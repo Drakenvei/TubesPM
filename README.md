@@ -62,11 +62,9 @@ Aplikasi ini adalah platform mobile berbasis **Kotlin (Native Android)** yang me
 ## 📖 Deskripsi Project
 - **Jenis**: Native Android Application
 - **SDK/Tools**:  
-  - Flutter SDK (>=3.x)  
-  - Dart SDK  
-  - Android Studio / VS Code  
-  - Android SDK 34 (atau sesuai kebutuhan)  
-  - JDK 17  
+  - Android Studio Narwhal 3 Feature Drop | 2025.1.3
+  - Android SDK 35
+  - JDK 23.0.2
 
 ---
 
