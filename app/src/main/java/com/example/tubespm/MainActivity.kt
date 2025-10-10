@@ -49,11 +49,12 @@ import androidx.navigation.NavHostController
 import androidx.navigation.compose.NavHost
 import androidx.navigation.compose.composable
 import androidx.navigation.compose.rememberNavController
+import com.example.tubespm.ui.MainScreen
 import com.example.tubespm.ui.theme.TubesPMTheme
 import com.google.firebase.auth.FirebaseAuth
 import com.google.firebase.firestore.FirebaseFirestore
 import kotlinx.coroutines.delay
-import com.example.tubespm.HomeScreen
+import com.example.tubespm.ui.screens.HomeScreen
 class MainActivity : ComponentActivity() {
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
@@ -83,7 +84,7 @@ fun AppNavigation() {
                 db = db
             )
         }
-        composable("home") { HomeScreen() } // placeholder after successful login
+        composable("main") { MainScreen() } // placeholder after successful login
     }
 }
 
@@ -289,7 +290,7 @@ fun LoginScreen(navController: NavHostController, auth: FirebaseAuth) {
                         .addOnCompleteListener { task ->
                             if (task.isSuccessful) {
                                 Toast.makeText(context, "Signed in", Toast.LENGTH_SHORT).show()
-                                navController.navigate("home") {
+                                navController.navigate("main") {
                                     popUpTo("login") { inclusive = true }
                                 }
                             } else {
@@ -468,7 +469,7 @@ fun RegisterScreen(navController: NavHostController, auth: FirebaseAuth, db: Fir
                                                 "Account created",
                                                 Toast.LENGTH_SHORT
                                             ).show()
-                                            navController.navigate("home") {
+                                            navController.navigate("main") {
                                                 popUpTo("register") { inclusive = true }
                                             }
                                         }

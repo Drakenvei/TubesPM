@@ -1,11 +1,13 @@
-package com.example.tubespm
+package com.example.tubespm.ui.screens
 
 import androidx.compose.foundation.Image
 import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.lazy.LazyRow
+import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
+import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.*
 import androidx.compose.material3.*
@@ -21,6 +23,7 @@ import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
+import com.example.tubespm.R
 import com.example.tubespm.ui.theme.TubesPMTheme
 import com.google.firebase.auth.FirebaseAuth
 import com.google.firebase.firestore.FirebaseFirestore
@@ -48,23 +51,22 @@ fun HomeScreen() {
     }
 
     Scaffold(
-        bottomBar = { BottomNavBar() },
-        floatingActionButton = {
-            FloatingActionButton(
-                onClick = { /* TODO: Add Tryout */ },
-                containerColor = Color.White,
-                shape = CircleShape,
-                modifier = Modifier.size(64.dp)
-            ) {
-                Icon(
-                    imageVector = Icons.Default.Add,
-                    contentDescription = "Add",
-                    tint = Color(0xFFE91E63),
-                    modifier = Modifier.size(36.dp)
-                )
-            }
-        },
-        floatingActionButtonPosition = FabPosition.Center
+//        floatingActionButton = {
+//            FloatingActionButton(
+//                onClick = { /* TODO: Add Tryout */ },
+//                containerColor = Color.White,
+//                shape = CircleShape,
+//                modifier = Modifier.size(64.dp)
+//            ) {
+//                Icon(
+//                    imageVector = Icons.Default.Add,
+//                    contentDescription = "Add",
+//                    tint = Color(0xFFE91E63),
+//                    modifier = Modifier.size(36.dp)
+//                )
+//            }
+//        },
+//        floatingActionButtonPosition = FabPosition.Center
     ) { paddingValues ->
 
         Column(
@@ -72,6 +74,7 @@ fun HomeScreen() {
                 .fillMaxSize()
                 .background(Color.White)
                 .padding(paddingValues)
+                .verticalScroll(rememberScrollState())
         ) {
             // Header Section
             Box(
@@ -228,7 +231,10 @@ fun ReportCard() {
             // Simple bar chart (just static boxes)
             Row(
                 horizontalArrangement = Arrangement.SpaceBetween,
-                modifier = Modifier.fillMaxWidth()
+                verticalAlignment = Alignment.Bottom,
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .height(100.dp)
             ) {
                 val data = listOf(30, 60, 40, 20, 55, 70, 50)
                 data.forEach {
@@ -262,39 +268,6 @@ fun ReportCard() {
     }
 }
 
-@Composable
-fun BottomNavBar() {
-    NavigationBar(
-        containerColor = Color(0xFFE0E0E0),
-        tonalElevation = 4.dp
-    ) {
-        NavigationBarItem(
-            selected = true,
-            onClick = { /* TODO */ },
-            icon = { Icon(Icons.Default.Home, contentDescription = "Home") },
-            label = { Text("Home") }
-        )
-        NavigationBarItem(
-            selected = false,
-            onClick = { /* TODO */ },
-            icon = { Icon(Icons.Default.List, contentDescription = "Tryouts") },
-            label = { Text("Tryout") }
-        )
-        Spacer(modifier = Modifier.width(64.dp)) // gap for FAB
-        NavigationBarItem(
-            selected = false,
-            onClick = { /* TODO */ },
-            icon = { Icon(Icons.Default.BarChart, contentDescription = "Report") },
-            label = { Text("Report") }
-        )
-        NavigationBarItem(
-            selected = false,
-            onClick = { /* TODO */ },
-            icon = { Icon(Icons.Default.Person, contentDescription = "Profile") },
-            label = { Text("Profile") }
-        )
-    }
-}
 
 @Preview(showBackground = true)
 @Composable
