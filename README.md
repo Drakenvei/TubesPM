@@ -47,9 +47,10 @@ Aplikasi ini adalah platform mobile berbasis **Kotlin (Native Android)** yang me
 
 ## 📖 Deskripsi Project
 - **Jenis**: Native Android Application
-- **SDK/Tools**:  
+- **SDK/Tools**:
+
 | Komponen | Deskripsi |
-|-----------|------------|
+|-----------|----------|
 | **Bahasa Pemrograman** | Kotlin |
 | **IDE** | Android Studio Narwhal 3 Feature Drop (2025.1.3) |
 | **Android SDK** | API Level 35 |
@@ -57,6 +58,44 @@ Aplikasi ini adalah platform mobile berbasis **Kotlin (Native Android)** yang me
 | **Architecture Pattern** | MVVM |
 | **UI Framework** | Jetpack Compose |
 | **Database Utama** | **Firebase Firestore** |
+
+---
+
+## 🧩 Cara Instalasi (Melalui Android Studio GUI)
+
+### 1️⃣ Clone Repository dari GitHub
+1. Buka **Android Studio**  
+2. Pilih menu **File → New → Project from Version Control...**  
+3. Pilih **Git** pada pilihan Version Control  
+4. Masukkan URL repository GitHub kamu (contoh):  
+   ```
+   https://github.com/Drakenvei/TubesPM.git
+   ```
+5. Tentukan lokasi penyimpanan project di lokal, lalu klik **Clone**
+
+---
+
+### 2️⃣ Hubungkan ke Firebase
+1. Buka **Firebase Console**: [https://console.firebase.google.com](https://console.firebase.google.com)  
+2. Buat **Project Baru** → tambahkan aplikasi Android  
+3. Masukkan nama package (misal `com.example.tubespm`)  
+4. Unduh file `google-services.json`  
+5. Letakkan file tersebut ke dalam folder:
+   ```
+   app/google-services.json
+   ```
+
+💡 **Catatan:**  
+File `google-services.json` **tidak akan ter-upload ke GitHub** karena sudah tercantum di `.gitignore`.  
+Artinya, setiap anggota tim harus **mengunduh file tersebut sendiri** dari Firebase Console proyek yang sama.
+
+---
+
+### 3️⃣ Sinkronisasi dan Jalankan
+1. Setelah file `google-services.json` dimasukkan, buka **Gradle panel** lalu klik **Sync Project**  
+2. Jika tidak ada error, tekan tombol ▶ **Run** di Android Studio  
+3. Pilih emulator atau perangkat fisik → aplikasi siap dijalankan 🎉
+
 
 ---
 
