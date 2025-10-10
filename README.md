@@ -7,11 +7,13 @@ Aplikasi ini adalah platform mobile berbasis **Kotlin (Native Android)** yang me
 ---
 
 ## 👥 Anggota Kelompok
-- Putera Nami Shiddieqy (231402003)
-- Nicholas Ken Surya (231402072)
-- Kenward Keene Hermanto (231404081)
-- Wynn Thomas Salim (231402120)
-- William Benediktus (231402091)
+| Nama | NIM |
+|------|-----|
+| Putera Nami Shiddieqy | 231402003 |
+| Nicholas Ken Surya | 231402072 |
+| Kenward Keene Hermanto | 231404081 |
+| Wynn Thomas Salim | 231402120 |
+| William Benediktus | 231402091 |
 
 ---
 
@@ -33,38 +35,28 @@ Aplikasi ini adalah platform mobile berbasis **Kotlin (Native Android)** yang me
 ---
 
 ### 🛠️ Fitur untuk **Admin**
-- **Login Dashboard Admin**: Mengakses dashboard khusus admin.  
-- **Manajemen Paket Tryout**: Membuat & menghapus paket tryout.  
-- **Soal Tryout**: Menambah, mengedit, menghapus soal dan pembahasan pada soal tryout.  
-- **Manajemen Latihan Soal**: Membuat, mengedit, menghapus soal dan pembahasan pada soal tryout.  
-- **Logout**: Keluar dari halaman Admin.  
-
----
-
-### 🏆 Fitur untuk **Super Admin**
-- **Login Dashboard Super Admin**: Masuk ke dashboard khusus super admin.  
-- **Kontrol Tryout & Latihan Soal**:  
-  - Memantau tryout & soal latihan yang dibuat admin.  
-  - Publish tryout & soal latihan.  
-  - Ubah status tryout & soal latihan (aktif / nonaktif / revisi).  
-- **Manajemen Siswa**:  
-  - Melihat detail akun siswa.  
-  - Menonaktifkan akun siswa.  
-- **Manajemen Admin**:  
-  - Membuat akun admin.  
-  - Mengedit profil admin.  
-  - Mengelola & menonaktifkan admin.  
-  - Melihat detail admin (profil, aktivitas CRUD).  
-- **Logout**: Keluar dari halaman Super Admin.  
+- **Login Dashboard Admin** — Admin dapat masuk ke halaman dashboard.  
+- **Manajemen Paket Tryout** — Membuat dan menghapus paket tryout.  
+- **Soal Tryout** — Menambah, mengedit, dan menghapus soal serta pembahasan pada tryout.  
+- **Publish Tryout & Latihan Soal** — Memublikasikan tryout dan latihan soal apabila sudah siap.  
+- **Ubah Status Tryout & Latihan Soal** — Mengubah status paket soal menjadi aktif, nonaktif, atau perbaikan.  
+- **Manajemen Latihan Soal** — Membuat, mengedit, menonaktifkan, dan menghapus soal serta pembahasan latihan soal.  
+- **Logout** — Keluar dari dashboard admin.
 
 ---
 
 ## 📖 Deskripsi Project
 - **Jenis**: Native Android Application
 - **SDK/Tools**:  
-  - Android Studio Narwhal 3 Feature Drop | 2025.1.3
-  - Android SDK 35
-  - JDK 23.0.2
+| Komponen | Deskripsi |
+|-----------|------------|
+| **Bahasa Pemrograman** | Kotlin |
+| **IDE** | Android Studio Narwhal 3 Feature Drop (2025.1.3) |
+| **Android SDK** | API Level 35 |
+| **JDK** | JDK 23.0.2 |
+| **Architecture Pattern** | MVVM |
+| **UI Framework** | Jetpack Compose |
+| **Database Utama** | **Firebase Firestore** |
 
 ---
 
