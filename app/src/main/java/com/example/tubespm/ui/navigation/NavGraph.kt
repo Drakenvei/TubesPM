@@ -10,7 +10,7 @@ import com.example.tubespm.ui.screens.*
 fun NavGraph(navController: NavHostController) {
     NavHost(navController = navController, startDestination = "home") {
         composable("home") { HomeScreen() }
-        composable("tryout") { /* TODO: TryoutScreen() */ }
+        composable("exercises") { ExerciseScreen() }
         composable("report") { /* TODO: ReportScreen() */ }
         composable("profile") { /* TODO: ProfileScreen() */ }
     }

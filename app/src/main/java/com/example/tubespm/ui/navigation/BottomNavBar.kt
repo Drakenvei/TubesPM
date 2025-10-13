@@ -14,7 +14,7 @@ import androidx.compose.material.icons.filled.*
 fun BottomNavBar(navController: NavHostController) {
     val items = listOf(
         BottomNavItem("Home", Icons.Default.Home, "home"),
-        BottomNavItem("Tryout", Icons.Default.List, "tryout"),
+        BottomNavItem("Exercises", Icons.Default.List, "exercises"),
         BottomNavItem("Report", Icons.Default.BarChart, "report"),
         BottomNavItem("Profile", Icons.Default.Person, "profile")
     )
