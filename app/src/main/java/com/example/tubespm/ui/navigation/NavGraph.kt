@@ -12,6 +12,6 @@ fun NavGraph(navController: NavHostController) {
         composable("home") { HomeScreen() }
         composable("exercises") { ExerciseScreen() }
         composable("report") { /* TODO: ReportScreen() */ }
-        composable("profile") { /* TODO: ProfileScreen() */ }
+        composable("profile") { ProfileScreen() }
     }
 }
