@@ -15,7 +15,7 @@ fun BottomNavBar(navController: NavHostController) {
     val items = listOf(
         BottomNavItem("Home", Icons.Default.Home, "home"),
         BottomNavItem("Exercises", Icons.Default.List, "exercises"),
-        BottomNavItem("Report", Icons.Default.BarChart, "report"),
+        BottomNavItem("Activity", Icons.Default.MenuBook, "activity"),
         BottomNavItem("Profile", Icons.Default.Person, "profile")
     )
 

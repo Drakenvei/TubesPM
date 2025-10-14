@@ -12,6 +12,8 @@ import androidx.compose.material3.Divider
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Tab
 import androidx.compose.material3.TabRow
+import androidx.compose.material3.TabRowDefaults
+import androidx.compose.material3.TabRowDefaults.tabIndicatorOffset
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.mutableStateOf
@@ -23,7 +25,9 @@ import androidx.compose.ui.unit.dp
 import com.example.tubespm.ui.screens.latihansoal.LatihanSoalScreen
 import com.example.tubespm.ui.screens.tryout.TryoutScreen
 import androidx.compose.runtime.*
+import androidx.compose.ui.tooling.preview.Preview
 
+@Preview
 @Composable
 fun ExerciseScreen(){
     var selectedTab by remember { mutableStateOf(0) }
@@ -32,6 +36,7 @@ fun ExerciseScreen(){
     Column (
         modifier = Modifier
             .fillMaxSize()
+            .background(Color(0xFFF0F0F0)),
     ) {
         Box(
             modifier = Modifier
@@ -50,12 +55,25 @@ fun ExerciseScreen(){
 
         TabRow(
             selectedTabIndex = selectedTab,
-            modifier = Modifier.fillMaxWidth()
+            modifier = Modifier
+                .fillMaxWidth()
+                .background(Color.White),
+            indicator = { tabPositions ->
+                // Indikator custom
+                TabRowDefaults.Indicator(
+                    modifier = Modifier
+                        .tabIndicatorOffset(tabPositions[selectedTab])
+                        .height(3.dp),       // tebal garis
+                    color = Color.Black      // warna indikator hitam
+                )
+            }
         ) {
             tabTitles.forEachIndexed { index, title ->
                 Tab(
                     selected = selectedTab == index,
                     onClick = { selectedTab = index },
+                    selectedContentColor = Color.Black,     // 🟢 warna teks saat aktif
+                    unselectedContentColor = Color.Gray,
                     text = {
                         Text(
                             text = title,
