@@ -20,7 +20,7 @@ import com.example.tubespm.data.model.CompletedSectionState
 import com.example.tubespm.data.model.TryoutCompleted
 
 @Composable
-fun SelesaiContent(tryouts: List<TryoutCompleted>) {
+fun TryoutSelesaiContent(tryouts: List<TryoutCompleted>) {
     LazyColumn (
         contentPadding = PaddingValues(16.dp),
         verticalArrangement = Arrangement.spacedBy(16.dp)
@@ -73,14 +73,28 @@ fun TryoutCompletedCard(tryout: TryoutCompleted) {
 fun CompletedSection(section: CompletedSectionState) {
     Column {
         Box(
-            modifier = Modifier.clip(RoundedCornerShape(8.dp)).background(Color.White).padding(horizontal = 10.dp, vertical = 4.dp)
+            modifier = Modifier
+                .clip(RoundedCornerShape(8.dp))
+                .background(Color.White)
+                .padding(horizontal = 10.dp, vertical = 4.dp)
         ) {
-            Text(section.title, color = Color(0xFFE61C5D), fontWeight = FontWeight.Bold, fontSize = 14.sp)
+            Text(
+                section.title,
+                color = Color(0xFFE61C5D),
+                fontWeight = FontWeight.Bold,
+                fontSize = 14.sp
+            )
         }
         Spacer(Modifier.height(12.dp))
-        InfoRow(icon = Icons.Default.CheckCircle, text = "Jawaban benar: ${section.correctAnswers}/${section.totalQuestions} soal")
+        InfoRow(
+            icon = Icons.Default.CheckCircle,
+            text = "Jawaban benar: ${section.correctAnswers}/${section.totalQuestions} soal"
+        )
         Spacer(Modifier.height(8.dp))
-        InfoRow(icon = Icons.Default.HourglassBottom, text = "Waktu selesai: ${section.completionTime}")
+        InfoRow(
+            icon = Icons.Default.HourglassBottom,
+            text = "Waktu selesai: ${section.completionTime}"
+        )
         Spacer(Modifier.height(12.dp))
         Button(
             onClick = { /* TODO: Lihat Pembahasan */ },
@@ -88,7 +102,12 @@ fun CompletedSection(section: CompletedSectionState) {
             colors = ButtonDefaults.buttonColors(containerColor = Color(0xFF30D158)),
             modifier = Modifier.fillMaxWidth().height(48.dp)
         ) {
-            Text("Lihat Pembahasan", color = Color.Black, fontWeight = FontWeight.Bold, fontSize = 16.sp)
+            Text(
+                "Lihat Pembahasan",
+                color = Color.Black,
+                fontWeight = FontWeight.Bold,
+                fontSize = 16.sp
+            )
         }
     }
 }

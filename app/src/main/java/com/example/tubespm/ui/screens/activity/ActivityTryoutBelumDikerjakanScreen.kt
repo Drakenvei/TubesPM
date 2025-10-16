@@ -26,7 +26,7 @@ import com.example.tubespm.data.model.Tryout
 import com.example.tubespm.data.model.TryoutSection
 
 @Composable
-fun BelumDikerjakanContent(tryouts: List<Tryout>, onCardClick: (Tryout) -> Unit) {
+fun TryoutBelumDikerjakanContent(tryouts: List<Tryout>, onCardClick: (Tryout) -> Unit) {
     LazyColumn(contentPadding = PaddingValues(16.dp), verticalArrangement = Arrangement.spacedBy(16.dp)) {
         items(tryouts) { tryout ->
             TryoutActivityCard(

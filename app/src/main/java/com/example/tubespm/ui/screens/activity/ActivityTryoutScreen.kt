@@ -38,7 +38,7 @@ fun ActivityTryoutScreen() {
                 .padding(top = 24.dp, bottom = 12.dp, start = 16.dp)
         ) {
             Text(
-                text = "Daftar Soal",
+                text = "Daftar Tryout",
                 style = MaterialTheme.typography.headlineMedium.copy(
                     fontWeight = FontWeight.Bold,
                     color = Color.White
@@ -64,14 +64,14 @@ fun ActivityTryoutScreen() {
             }
         }
         when (selectedTabIndex) {
-            0 -> BelumDikerjakanContent(
+            0 -> TryoutBelumDikerjakanContent(
                     tryouts = belumDikerjakanList,
                     onCardClick = { tryout ->
                         showDetailDialogFor = tryout
                     }
                 )
-            1 -> DalamProsesContent(dalamProsesList)
-            2 -> SelesaiContent(selesaiList)
+            1 -> TryoutDalamProsesContent(dalamProsesList)
+            2 -> TryoutSelesaiContent(selesaiList)
         }
     }
 

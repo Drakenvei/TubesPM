@@ -22,7 +22,7 @@ import com.example.tubespm.data.model.InProgressSectionState
 import com.example.tubespm.data.model.TryoutInProgress
 
 @Composable
-fun DalamProsesContent(tryouts: List<TryoutInProgress>) {
+fun TryoutDalamProsesContent(tryouts: List<TryoutInProgress>) {
     LazyColumn (
         contentPadding = PaddingValues(16.dp),
         verticalArrangement = Arrangement.spacedBy(16.dp)
