@@ -12,10 +12,11 @@ import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
+import androidx.navigation.NavController
 import com.example.tubespm.data.model.*
 
 @Composable
-fun ActivityTryoutScreen() {
+fun ActivityTryoutScreen(navController : NavController) {
     val belumDikerjakanList = remember { sampleTryoutList() }
     val dalamProsesList = remember { sampleInProgressList() }
     val selesaiList = remember { sampleCompletedList() }
@@ -70,7 +71,12 @@ fun ActivityTryoutScreen() {
                         showDetailDialogFor = tryout
                     }
                 )
-            1 -> TryoutDalamProsesContent(dalamProsesList)
+            1 -> TryoutDalamProsesContent(
+                tryouts = dalamProsesList,
+                onContinueClick = {
+                    navController.navigate("tryout_quiz")
+                }
+            )
             2 -> TryoutSelesaiContent(selesaiList)
         }
     }
@@ -81,8 +87,11 @@ fun ActivityTryoutScreen() {
             tryout = tryout,
             onDismiss = { showDetailDialogFor = null },
             onStart = {
-                // TODO: Logika untuk memulai pengerjaan tryout
+                // INI BAGIAN PENTINGNYA
+                // 1. Tutup dialog
                 showDetailDialogFor = null
+                // 2. Lakukan navigasi ke QuizScreen
+                navController.navigate("tryout_quiz")
             },
             onCancel = {
                 // TODO: Logika untuk membatalkan/menghapus tryout dari daftar

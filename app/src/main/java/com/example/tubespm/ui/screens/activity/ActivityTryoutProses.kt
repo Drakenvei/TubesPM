@@ -22,19 +22,28 @@ import com.example.tubespm.data.model.InProgressSectionState
 import com.example.tubespm.data.model.TryoutInProgress
 
 @Composable
-fun TryoutDalamProsesContent(tryouts: List<TryoutInProgress>) {
+fun TryoutDalamProsesContent(
+    tryouts: List<TryoutInProgress>,
+    onContinueClick: () -> Unit
+) {
     LazyColumn (
         contentPadding = PaddingValues(16.dp),
         verticalArrangement = Arrangement.spacedBy(16.dp)
     ) {
         items(tryouts) { tryout ->
-            TryoutInProgressCard( tryout = tryout)
+            TryoutInProgressCard(
+                tryout = tryout,
+                onContinueClick = onContinueClick
+            )
         }
     }
 }
 
 @Composable
-fun TryoutInProgressCard(tryout: TryoutInProgress) {
+fun TryoutInProgressCard(
+    tryout: TryoutInProgress,
+    onContinueClick: () -> Unit
+) {
     Card (
         shape = RoundedCornerShape(12.dp),
         colors = CardDefaults.cardColors(containerColor = Color(0xFFE61C5D))
@@ -52,7 +61,10 @@ fun TryoutInProgressCard(tryout: TryoutInProgress) {
                 verticalArrangement = Arrangement.spacedBy(8.dp)
             ) {
                 tryout.sections.forEach { section ->
-                    InProgressSection(section = section)
+                    InProgressSection(
+                        section = section,
+                        onContinueClick = onContinueClick
+                    )
                     if (tryout.sections.last() != section) {
                         Divider(
                             color = Color.White.copy(alpha = 0.3f),
@@ -66,7 +78,10 @@ fun TryoutInProgressCard(tryout: TryoutInProgress) {
 }
 
 @Composable
-fun InProgressSection(section: InProgressSectionState) {
+fun InProgressSection(
+    section: InProgressSectionState,
+    onContinueClick: () -> Unit
+) {
     Column {
         Box(
             modifier = Modifier
@@ -145,7 +160,7 @@ fun InProgressSection(section: InProgressSectionState) {
             )
             Spacer(Modifier.height(8.dp))
             Button(
-                onClick = { /* TODO: Lanjutkan Tryout */ },
+                onClick = onContinueClick,
                 shape = RoundedCornerShape(12.dp),
                 colors = ButtonDefaults.buttonColors(containerColor = Color(0xFF30D158)),
                 modifier = Modifier.fillMaxWidth().height(48.dp)

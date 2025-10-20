@@ -31,19 +31,28 @@ import androidx.compose.ui.unit.dp
 import com.example.tubespm.data.model.LatihanInProgress
 
 @Composable
-fun LatihanDalamProsesContent(latihanList: List<LatihanInProgress>){
+fun LatihanDalamProsesContent(
+    latihanList: List<LatihanInProgress>,
+    onContinueClick: () -> Unit
+){
     LazyColumn (
         contentPadding = PaddingValues(16.dp),
         verticalArrangement = Arrangement.spacedBy(16.dp)
     ) {
         items(latihanList) { latihan ->
-            LatihanInProgressCard(latihan = latihan)
+            LatihanInProgressCard(
+                latihan = latihan,
+                onContinueClick = onContinueClick
+            )
         }
     }
 }
 
 @Composable
-fun LatihanInProgressCard(latihan: LatihanInProgress) {
+fun LatihanInProgressCard(
+    latihan: LatihanInProgress,
+    onContinueClick: () -> Unit
+) {
     Card (
         shape = RoundedCornerShape(12.dp),
         colors = CardDefaults.cardColors(containerColor = Color(0xFFE61C5D))
@@ -87,7 +96,7 @@ fun LatihanInProgressCard(latihan: LatihanInProgress) {
                 trackColor = Color.White.copy(alpha = 0.3f)
             )
             Spacer(Modifier.height(12.dp))
-            ActionButton(text = "Lanjutkan Latihan", onClick = {})
+            ActionButton(text = "Lanjutkan Latihan", onClick = onContinueClick)
         }
     }
 }

@@ -24,12 +24,12 @@ import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.compose.ui.window.Dialog
+import androidx.navigation.NavController
 import com.example.tubespm.data.model.*
 import org.w3c.dom.Text
 
-@Preview
 @Composable
-fun ActivityLatihanScreen() {
+fun ActivityLatihanScreen(navController: NavController) {
     val belumDikerjakanList = remember { sampleLatihanList() }
     val dalamProsesList = remember { sampleLatihanInProgressList() }
     val selesaiList = remember { sampleLatihanCompletedList() }
@@ -80,7 +80,12 @@ fun ActivityLatihanScreen() {
             0 -> LatihanBelumDikerjakanContent(belumDikerjakanList) { latihan ->
                 showDetailDialogFor = latihan
             }
-            1 -> LatihanDalamProsesContent(dalamProsesList)
+            1 -> LatihanDalamProsesContent(
+                latihanList = dalamProsesList,
+                onContinueClick = {
+                    navController.navigate("latihan_quiz")
+                }
+            )
             2 -> LatihanSelesaiContent(selesaiList)
         }
     }
@@ -90,7 +95,13 @@ fun ActivityLatihanScreen() {
         LatihanDetailDialog(
             latihan = latihan,
             onDismiss = { showDetailDialogFor = null },
-            onStart = { showDetailDialogFor = null },
+            onStart = {
+                // INI BAGIAN PENTINGNYA
+                // 1. Tutup dialog
+                showDetailDialogFor = null
+                // 2. Lakukan navigasi ke QuizScreen
+                navController.navigate("latihan_quiz")
+            },
             onCancel = { showDetailDialogFor = null }
         )
     }
