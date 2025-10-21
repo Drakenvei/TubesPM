@@ -5,6 +5,7 @@ import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.automirrored.filled.ArrowBack
 import androidx.compose.material.icons.automirrored.filled.ArrowForwardIos
 import androidx.compose.material3.*
 import androidx.compose.runtime.Composable
@@ -18,6 +19,7 @@ import androidx.compose.ui.unit.sp
 import androidx.navigation.NavController
 import androidx.navigation.compose.rememberNavController
 
+@OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun ActivityScreen(navController: NavController){
     Column (
@@ -25,20 +27,20 @@ fun ActivityScreen(navController: NavController){
             .fillMaxSize()
             .background(color = Color.White)
     ) {
-        Box(
-            modifier = Modifier
-                .fillMaxWidth()
-                .background(Color(0xFFE61C5D))
-                .padding(top = 24.dp, bottom = 12.dp, start = 16.dp)
-        ) {
-            Text(
-                text = "Daftar Tryout & Latihan",
-                style = MaterialTheme.typography.headlineMedium.copy(
-                    fontWeight = FontWeight.Bold,
-                    color = Color.White
+        TopAppBar(
+            title = {
+                Text(
+                    text = "Daftar Tryout & Latihan Soal",
+                    style = MaterialTheme.typography.headlineMedium.copy(
+                        fontWeight = FontWeight.Bold,
+                        color = Color.White
+                    )
                 )
+            },
+            colors = TopAppBarDefaults.topAppBarColors(
+                containerColor = Color(0xFFE61C5D) // Mengatur warna background
             )
-        }
+        )
 
         Spacer(Modifier.height(8.dp))
 

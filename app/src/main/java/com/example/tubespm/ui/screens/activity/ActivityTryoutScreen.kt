@@ -2,6 +2,8 @@ package com.example.tubespm.ui.screens.activity
 
 import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.*
+import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.automirrored.filled.ArrowBack
 import androidx.compose.material3.*
 import androidx.compose.material3.TabRowDefaults.tabIndicatorOffset
 import androidx.compose.runtime.*
@@ -15,6 +17,7 @@ import androidx.compose.ui.unit.sp
 import androidx.navigation.NavController
 import com.example.tubespm.data.model.*
 
+@OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun ActivityTryoutScreen(navController : NavController) {
     val belumDikerjakanList = remember { sampleTryoutList() }
@@ -32,20 +35,31 @@ fun ActivityTryoutScreen(navController : NavController) {
             .fillMaxSize()
             .background(Color(0xFFF0F0F0))
     ) {
-        Box(
-            modifier = Modifier
-                .fillMaxWidth()
-                .background(Color(0xFFE61C5D))
-                .padding(top = 24.dp, bottom = 12.dp, start = 16.dp)
-        ) {
-            Text(
-                text = "Daftar Tryout",
-                style = MaterialTheme.typography.headlineMedium.copy(
-                    fontWeight = FontWeight.Bold,
-                    color = Color.White
+        TopAppBar(
+            title = {
+                Text(
+                    text = "Daftar Tryout",
+                    style = MaterialTheme.typography.headlineMedium.copy(
+                        fontWeight = FontWeight.Bold,
+                        color = Color.White
+                    )
                 )
+            },
+            navigationIcon = {
+                // Tombol kembali ditambahkan di sini
+                IconButton(onClick = { navController.popBackStack() }) {
+                    Icon(
+                        imageVector = Icons.AutoMirrored.Filled.ArrowBack,
+                        contentDescription = "Kembali",
+                        tint = Color.White
+                    )
+                }
+            },
+            colors = TopAppBarDefaults.topAppBarColors(
+                containerColor = Color(0xFFE61C5D) // Mengatur warna background
             )
-        }
+        )
+        // --- AKHIR PERUBAHAN ---
 
         TabRow(
             selectedTabIndex = selectedTabIndex,

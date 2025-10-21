@@ -9,12 +9,15 @@ import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
 import androidx.compose.material3.Divider
+import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Tab
 import androidx.compose.material3.TabRow
 import androidx.compose.material3.TabRowDefaults
 import androidx.compose.material3.TabRowDefaults.tabIndicatorOffset
 import androidx.compose.material3.Text
+import androidx.compose.material3.TopAppBar
+import androidx.compose.material3.TopAppBarDefaults
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
@@ -28,6 +31,7 @@ import androidx.compose.runtime.*
 import androidx.compose.ui.tooling.preview.Preview
 
 @Preview
+@OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun ExerciseScreen(){
     var selectedTab by remember { mutableStateOf(0) }
@@ -38,20 +42,20 @@ fun ExerciseScreen(){
             .fillMaxSize()
             .background(Color(0xFFF0F0F0)),
     ) {
-        Box(
-            modifier = Modifier
-                .fillMaxWidth()
-                .background(Color(0xFFE61C5D))
-                .padding(top = 24.dp, bottom = 12.dp, start = 16.dp)
-        ) {
-            Text(
-                text = "Daftar Soal",
-                style = MaterialTheme.typography.headlineMedium.copy(
-                    fontWeight = FontWeight.Bold,
-                    color = Color.White
+        TopAppBar(
+            title = {
+                Text(
+                    text = "Daftar Soal",
+                    style = MaterialTheme.typography.headlineMedium.copy(
+                        fontWeight = FontWeight.Bold,
+                        color = Color.White
+                    )
                 )
+            },
+            colors = TopAppBarDefaults.topAppBarColors(
+                containerColor = Color(0xFFE61C5D) // Mengatur warna background
             )
-        }
+        )
 
         TabRow(
             selectedTabIndex = selectedTab,
