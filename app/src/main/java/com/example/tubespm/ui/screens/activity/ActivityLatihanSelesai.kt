@@ -26,22 +26,29 @@ import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
+import androidx.navigation.NavController
 import com.example.tubespm.data.model.LatihanCompleted
 
 @Composable
-fun LatihanSelesaiContent(latihanList: List<LatihanCompleted>){
+fun LatihanSelesaiContent(
+    latihanList: List<LatihanCompleted>,
+    navController: NavController  // Tambahkan parameter
+){
     LazyColumn (
         contentPadding = PaddingValues(16.dp),
         verticalArrangement = Arrangement.spacedBy(16.dp)
     ) {
         items(latihanList) { latihan ->
-            LatihanCompletedCard(latihan = latihan)
+            LatihanCompletedCard(
+                latihan = latihan,
+                navController = navController  // Pass ke card
+            )
         }
     }
 }
 
 @Composable
-fun LatihanCompletedCard(latihan: LatihanCompleted) {
+fun LatihanCompletedCard(latihan: LatihanCompleted, navController: NavController) {
     Card(
         shape = RoundedCornerShape(12.dp),
         colors = CardDefaults.cardColors(containerColor = Color(0xFFE61C5D))
@@ -73,7 +80,13 @@ fun LatihanCompletedCard(latihan: LatihanCompleted) {
                 )
             }
             Spacer(Modifier.height(12.dp))
-            ActionButton(text = "Lihat Pembahasan", onClick = { /*TODO*/ })
+            ActionButton(
+                text = "Lihat Pembahasan",
+                onClick = {
+                    // Navigasi ke screen pembahasan
+                    navController.navigate("pembahasan_latihan")
+                }
+            )
             Spacer(Modifier.height(8.dp))
 
             Text(

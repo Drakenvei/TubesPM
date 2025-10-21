@@ -11,6 +11,8 @@ import com.example.tubespm.ui.screens.activity.ActivityScreen
 import com.example.tubespm.ui.screens.activity.ActivityTryoutScreen
 import com.example.tubespm.ui.screens.quiz.QuizMode
 import com.example.tubespm.ui.screens.quiz.QuizScreen
+import com.example.tubespm.data.model.sampleQuestionsWithExplanation
+import com.example.tubespm.ui.screens.pembahasan.PembahasanScreen
 
 @Composable
 fun NavGraph(navController: NavHostController) {
@@ -39,6 +41,12 @@ fun NavGraph(navController: NavHostController) {
                 onSessionFinished = {
                     navController.popBackStack()
                 }
+            )
+        }
+        composable("pembahasan_latihan") {
+            PembahasanScreen(
+                navController = navController,
+                questions = sampleQuestionsWithExplanation()
             )
         }
     }

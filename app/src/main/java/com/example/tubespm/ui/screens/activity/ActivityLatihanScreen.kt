@@ -86,7 +86,10 @@ fun ActivityLatihanScreen(navController: NavController) {
                     navController.navigate("latihan_quiz")
                 }
             )
-            2 -> LatihanSelesaiContent(selesaiList)
+            2 -> LatihanSelesaiContent(
+                latihanList = selesaiList,
+                navController = navController  // Tambahkan parameter ini
+            )
         }
     }
 
