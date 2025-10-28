@@ -24,13 +24,52 @@ import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.compose.ui.window.Dialog
 import com.example.tubespm.data.model.LatihanSoal
-import com.example.tubespm.data.model.sampleLatihanList
+import com.example.tubespm.repository.LatihanRepository
+import kotlinx.coroutines.launch
 
 // Main Screen
 @Composable
 fun LatihanSoalScreen(){
-    val latihanList = remember { sampleLatihanList() }
+    val repository = remember { LatihanRepository() }
+    val scope = rememberCoroutineScope()
+
+    var latihanList by remember { mutableStateOf<List<LatihanSoal>>(emptyList()) }
+    var isLoading by remember { mutableStateOf(true) }
+    var errorMessage by remember { mutableStateOf<String?>(null) }
     var selectedLatihan by remember { mutableStateOf<LatihanSoal?>(null) }
+    var searchQuery by remember { mutableStateOf("") }
+
+    // Load latihan on first composition
+    LaunchedEffect(Unit) {
+        scope.launch {
+            isLoading = true
+            errorMessage = null
+            try {
+                latihanList = repository.getAllLatihan()
+            } catch (e: Exception) {
+                errorMessage = "Gagal memuat data: ${e.message}"
+            } finally {
+                isLoading = false
+            }
+        }
+    }
+
+    // Handle search
+    LaunchedEffect(searchQuery) {
+        if (searchQuery.isNotBlank()) {
+            scope.launch {
+                try {
+                    latihanList = repository.searchLatihan(searchQuery)
+                } catch (e: Exception) {
+                    errorMessage = "Gagal mencari: ${e.message}"
+                }
+            }
+        } else {
+            scope.launch {
+                latihanList = repository.getAllLatihan()
+            }
+        }
+    }
 
     Column (
         modifier = Modifier
@@ -39,16 +78,75 @@ fun LatihanSoalScreen(){
     ) {
         Spacer(Modifier.height(16.dp))
 
-        SearchBarLatihanSoal()
+        SearchBarLatihanSoal(
+            searchQuery = searchQuery,
+            onSearchQueryChange = { searchQuery = it }
+        )
 
         Spacer(Modifier.height(16.dp))
 
-        LazyColumn (
-            verticalArrangement = Arrangement.spacedBy(16.dp)
-        ) {
-            items(latihanList) { latihan ->
-                LatihanSoalCard(latihan) {
-                    selectedLatihan = latihan
+        when {
+            isLoading -> {
+                Box(
+                    modifier = Modifier.fillMaxSize(),
+                    contentAlignment = Alignment.Center
+                ) {
+                    CircularProgressIndicator(color = Color(0xFFE61C5D))
+                }
+            }
+            errorMessage != null -> {
+                Box(
+                    modifier = Modifier.fillMaxSize(),
+                    contentAlignment = Alignment.Center
+                ) {
+                    Column(horizontalAlignment = Alignment.CenterHorizontally) {
+                        Text(
+                            text = errorMessage ?: "Terjadi kesalahan",
+                            color = Color.Red,
+                            textAlign = TextAlign.Center
+                        )
+                        Spacer(Modifier.height(16.dp))
+                        Button(
+                            onClick = {
+                                scope.launch {
+                                    isLoading = true
+                                    errorMessage = null
+                                    latihanList = repository.getAllLatihan()
+                                    isLoading = false
+                                }
+                            },
+                            colors = ButtonDefaults.buttonColors(
+                                containerColor = Color(0xFFE61C5D)
+                            )
+                        ) {
+                            Text("Coba Lagi")
+                        }
+                    }
+                }
+            }
+            latihanList.isEmpty() -> {
+                Box(
+                    modifier = Modifier.fillMaxSize(),
+                    contentAlignment = Alignment.Center
+                ) {
+                    Text(
+                        text = if (searchQuery.isBlank())
+                            "Belum ada latihan soal tersedia"
+                        else
+                            "Tidak ada hasil untuk \"$searchQuery\"",
+                        color = Color.Gray
+                    )
+                }
+            }
+            else -> {
+                LazyColumn (
+                    verticalArrangement = Arrangement.spacedBy(16.dp)
+                ) {
+                    items(latihanList) { latihan ->
+                        LatihanSoalCard(latihan) {
+                            selectedLatihan = latihan
+                        }
+                    }
                 }
             }
         }
@@ -69,11 +167,13 @@ fun LatihanSoalScreen(){
 
 // Search Bar
 @Composable
-fun SearchBarLatihanSoal() {
-    var text by remember { mutableStateOf("") }
+fun SearchBarLatihanSoal(
+    searchQuery: String,
+    onSearchQueryChange: (String) -> Unit
+) {
     OutlinedTextField(
-        value = text,
-        onValueChange = {text = it},
+        value = searchQuery,
+        onValueChange = onSearchQueryChange,
         placeholder = { Text("Search...", color = Color.Black.copy(alpha = 0.5f)) },
         leadingIcon = { Icon(Icons.Default.Search, contentDescription = null, tint = Color.Black) },
         trailingIcon = { Icon(Icons.Outlined.FilterList, contentDescription = null, tint = Color.Black)},
