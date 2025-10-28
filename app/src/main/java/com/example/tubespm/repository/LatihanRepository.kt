@@ -11,28 +11,45 @@ class LatihanRepository(private val db: FirebaseFirestore = FirebaseFirestore.ge
     // Fetch all active latihan soal
     suspend fun getAllLatihan(): List<LatihanSoal> {
         return try {
+            android.util.Log.d("LatihanRepository", "📡 Fetching from Firestore...")
+            android.util.Log.d("LatihanRepository", "Query: collection('latihan_soal').whereEqualTo('status', 'active')")
+
             val snapshot = db.collection("latihan_soal")
                 .whereEqualTo("status", "active")
                 .orderBy("createdAt", Query.Direction.DESCENDING)
                 .get()
                 .await()
 
-            snapshot.documents.mapNotNull { doc ->
+            android.util.Log.d("LatihanRepository", "📦 Received ${snapshot.documents.size} documents from Firebase")
+
+            snapshot.documents.forEachIndexed { index, doc ->
+                android.util.Log.d("LatihanRepository", "  Doc[$index]: id=${doc.id}, data exists=${doc.exists()}")
+                android.util.Log.d("LatihanRepository", "    - title: ${doc.getString("title")}")
+                android.util.Log.d("LatihanRepository", "    - status: ${doc.getString("status")}")
+                android.util.Log.d("LatihanRepository", "    - questionCount: ${doc.getLong("questionCount")}")
+            }
+
+            val result = snapshot.documents.mapNotNull { doc ->
                 try {
-                    LatihanSoal(
+                    val latihan = LatihanSoal(
                         id = (doc.getLong("id") ?: 0).toInt(),
                         title = doc.getString("title") ?: "",
                         subtest = doc.getString("subtest") ?: "",
                         questionCount = (doc.getLong("questionCount") ?: 0).toInt(),
                         kisiKisi = (doc.get("kisiKisi") as? List<String>) ?: emptyList()
                     )
+                    android.util.Log.d("LatihanRepository", "✅ Parsed: ${latihan.title}")
+                    latihan
                 } catch (e: Exception) {
-                    Log.e("LatihanRepository", "Error parsing latihan: ${e.message}")
+                    android.util.Log.e("LatihanRepository", "❌ Error parsing document ${doc.id}: ${e.message}", e)
                     null
                 }
             }
+
+            android.util.Log.d("LatihanRepository", "🎯 Returning ${result.size} latihan objects")
+            result
         } catch (e: Exception) {
-            Log.e("LatihanRepository", "Error fetching latihan: ${e.message}")
+            android.util.Log.e("LatihanRepository", "💥 FATAL ERROR in getAllLatihan: ${e.message}", e)
             emptyList()
         }
     }

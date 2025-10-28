@@ -25,6 +25,7 @@ import androidx.compose.ui.unit.sp
 import androidx.compose.ui.window.Dialog
 import com.example.tubespm.data.model.LatihanSoal
 import com.example.tubespm.repository.LatihanRepository
+import com.google.firebase.auth.FirebaseAuth
 import kotlinx.coroutines.launch
 
 // Main Screen
@@ -38,18 +39,35 @@ fun LatihanSoalScreen(){
     var errorMessage by remember { mutableStateOf<String?>(null) }
     var selectedLatihan by remember { mutableStateOf<LatihanSoal?>(null) }
     var searchQuery by remember { mutableStateOf("") }
+    val auth = FirebaseAuth.getInstance()
+    val currentUser = auth.currentUser
+
+    LaunchedEffect(Unit) {
+        android.util.Log.d("LatihanScreen", "🔐 Current user: ${currentUser?.email ?: "NOT LOGGED IN"}")
+        android.util.Log.d("LatihanScreen", "🔐 User UID: ${currentUser?.uid ?: "null"}")
+    }
 
     // Load latihan on first composition
     LaunchedEffect(Unit) {
         scope.launch {
+            android.util.Log.d("LatihanScreen", "=== START LOADING ===")
             isLoading = true
             errorMessage = null
             try {
-                latihanList = repository.getAllLatihan()
+                android.util.Log.d("LatihanScreen", "Calling repository.getAllLatihan()...")
+                val result = repository.getAllLatihan()
+                android.util.Log.d("LatihanScreen", "✅ Got ${result.size} items from Firebase")
+                result.forEachIndexed { index, item ->
+                    android.util.Log.d("LatihanScreen", "  [$index] ${item.title}")
+                }
+                latihanList = result
+                android.util.Log.d("LatihanScreen", "State updated with ${latihanList.size} items")
             } catch (e: Exception) {
+                android.util.Log.e("LatihanScreen", "❌ ERROR: ${e.message}", e)
                 errorMessage = "Gagal memuat data: ${e.message}"
             } finally {
                 isLoading = false
+                android.util.Log.d("LatihanScreen", "=== END LOADING (isLoading=$isLoading) ===")
             }
         }
     }
