@@ -29,9 +29,12 @@ import com.example.tubespm.ui.screens.*
 import com.example.tubespm.ui.screens.activity.ActivityLatihanScreen
 import com.example.tubespm.ui.screens.activity.ActivityScreen
 import com.example.tubespm.ui.screens.activity.ActivityTryoutScreen
+import com.example.tubespm.ui.screens.exercises.ExerciseScreen
 import com.example.tubespm.ui.screens.pembahasan.PembahasanScreen
 import com.example.tubespm.ui.screens.quiz.QuizMode
 import com.example.tubespm.ui.screens.quiz.QuizScreen
+import com.example.tubespm.ui.screens.siswa.homepage.HomeScreen
+import com.example.tubespm.ui.screens.siswa.profile.ProfileScreen
 
 @Composable
 fun NavGraph(navController: NavHostController) {

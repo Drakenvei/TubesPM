@@ -1,4 +1,4 @@
-package com.example.tubespm.ui.screens.activity
+package com.example.tubespm.ui.screens.siswa.activity
 
 import android.app.Dialog
 import android.view.Surface

@@ -3,6 +3,8 @@ plugins {
     alias(libs.plugins.kotlin.android)
     alias(libs.plugins.kotlin.compose)
     id("com.google.gms.google-services")
+    id("com.google.dagger.hilt.android")
+    kotlin("kapt")
 }
 
 android {
@@ -46,12 +48,31 @@ android {
 }
 
 dependencies {
+
+    // Hilt
+    implementation("com.google.dagger:hilt-android:2.48") // Versi Hilt terbaru
+    kapt("com.google.dagger:hilt-compiler:2.48")
+    implementation("androidx.hilt:hilt-navigation-compose:1.0.0")
+
+// ViewModel & Coroutines
+    implementation("androidx.lifecycle:lifecycle-viewmodel-ktx:2.6.2")
+    implementation("androidx.lifecycle:lifecycle-runtime-ktx:2.6.2")
+    implementation("org.jetbrains.kotlinx:kotlinx-coroutines-core:1.7.3")
+    implementation("org.jetbrains.kotlinx:kotlinx-coroutines-play-services:1.7.3") // Untuk await() di Firestore
+
 // Firebase (use BOM)
     implementation(platform("com.google.firebase:firebase-bom:34.3.0"))
 
+    // WAJIB (untuk arsitektur reaktif kita)
+    implementation("com.google.firebase:firebase-firestore-ktx")
+
+    // SANGAT DIREKOMENDASIKAN (untuk coroutine yang konsisten)
+    implementation("com.google.firebase:firebase-auth-ktx") // Diubah dari non-KTX
+
+    // OPSIONAL (boleh tetap, boleh ganti)
     implementation("com.google.firebase:firebase-analytics")
-    implementation("com.google.firebase:firebase-auth")
-    implementation("com.google.firebase:firebase-firestore")
+    // atau: implementation("com.google.firebase:firebase-analytics-ktx")
+
     implementation("androidx.compose.material:material-icons-extended")
     // Other libraries
     implementation(libs.androidx.core.ktx)

@@ -1,4 +1,4 @@
-package com.example.tubespm.ui.screens
+package com.example.tubespm.ui.screens.siswa.homepage
 
 import androidx.compose.foundation.Image
 import androidx.compose.foundation.background

@@ -1,4 +1,4 @@
-package com.example.tubespm.ui.screens.quiz
+package com.example.tubespm.ui.screens.siswa.quiz
 
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
