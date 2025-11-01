@@ -29,6 +29,7 @@ import com.example.tubespm.data.model.Tryout
 import com.example.tubespm.data.model.TryoutSection
 import com.example.tubespm.data.model.sampleTryoutList
 import com.example.tubespm.ui.screens.siswa.exercises.tryout.TryoutViewModel
+import com.google.firebase.firestore.Query
 
 //import com.example.tubespm.data.model.* // bisa juga import semua
 
@@ -40,6 +41,9 @@ fun TryoutScreen(
     // 2. Observasi state dari ViewModel
     val uiState by viewModel.uiState.collectAsState()
 
+    // Ambil state query pencarian dari ViewModel
+    val searchQuery by viewModel.searchQuery.collectAsState()
+
     // State lokal untuk dialog bisa tetap di sini
     var selectedTryout by remember { mutableStateOf<Tryout?>(null) }
 
@@ -49,7 +53,13 @@ fun TryoutScreen(
             .padding(horizontal = 16.dp)
     ) {
         Spacer(Modifier.height(16.dp))
-        SearchBarTryout()
+
+        //Berikan state dan fungsi ke SearchBar
+        SearchBarTryout(
+            query = searchQuery,
+            onQueryChanged = viewModel::onSearchQueryChanged // Cara singkat untuk: { viewModel.onSearchQueryChanged(it) }
+        )
+
         Spacer(Modifier.height(16.dp))
 
         // Daftar Tryout
@@ -113,11 +123,13 @@ fun TryoutScreen(
 }
 
 @Composable
-fun SearchBarTryout() {
-    var text by remember { mutableStateOf("") }
+fun SearchBarTryout(
+    query: String,
+    onQueryChanged: (String) -> Unit
+) {
     OutlinedTextField(
-        value = text,
-        onValueChange = {text = it},
+        value = query,
+        onValueChange = onQueryChanged,
         placeholder = { Text("Search...", color = Color.Black.copy(alpha = 0.5f)) },
         leadingIcon = { Icon(Icons.Default.Search, contentDescription = null, tint = Color.Black) },
         trailingIcon = { Icon(Icons.Outlined.FilterList, contentDescription = null, tint = Color.Black)},

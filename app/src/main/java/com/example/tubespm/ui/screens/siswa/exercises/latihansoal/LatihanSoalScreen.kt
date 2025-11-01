@@ -34,6 +34,10 @@ fun LatihanSoalScreen(
     viewModel: LatihanSoalViewModel = hiltViewModel() // 1. Dapatkan ViewModel
 ){
     val uiState by viewModel.uiState.collectAsState() // 2. Observasi state
+
+    // ambil state query pencarian dari ViewModel
+    val searchQuery by viewModel.searchQuery.collectAsState()
+
     var selectedLatihan by remember { mutableStateOf<LatihanSoal?>(null) }
 
     Column (
@@ -42,7 +46,14 @@ fun LatihanSoalScreen(
             .padding(horizontal = 16.dp)
     ) {
         Spacer(Modifier.height(16.dp))
-        SearchBarLatihanSoal()
+
+        // Berikan state dan fungsi ke SearchBar
+        SearchBarLatihanSoal(
+            query = searchQuery,
+            onQueryChanged = viewModel::onSearchQueryChanged
+
+        )
+
         Spacer(Modifier.height(16.dp))
 
         // 3. Tampilkan UI berdasarkan state
@@ -104,11 +115,13 @@ fun LatihanSoalScreen(
 
 // Search Bar
 @Composable
-fun SearchBarLatihanSoal() {
-    var text by remember { mutableStateOf("") }
+fun SearchBarLatihanSoal(
+    query: String,
+    onQueryChanged: (String) -> Unit
+) {
     OutlinedTextField(
-        value = text,
-        onValueChange = {text = it},
+        value = query,
+        onValueChange = onQueryChanged,
         placeholder = { Text("Search...", color = Color.Black.copy(alpha = 0.5f)) },
         leadingIcon = { Icon(Icons.Default.Search, contentDescription = null, tint = Color.Black) },
         trailingIcon = { Icon(Icons.Outlined.FilterList, contentDescription = null, tint = Color.Black)},
