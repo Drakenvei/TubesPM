@@ -9,8 +9,7 @@ import androidx.navigation.compose.NavHost
 import androidx.navigation.compose.composable
 import androidx.navigation.compose.rememberNavController
 import com.example.tubespm.ui.MainScreen
-import com.example.tubespm.ui.screens.auth.LoginScreen
-import com.example.tubespm.ui.screens.auth.RegisterScreen
+import com.example.tubespm.ui.screens.auth.AuthenticationScreen
 import com.example.tubespm.ui.screens.getstarted.GetStartedPage
 import com.example.tubespm.ui.screens.splash.SplashScreen
 import com.example.tubespm.ui.theme.TubesPMTheme
@@ -36,14 +35,19 @@ fun AppNavigation() {
     // Hapus auth dan db dari sini, ViewModel yang akan menanganinya
     NavHost(navController = navController, startDestination = "splash") {
         composable("splash") { SplashScreen(navController) }
-        composable("get_started") { GetStartedPage(onClick = { navController.navigate("login") }) }
+        composable("get_started") { GetStartedPage(onClick = { navController.navigate("auth") }) }
 
         // Composable sekarang memanggil layar yang sudah bersih
-        composable("login") {
-            LoginScreen(navController = navController) // ViewModel diambil di dalam
-        }
-        composable("register") {
-            RegisterScreen(navController = navController) // ViewModel diambil di dalam
+        composable("auth") {
+            AuthenticationScreen(
+                onAuthSuccess = {
+                    navController.navigate("main") {
+                        popUpTo("auth") {
+                            inclusive = true
+                        }
+                    }
+                }
+            )
         }
         composable("main") { MainScreen() }
     }

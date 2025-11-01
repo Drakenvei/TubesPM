@@ -27,107 +27,128 @@ import com.example.tubespm.ui.theme.TubesPMTheme
 import kotlinx.coroutines.flow.collectLatest
 
 @Composable
-fun RegisterScreen(
-    navController: NavHostController,
-    viewModel: AuthViewModel = hiltViewModel()
+fun RegisterContent(
+    uiState: AuthUiState,
+    onRegisterClicked: (String, String, String, String) -> Unit
 ) {
-    val context = LocalContext.current
     var name by remember { mutableStateOf("") }
     var email by remember { mutableStateOf("") }
     var password by remember { mutableStateOf("") }
     var confirm by remember { mutableStateOf("") }
     var passwordVisible by remember { mutableStateOf(false) }
+    var confirmPasswordVisible by remember { mutableStateOf(false) }
 
-    val uiState by viewModel.uiState.collectAsState()
+    Column(
+        horizontalAlignment = Alignment.CenterHorizontally
+    ) {
+        Spacer(modifier = Modifier.height(16.dp))
+        Text("Get started", color = Color.White, fontSize = 24.sp, fontWeight = FontWeight.Bold)
+        Text("Let's create your account!", color = Color.White, fontSize = 14.sp)
+        Spacer(modifier = Modifier.height(20.dp))
 
-    LaunchedEffect(key1 = true) {
-        viewModel.authEvent.collectLatest { event ->
-            when (event) {
-                is AuthEvent.NavigateToMain -> {
-                    navController.navigate("main") {
-                        popUpTo("register") { inclusive = true }
-                        // Jika register, mungkin ingin popUpTo("login") agar tidak bisa kembali
-                        // popUpTo("login") { inclusive = true }
-                    }
-                }
-                is AuthEvent.ShowToast -> {
-                    Toast.makeText(context, event.message, Toast.LENGTH_SHORT).show()
-                }
-            }
-        }
-    }
-
-    val gradient = Brush.verticalGradient(listOf(Color(0xFFFF004E), Color(0xFFFF7E30)))
-
-    Box(modifier = Modifier
-        .fillMaxSize()
-        .background(gradient)) {
-        Column(
-            horizontalAlignment = Alignment.CenterHorizontally,
-            modifier = Modifier
-                .fillMaxSize()
-                .padding(horizontal = 32.dp)
-        ) {
-            // ... (UI untuk logo, tombol sign in/up, dll)
-            Spacer(modifier = Modifier.height(60.dp))
-            Box(
-                modifier = Modifier
-                    .size(50.dp)
-                    .background(Color.LightGray, shape = RoundedCornerShape(25.dp))
+        OutlinedTextField(
+            value = name,
+            onValueChange = { name = it },
+            label = { Text("Your Name") },
+            modifier = Modifier.fillMaxWidth(),
+            singleLine = true,
+            shape = RoundedCornerShape(10.dp),
+            colors = OutlinedTextFieldDefaults.colors(
+                focusedContainerColor = Color.White,
+                unfocusedContainerColor = Color.White,
+                focusedBorderColor = Color.Transparent,
+                unfocusedBorderColor = Color.Transparent
             )
-            Spacer(modifier = Modifier.height(20.dp))
-            Row {
-                TextButton(onClick = { navController.navigate("login") }) {
-                    Text("Sign in", color = Color.White)
-                }
-                TextButton(onClick = { /* already here */ }) {
-                    Text("Sign up", color = Color.Black)
-                }
-            }
-            Spacer(modifier = Modifier.height(16.dp))
-            Text("Get started", color = Color.White, fontSize = 24.sp, fontWeight = FontWeight.Bold)
-            Text("Let's create your account!", color = Color.White, fontSize = 14.sp)
-            Spacer(modifier = Modifier.height(20.dp))
+        )
 
-            // ... (UI untuk semua OutlinedTextField)
-            OutlinedTextField(value = name, onValueChange = { name = it }, /* ... */)
-            Spacer(modifier = Modifier.height(12.dp))
-            OutlinedTextField(value = email, onValueChange = { email = it }, /* ... */)
-            Spacer(modifier = Modifier.height(12.dp))
-            OutlinedTextField(value = password, onValueChange = { password = it }, /* ... */)
-            Spacer(modifier = Modifier.height(12.dp))
-            OutlinedTextField(value = confirm, onValueChange = { confirm = it }, /* ... */)
+        Spacer(modifier = Modifier.height(12.dp))
 
-            Spacer(modifier = Modifier.height(24.dp))
+        OutlinedTextField(
+            value = email,
+            onValueChange = { email = it },
+            label = { Text("Email") },
+            modifier = Modifier.fillMaxWidth(),
+            singleLine = true,
+            shape = RoundedCornerShape(10.dp),
+            colors = OutlinedTextFieldDefaults.colors(
+                focusedContainerColor = Color.White,
+                unfocusedContainerColor = Color.White,
+                focusedBorderColor = Color.Transparent,
+                unfocusedBorderColor = Color.Transparent
+            )
+        )
 
-            Button(
-                onClick = {
-                    viewModel.register(name, email, password, confirm)
-                },
-                enabled = !uiState.isLoading,
-                modifier = Modifier
-                    .fillMaxWidth(0.85f)
-                    .height(52.dp),
-                shape = RoundedCornerShape(14.dp),
-                colors = ButtonDefaults.buttonColors(containerColor = Color(0xFFFF004E))
-            ) {
-                if (uiState.isLoading) {
-                    CircularProgressIndicator(color = Color.White, modifier = Modifier.size(24.dp))
-                } else {
-                    Text("Sign up", color = Color.White, fontSize = 16.sp)
+        Spacer(modifier = Modifier.height(12.dp))
+
+        OutlinedTextField(
+            value = password,
+            onValueChange = { password = it },
+            label = { Text("Password") },
+            modifier = Modifier.fillMaxWidth(),
+            singleLine = true,
+            shape = RoundedCornerShape(10.dp),
+            visualTransformation = if (passwordVisible) VisualTransformation.None else PasswordVisualTransformation(),
+            trailingIcon = {
+                IconButton(onClick = { passwordVisible = !passwordVisible }) {
+                    Icon(
+                        if (passwordVisible) Icons.Default.Visibility else Icons.Default.VisibilityOff,
+                        contentDescription = null
+                    )
                 }
+            },
+            colors = OutlinedTextFieldDefaults.colors(
+                focusedContainerColor = Color.White,
+                unfocusedContainerColor = Color.White,
+                focusedBorderColor = Color.Transparent,
+                unfocusedBorderColor = Color.Transparent
+            )
+        )
+
+        Spacer(modifier = Modifier.height(12.dp))
+
+        OutlinedTextField(
+            value = confirm,
+            onValueChange = { confirm = it },
+            label = { Text("Confirm Password") },
+            modifier = Modifier.fillMaxWidth(),
+            singleLine = true,
+            shape = RoundedCornerShape(10.dp),
+            visualTransformation = if (confirmPasswordVisible) VisualTransformation.None else PasswordVisualTransformation(),
+            trailingIcon = {
+                IconButton(onClick = { confirmPasswordVisible = !confirmPasswordVisible }) {
+                    Icon(
+                        if (confirmPasswordVisible) Icons.Default.Visibility else Icons.Default.VisibilityOff,
+                        contentDescription = null
+                    )
+                }
+            },
+            colors = OutlinedTextFieldDefaults.colors(
+                focusedContainerColor = Color.White,
+                unfocusedContainerColor = Color.White,
+                focusedBorderColor = Color.Transparent,
+                unfocusedBorderColor = Color.Transparent
+            )
+        )
+
+        Spacer(modifier = Modifier.height(24.dp))
+
+        Button(
+            onClick = {
+                onRegisterClicked(name, email, password, confirm)
+            },
+            enabled = !uiState.isLoading,
+            modifier = Modifier
+                .fillMaxWidth(0.85f)
+                .height(52.dp),
+            shape = RoundedCornerShape(14.dp),
+            colors = ButtonDefaults.buttonColors(containerColor = Color(0xFFFF004E))
+        ) {
+            if (uiState.isLoading) {
+                CircularProgressIndicator(color = Color.White, modifier = Modifier.size(24.dp))
+            } else {
+                Text("Sign up", color = Color.White, fontSize = 16.sp)
             }
         }
     }
 }
 
-// Tambahkan @Composable untuk OutlinedTextField yang berulang
-// (Saya singkat di sini agar tidak terlalu panjang, tapi UI-nya sama seperti di LoginScreen)
-
-@Preview(showBackground = true)
-@Composable
-fun RegisterScreenPreview() {
-    TubesPMTheme {
-        RegisterScreen(navController = rememberNavController())
-    }
-}
