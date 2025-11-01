@@ -64,10 +64,10 @@ dependencies {
     implementation(platform("com.google.firebase:firebase-bom:34.3.0"))
 
     // WAJIB (untuk arsitektur reaktif kita)
-    implementation("com.google.firebase:firebase-firestore-ktx")
+    implementation("com.google.firebase:firebase-firestore")
 
     // SANGAT DIREKOMENDASIKAN (untuk coroutine yang konsisten)
-    implementation("com.google.firebase:firebase-auth-ktx") // Diubah dari non-KTX
+    implementation("com.google.firebase:firebase-auth") // Diubah dari non-KTX
 
     // OPSIONAL (boleh tetap, boleh ganti)
     implementation("com.google.firebase:firebase-analytics")

@@ -17,10 +17,10 @@ import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.navigation.NavHostController
 import com.example.tubespm.data.model.QuizQuestion
-import com.example.tubespm.ui.screens.quiz.components.AnswerOption
-import com.example.tubespm.ui.screens.quiz.components.QuestionNavigator
-import com.example.tubespm.ui.screens.quiz.components.QuizBottomNavigation
-import com.example.tubespm.ui.screens.quiz.components.QuizTopBar
+import com.example.tubespm.ui.screens.siswa.quiz.components.QuestionNavigator
+import com.example.tubespm.ui.screens.siswa.quiz.components.QuizBottomNavigation
+import com.example.tubespm.ui.screens.siswa.quiz.components.QuizTopBar
+import com.example.tubespm.ui.screens.siswa.quiz.components.AnswerOption
 import kotlinx.coroutines.delay
 
 enum class QuizMode {
