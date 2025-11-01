@@ -24,126 +24,70 @@ import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.compose.ui.window.Dialog
+import androidx.hilt.navigation.compose.hiltViewModel
 import com.example.tubespm.data.model.Tryout
 import com.example.tubespm.data.model.TryoutSection
-import com.example.tubespm.repository.TryoutRepository
-import kotlinx.coroutines.launch
+import com.example.tubespm.data.model.sampleTryoutList
+import com.example.tubespm.ui.screens.siswa.exercises.tryout.TryoutViewModel
 
+//import com.example.tubespm.data.model.* // bisa juga import semua
+
+// Main Screen
 @Composable
-fun TryoutScreen() {
-    val repository = remember { TryoutRepository() }
-    val scope = rememberCoroutineScope()
+fun TryoutScreen(
+    viewModel: TryoutViewModel = hiltViewModel() // 1. Dapatkan ViewModel
+) {
+    // 2. Observasi state dari ViewModel
+    val uiState by viewModel.uiState.collectAsState()
 
-    var tryouts by remember { mutableStateOf<List<Tryout>>(emptyList()) }
-    var isLoading by remember { mutableStateOf(true) }
-    var errorMessage by remember { mutableStateOf<String?>(null) }
+    // State lokal untuk dialog bisa tetap di sini
     var selectedTryout by remember { mutableStateOf<Tryout?>(null) }
-    var searchQuery by remember { mutableStateOf("") }
 
-    // Load tryouts on first composition
-    LaunchedEffect(Unit) {
-        scope.launch {
-            isLoading = true
-            errorMessage = null
-            try {
-                tryouts = repository.getAllTryouts()
-            } catch (e: Exception) {
-                errorMessage = "Gagal memuat data: ${e.message}"
-            } finally {
-                isLoading = false
-            }
-        }
-    }
-
-    // Handle search
-    LaunchedEffect(searchQuery) {
-        if (searchQuery.isNotBlank()) {
-            scope.launch {
-                try {
-                    tryouts = repository.searchTryouts(searchQuery)
-                } catch (e: Exception) {
-                    errorMessage = "Gagal mencari: ${e.message}"
-                }
-            }
-        } else {
-            scope.launch {
-                tryouts = repository.getAllTryouts()
-            }
-        }
-    }
-
-    Column(
+    Column (
         modifier = Modifier
             .fillMaxSize()
             .padding(horizontal = 16.dp)
     ) {
         Spacer(Modifier.height(16.dp))
-
-        SearchBarTryout(
-            searchQuery = searchQuery,
-            onSearchQueryChange = { searchQuery = it }
-        )
-
+        SearchBarTryout()
         Spacer(Modifier.height(16.dp))
 
+        // Daftar Tryout
+        // 3. Tampilkan UI berdasarkan state
         when {
-            isLoading -> {
+            uiState.isLoading -> {
                 Box(
                     modifier = Modifier.fillMaxSize(),
                     contentAlignment = Alignment.Center
                 ) {
-                    CircularProgressIndicator(color = Color(0xFFE61C5D))
+                    CircularProgressIndicator()
                 }
             }
-            errorMessage != null -> {
-                Box(
-                    modifier = Modifier.fillMaxSize(),
-                    contentAlignment = Alignment.Center
-                ) {
-                    Column(horizontalAlignment = Alignment.CenterHorizontally) {
-                        Text(
-                            text = errorMessage ?: "Terjadi kesalahan",
-                            color = Color.Red,
-                            textAlign = TextAlign.Center
-                        )
-                        Spacer(Modifier.height(16.dp))
-                        Button(
-                            onClick = {
-                                scope.launch {
-                                    isLoading = true
-                                    errorMessage = null
-                                    tryouts = repository.getAllTryouts()
-                                    isLoading = false
-                                }
-                            },
-                            colors = ButtonDefaults.buttonColors(
-                                containerColor = Color(0xFFE61C5D)
-                            )
-                        ) {
-                            Text("Coba Lagi")
-                        }
-                    }
-                }
-            }
-            tryouts.isEmpty() -> {
+            uiState.error != null -> {
                 Box(
                     modifier = Modifier.fillMaxSize(),
                     contentAlignment = Alignment.Center
                 ) {
                     Text(
-                        text = if (searchQuery.isBlank())
-                            "Belum ada tryout tersedia"
-                        else
-                            "Tidak ada hasil untuk \"$searchQuery\"",
-                        color = Color.Gray
+                        text = "Error: ${uiState.error}",
+                        color = MaterialTheme.colorScheme.error
                     )
                 }
             }
+            uiState.tryouts.isEmpty() -> {
+                Box(
+                    modifier = Modifier.fillMaxSize(),
+                    contentAlignment = Alignment.Center
+                ) {
+                    Text(text = "Belum ada tryout yang tersedia.")
+                }
+            }
             else -> {
-                LazyColumn(
+                LazyColumn (
                     verticalArrangement = Arrangement.spacedBy(16.dp)
                 ) {
-                    items(tryouts) { tryout ->
+                    // 4. Gunakan data dari uiState.tryouts
+                    items(uiState.tryouts) { tryout ->
                         TryoutCard(tryout) {
                             selectedTryout = tryout
                         }
@@ -151,6 +95,7 @@ fun TryoutScreen() {
                 }
             }
         }
+
     }
 
     // Modal Detail
@@ -159,24 +104,23 @@ fun TryoutScreen() {
             tryout = it,
             onDismiss = { selectedTryout = null },
             onStart = {
+                // Aksi ketika tombol "Ambil Tryout" ditekan
+                // Misalnya navigasi ke halaman pengerjaan
                 selectedTryout = null
-                // Navigate to quiz screen
             }
         )
     }
 }
 
 @Composable
-fun SearchBarTryout(
-    searchQuery: String,
-    onSearchQueryChange: (String) -> Unit
-) {
+fun SearchBarTryout() {
+    var text by remember { mutableStateOf("") }
     OutlinedTextField(
-        value = searchQuery,
-        onValueChange = onSearchQueryChange,
+        value = text,
+        onValueChange = {text = it},
         placeholder = { Text("Search...", color = Color.Black.copy(alpha = 0.5f)) },
         leadingIcon = { Icon(Icons.Default.Search, contentDescription = null, tint = Color.Black) },
-        trailingIcon = { Icon(Icons.Outlined.FilterList, contentDescription = null, tint = Color.Black) },
+        trailingIcon = { Icon(Icons.Outlined.FilterList, contentDescription = null, tint = Color.Black)},
         shape = RoundedCornerShape(12.dp),
         modifier = Modifier
             .fillMaxWidth()
@@ -191,16 +135,17 @@ fun SearchBarTryout(
     )
 }
 
+// Tryout Card
 @Composable
 fun TryoutCard(tryout: Tryout, onClick: () -> Unit) {
-    Card(
+    Card (
         modifier = Modifier
             .fillMaxWidth()
-            .clickable { onClick() },
+            .clickable {onClick()},
         shape = RoundedCornerShape(12.dp),
         colors = CardDefaults.cardColors(containerColor = Color(0xFFE61C5D))
     ) {
-        Column(
+        Column (
             modifier = Modifier.padding(16.dp)
         ) {
             Text(
@@ -210,7 +155,7 @@ fun TryoutCard(tryout: Tryout, onClick: () -> Unit) {
             )
             Spacer(Modifier.height(8.dp))
 
-            Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
+            Column (verticalArrangement = Arrangement.spacedBy(8.dp)) {
                 tryout.sections.forEach { section ->
                     TryoutSectionRow(section = section)
                 }
@@ -221,10 +166,11 @@ fun TryoutCard(tryout: Tryout, onClick: () -> Unit) {
 
 @Composable
 fun TryoutSectionRow(section: TryoutSection) {
-    Row(
+    Row (
         modifier = Modifier.fillMaxWidth(),
         verticalAlignment = Alignment.CenterVertically
     ) {
+        // Tag (e.g., "TPS", "Literasi")
         Box(
             modifier = Modifier
                 .clip(RoundedCornerShape(8.dp))
@@ -241,6 +187,7 @@ fun TryoutSectionRow(section: TryoutSection) {
 
         Spacer(Modifier.weight(1f))
 
+        //Details
         Icon(
             imageVector = Icons.Filled.Description,
             contentDescription = "Jumlah Soal",
@@ -269,6 +216,7 @@ fun TryoutSectionRow(section: TryoutSection) {
     }
 }
 
+// Detail Dialog
 @Composable
 fun TryoutDetailDialog(
     tryout: Tryout,
@@ -285,12 +233,15 @@ fun TryoutDetailDialog(
                     .fillMaxWidth()
                     .padding(16.dp)
             ) {
+                // Header dengan X dan judul
                 Row(
                     modifier = Modifier.fillMaxWidth(),
                     verticalAlignment = Alignment.CenterVertically,
                     horizontalArrangement = Arrangement.SpaceBetween
                 ) {
-                    IconButton(onClick = onDismiss) {
+                    IconButton(
+                        onClick = onDismiss,
+                    ) {
                         Icon(
                             imageVector = Icons.Filled.Close,
                             contentDescription = "Close",
@@ -309,11 +260,13 @@ fun TryoutDetailDialog(
                         modifier = Modifier.weight(1f)
                     )
 
+                    // Spacer agar teks tetap di tengah meski tombol hanya di kiri
                     Spacer(modifier = Modifier.size(48.dp))
                 }
 
                 Spacer(Modifier.height(16.dp))
 
+                // Detail Tryout
                 Text("Detail Tryout", fontWeight = FontWeight.Bold, fontSize = 16.sp)
                 Spacer(Modifier.height(4.dp))
                 Text("Kode Paket: ${tryout.code}", style = MaterialTheme.typography.bodyMedium)
@@ -322,20 +275,21 @@ fun TryoutDetailDialog(
 
                 Divider(Modifier.padding(vertical = 12.dp))
 
+                // Sections
                 LazyColumn(modifier = Modifier.heightIn(max = 350.dp)) {
                     items(tryout.sections) { section ->
                         Text(section.displayName, fontWeight = FontWeight.Bold, fontSize = 16.sp)
                         Spacer(Modifier.height(8.dp))
                         Column(modifier = Modifier.padding(start = 8.dp)) {
                             section.subSections.forEachIndexed { index, subSection ->
-                                Column(modifier = Modifier.padding(bottom = 8.dp)) {
+                                Column (modifier = Modifier.padding(bottom = 8.dp)) {
                                     Text(
                                         "${index + 1}. ${subSection.name} (${subSection.questionCount} soal, ${subSection.duration} menit)",
                                         style = MaterialTheme.typography.bodyMedium,
                                         fontWeight = FontWeight.SemiBold
                                     )
                                     if (subSection.kisiKisi.isNotEmpty()) {
-                                        Column(modifier = Modifier.padding(start = 16.dp, top = 4.dp)) {
+                                        Column (modifier = Modifier.padding(start = 16.dp, top = 4.dp)) {
                                             subSection.kisiKisi.forEach { kisi ->
                                                 Text(
                                                     text = "- $kisi",
@@ -346,6 +300,7 @@ fun TryoutDetailDialog(
                                         }
                                     }
                                 }
+
                             }
                         }
                         Spacer(Modifier.height(16.dp))

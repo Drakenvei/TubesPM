@@ -1,26 +1,30 @@
 package com.example.tubespm.data.model
 
-data class  SubSectionDetail(
-    val name: String,
-    val questionCount: Int,
-    val duration: Int,
-    val kisiKisi: List<String>
+// Tambahkan default value (misal: "", 0, emptyList()) untuk SEMUA properti
+
+data class SubSectionDetail(
+    val name: String = "",
+    val questionCount: Int = 0,
+    val duration: Int = 0,
+    val kisiKisi: List<String> = emptyList()
 )
 
 data class TryoutSection(
-    val title: String,
-    val displayName: String,
-    val totalQuestions: Int,
-    val totalDuration: Int,
-    val subSections: List<SubSectionDetail>
+    val title: String = "",
+    val displayName: String = "",
+    val totalQuestions: Int = 0,
+    val totalDuration: Int = 0,
+    val subSections: List<SubSectionDetail> = emptyList()
 )
 
 data class Tryout(
-    val id: Int,
-    val title: String,
-    val code: String,
-    val sections: List<TryoutSection>
+    val id: Int = 0,
+    val title: String = "",
+    val code: String = "",
+    val status: String = "", // Tambahkan field status jika ada
+    val sections: List<TryoutSection> = emptyList()
 ) {
+    // Properti ini tidak masalah, karena bukan bagian dari data Firestore
     val totalQuestions: Int
         get() = sections.sumOf { it.totalQuestions }
     val totalDuration: Int

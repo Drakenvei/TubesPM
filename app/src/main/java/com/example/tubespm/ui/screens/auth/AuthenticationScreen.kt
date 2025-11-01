@@ -40,7 +40,7 @@ fun AuthenticationScreen(
         viewModel.authEvent.collectLatest { event ->
             when (event) {
                 is AuthEvent.NavigateToMain ->  {
-                    onAuthSuccess
+                    onAuthSuccess()
                 }
                 is AuthEvent.ShowToast -> {
                     Toast.makeText(context, event.message, Toast.LENGTH_SHORT).show()

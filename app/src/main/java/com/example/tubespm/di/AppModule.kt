@@ -1,5 +1,7 @@
 package com.example.tubespm.di
 
+import com.example.tubespm.repository.ExerciseCatalogRepository
+import com.example.tubespm.repository.ExerciseCatalogRepositoryImpl
 import com.google.firebase.auth.FirebaseAuth
 import com.google.firebase.firestore.FirebaseFirestore
 import dagger.Module
@@ -19,4 +21,13 @@ object AppModule {
     @Provides
     @Singleton
     fun provideFirebaseFirestore(): FirebaseFirestore = FirebaseFirestore.getInstance()
+
+    @Provides
+    @Singleton
+    fun provideExerciseCatalogRepository(db: FirebaseFirestore): ExerciseCatalogRepository {
+        // Saat ViewModel meminta ExerciseCatalogRepository, Hilt akan membuat
+        // dan memberikannya ExerciseCatalogRepositoryImpl
+        return ExerciseCatalogRepositoryImpl(db)
+    }
+
 }
