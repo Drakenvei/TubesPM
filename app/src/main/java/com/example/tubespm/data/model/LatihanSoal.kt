@@ -1,11 +1,12 @@
 package com.example.tubespm.data.model
 
 data class LatihanSoal(
-    val id: Int,
-    val title: String,
-    val subtest: String,
-    val questionCount: Int,
-    val kisiKisi: List<String>
+    val id: Int = 0,
+    val title: String = "",
+    val subtest: String = "",
+    val questionCount: Int = 0,
+    val kisiKisi: List<String> = emptyList(),
+    val status: String = ""
 )
 
 // Data Dummy
