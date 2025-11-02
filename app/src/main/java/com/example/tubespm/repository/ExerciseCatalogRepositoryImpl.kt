@@ -15,6 +15,7 @@ class ExerciseCatalogRepositoryImpl @Inject constructor(
     override fun getTryouts(): Flow<List<Tryout>> {
         // .snapshots() secara otomatis memberikan data real-time (Flow)
         return db.collection("tryouts")
+            .whereEqualTo("status", "active")
             .snapshots()
             .map { snapshots ->
                 // Mengubah dokumen Firestore menjadi list data class Tryout
@@ -24,6 +25,7 @@ class ExerciseCatalogRepositoryImpl @Inject constructor(
 
     override fun getLatihanSoal(): Flow<List<LatihanSoal>> {
         return db.collection("latihan_soal")
+            .whereEqualTo("status", "active")
             .snapshots()
             .map { snapshots ->
                 snapshots.toObjects(LatihanSoal::class.java)
