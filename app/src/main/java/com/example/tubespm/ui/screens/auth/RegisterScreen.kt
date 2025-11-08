@@ -32,13 +32,18 @@ import kotlinx.coroutines.flow.collectLatest
 
 @Composable
 fun RegisterContent(
-    uiState: AuthUiState,
-    onRegisterClicked: (String, String, String, String) -> Unit
+    name: String,
+    email: String,
+    pass: String,
+    confirm: String,
+    error: String?,
+    isLoading: Boolean,
+    onNameChanged: (String) -> Unit,
+    onEmailChanged: (String) -> Unit,
+    onPassChanged: (String) -> Unit,
+    onConfirmChanged: (String) -> Unit,
+    onRegisterClicked: () -> Unit
 ) {
-    var name by remember { mutableStateOf("") }
-    var email by remember { mutableStateOf("") }
-    var password by remember { mutableStateOf("") }
-    var confirm by remember { mutableStateOf("") }
     var passwordVisible by remember { mutableStateOf(false) }
     var confirmPasswordVisible by remember { mutableStateOf(false) }
 
@@ -64,7 +69,7 @@ fun RegisterContent(
 
         OutlinedTextField(
             value = name,
-            onValueChange = { name = it },
+            onValueChange = onNameChanged,
             label = {
                 Text(
                     "Your Name",
@@ -72,6 +77,7 @@ fun RegisterContent(
                     fontWeight = if (name.isNotEmpty() || nameFocused) FontWeight.Medium else FontWeight.Normal
                 )
             },
+            isError = error != null,
             modifier = Modifier
                 .fillMaxWidth()
                 .shadow(
@@ -90,7 +96,12 @@ fun RegisterContent(
                 focusedTextColor = Color.Black,
                 unfocusedTextColor = Color.Black,
                 focusedLabelColor = Color.White,
-                unfocusedLabelColor = Color.White
+                unfocusedLabelColor = Color.White,
+                // -- WARNA SAAT ERROR (KUNCI UTAMANYA DI SINI) --
+                errorContainerColor = Color.White.copy(alpha = 0.95f), // Background tetap putih
+                errorBorderColor = Color.White, // Border PUTIH saat error
+                errorLabelColor = Color.White, // Label "Email" tetap putih
+                errorTextColor = Color.Black // Teks yang diketik tetap hitam
             )
         )
 
@@ -105,7 +116,7 @@ fun RegisterContent(
 
         OutlinedTextField(
             value = email,
-            onValueChange = { email = it },
+            onValueChange = onEmailChanged,
             label = {
                 Text(
                     "Email",
@@ -113,6 +124,7 @@ fun RegisterContent(
                     fontWeight = if (email.isNotEmpty() || emailFocused) FontWeight.Medium else FontWeight.Normal
                 )
             },
+            isError = error != null,
             modifier = Modifier
                 .fillMaxWidth()
                 .shadow(
@@ -131,7 +143,13 @@ fun RegisterContent(
                 focusedTextColor = Color.Black,
                 unfocusedTextColor = Color.Black,
                 focusedLabelColor = Color.White,
-                unfocusedLabelColor = Color.White
+                unfocusedLabelColor = Color.White,
+
+                // -- WARNA SAAT ERROR (KUNCI UTAMANYA DI SINI) --
+                errorContainerColor = Color.White.copy(alpha = 0.95f), // Background tetap putih
+                errorBorderColor = Color.White, // Border PUTIH saat error
+                errorLabelColor = Color.White, // Label "Email" tetap putih
+                errorTextColor = Color.Black // Teks yang diketik tetap hitam
             )
         )
 
@@ -139,21 +157,22 @@ fun RegisterContent(
 
         // Password TextField dengan floating label
         val passwordElevation by animateDpAsState(
-            targetValue = if (password.isNotEmpty() || passwordFocused) 8.dp else 2.dp,
+            targetValue = if (pass.isNotEmpty() || passwordFocused) 8.dp else 2.dp,
             animationSpec = tween(300),
             label = "passwordElevation"
         )
 
         OutlinedTextField(
-            value = password,
-            onValueChange = { password = it },
+            value = pass,
+            onValueChange = onPassChanged,
             label = {
                 Text(
                     "Password",
-                    color = if (password.isNotEmpty() || passwordFocused) Color.White else Color.Gray.copy(alpha = 0.6f),
-                    fontWeight = if (password.isNotEmpty() || passwordFocused) FontWeight.Medium else FontWeight.Normal
+                    color = if (pass.isNotEmpty() || passwordFocused) Color.White else Color.Gray.copy(alpha = 0.6f),
+                    fontWeight = if (pass.isNotEmpty() || passwordFocused) FontWeight.Medium else FontWeight.Normal
                 )
             },
+            isError = error != null,
             modifier = Modifier
                 .fillMaxWidth()
                 .shadow(
@@ -182,7 +201,13 @@ fun RegisterContent(
                 focusedTextColor = Color.Black,
                 unfocusedTextColor = Color.Black,
                 focusedLabelColor = Color.White,
-                unfocusedLabelColor = Color.White
+                unfocusedLabelColor = Color.White,
+
+                // -- WARNA SAAT ERROR (KUNCI UTAMANYA DI SINI) --
+                errorContainerColor = Color.White.copy(alpha = 0.95f), // Background tetap putih
+                errorBorderColor = Color.White, // Border PUTIH saat error
+                errorLabelColor = Color.White, // Label "Email" tetap putih
+                errorTextColor = Color.Black // Teks yang diketik tetap hitam
             )
         )
 
@@ -197,7 +222,7 @@ fun RegisterContent(
 
         OutlinedTextField(
             value = confirm,
-            onValueChange = { confirm = it },
+            onValueChange = onConfirmChanged,
             label = {
                 Text(
                     "Confirm Password",
@@ -205,6 +230,7 @@ fun RegisterContent(
                     fontWeight = if (confirm.isNotEmpty() || confirmFocused) FontWeight.Medium else FontWeight.Normal
                 )
             },
+            isError = error != null,
             modifier = Modifier
                 .fillMaxWidth()
                 .shadow(
@@ -233,24 +259,38 @@ fun RegisterContent(
                 focusedTextColor = Color.Black,
                 unfocusedTextColor = Color.Black,
                 focusedLabelColor = Color.White,
-                unfocusedLabelColor = Color.White
+                unfocusedLabelColor = Color.White,
+
+                // -- WARNA SAAT ERROR (KUNCI UTAMANYA DI SINI) --
+                errorContainerColor = Color.White.copy(alpha = 0.95f), // Background tetap putih
+                errorBorderColor = Color.White, // Border PUTIH saat error
+                errorLabelColor = Color.White, // Label "Email" tetap putih
+                errorTextColor = Color.Black // Teks yang diketik tetap hitam
             )
         )
+
+        if (error != null) {
+            Text(
+                text = error,
+                color = MaterialTheme.colorScheme.error,
+                modifier = Modifier
+                    .padding(top = 8.dp)
+                    .align(Alignment.Start)
+            )
+        }
 
         Spacer(modifier = Modifier.height(24.dp))
 
         Button(
-            onClick = {
-                onRegisterClicked(name, email, password, confirm)
-            },
-            enabled = !uiState.isLoading,
+            onClick = onRegisterClicked,
+            enabled = !isLoading,
             modifier = Modifier
                 .fillMaxWidth(0.85f)
                 .height(52.dp),
             shape = RoundedCornerShape(14.dp),
             colors = ButtonDefaults.buttonColors(containerColor = Color(0xFFFF004E))
         ) {
-            if (uiState.isLoading) {
+            if (isLoading) {
                 CircularProgressIndicator(color = Color.White, modifier = Modifier.size(24.dp))
             } else {
                 Text("Sign up", color = Color.White, fontSize = 16.sp)

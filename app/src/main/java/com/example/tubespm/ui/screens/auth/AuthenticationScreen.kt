@@ -36,7 +36,7 @@ private enum class AuthView {
 
 @Composable
 fun AuthenticationScreen(
-    onAuthSuccess: ()-> Unit,
+    onAuthSuccess: (String)-> Unit,
     viewModel: AuthViewModel = hiltViewModel()
 ) {
     val context = LocalContext.current
@@ -47,8 +47,8 @@ fun AuthenticationScreen(
     LaunchedEffect(key1 = true) {
         viewModel.authEvent.collectLatest { event ->
             when (event) {
-                is AuthEvent.NavigateToMain ->  {
-                    onAuthSuccess()
+                is AuthEvent.NavigateWithRole ->  {
+                    onAuthSuccess(event.role)
                 }
                 is AuthEvent.ShowToast -> {
                     Toast.makeText(context, event.message, Toast.LENGTH_SHORT).show()
@@ -189,17 +189,27 @@ fun AuthenticationScreen(
             ) { view ->
                 if (view == AuthView.SIGN_IN) {
                     LoginContent(
-                        uiState = uiState,
-                        onLoginClicked = { email, pass ->
-                            viewModel.login(email, pass)
-                        }
+                        email = uiState.loginEmail,
+                        pass = uiState.loginPass,
+                        error = uiState.loginError,
+                        isLoading = uiState.isLoading,
+                        onEmailChanged = viewModel::onLoginEmailChanged,
+                        onPassChanged = viewModel::onLoginPassChanged,
+                        onLoginClicked = viewModel::login // Panggil fungsi tanpa parameter
                     )
                 } else {
                     RegisterContent(
-                        uiState = uiState,
-                        onRegisterClicked = { name, email, pass, confirm ->
-                            viewModel.register(name, email, pass, confirm)
-                        }
+                        name = uiState.regName,
+                        email = uiState.regEmail,
+                        pass = uiState.regPass,
+                        confirm = uiState.regConfirm,
+                        error = uiState.regError,
+                        isLoading = uiState.isLoading,
+                        onNameChanged = viewModel::onRegNameChanged,
+                        onEmailChanged = viewModel::onRegEmailChanged,
+                        onPassChanged = viewModel::onRegPassChanged,
+                        onConfirmChanged = viewModel::onRegConfirmChanged,
+                        onRegisterClicked = viewModel::register // Panggil fungsi tanpa parameter
                     )
                 }
             }

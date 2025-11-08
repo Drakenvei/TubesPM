@@ -4,13 +4,13 @@ import android.os.Bundle
 import androidx.activity.ComponentActivity
 import androidx.activity.compose.setContent
 import androidx.compose.runtime.Composable
-import androidx.navigation.NavHostController
 import androidx.navigation.compose.NavHost
 import androidx.navigation.compose.composable
 import androidx.navigation.compose.rememberNavController
-import com.example.tubespm.ui.MainScreen
+import com.example.tubespm.ui.screens.admin.AdminMainScreen
 import com.example.tubespm.ui.screens.auth.AuthenticationScreen
 import com.example.tubespm.ui.screens.getstarted.GetStartedPage
+import com.example.tubespm.ui.screens.siswa.SiswaMainScreen
 import com.example.tubespm.ui.screens.splash.SplashScreen
 import com.example.tubespm.ui.theme.TubesPMTheme
 import dagger.hilt.android.AndroidEntryPoint
@@ -40,8 +40,16 @@ fun AppNavigation() {
         // Composable sekarang memanggil layar yang sudah bersih
         composable("auth") {
             AuthenticationScreen(
-                onAuthSuccess = {
-                    navController.navigate("main") {
+                // Callback onAuthSuccess sekarang menerima 'role'
+                onAuthSuccess = { role ->
+                    // Callback onAuthSuccess sekarang menerima 'role'
+                    val destination = when (role){
+                        "admin" -> "admin_main"
+                        "siswa" -> "siswa_main"
+                        else -> "siswa_main" // Default ke siswa jika role tidak dikenali
+                    }
+                    navController.navigate(destination) {
+                        // Hapus tumpukan navigasi ke 'auth' agar tidak bisa kembali
                         popUpTo("auth") {
                             inclusive = true
                         }
@@ -49,6 +57,12 @@ fun AppNavigation() {
                 }
             )
         }
-        composable("main") { MainScreen() }
+
+        composable("siswa_main") {
+            SiswaMainScreen()
+        }
+        composable("admin_main"){
+            AdminMainScreen()
+        }
     }
 }

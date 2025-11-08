@@ -1,7 +1,6 @@
-package com.example.tubespm.ui
+package com.example.tubespm.ui.screens.siswa
 
 import androidx.compose.foundation.layout.WindowInsets
-import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.padding
 import androidx.compose.material3.*
 import androidx.compose.runtime.Composable
@@ -13,7 +12,7 @@ import com.example.tubespm.ui.navigation.BottomNavBar
 import com.example.tubespm.ui.navigation.NavGraph
 
 @Composable
-fun MainScreen() {
+fun SiswaMainScreen() {
     val navController = rememberNavController()
 
 //    Dapatkan rute (sebagai String) yang sedang aktif

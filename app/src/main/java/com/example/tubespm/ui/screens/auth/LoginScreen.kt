@@ -32,11 +32,14 @@ import kotlinx.coroutines.flow.collectLatest
 
 @Composable
 fun LoginContent(
-    uiState: AuthUiState,
-    onLoginClicked: (String, String) -> Unit
+    email: String,
+    pass: String,
+    error: String?,
+    isLoading: Boolean,
+    onEmailChanged: (String) -> Unit,
+    onPassChanged: (String) -> Unit,
+    onLoginClicked: () -> Unit
 ) {
-    var email by remember { mutableStateOf("") }
-    var password by remember { mutableStateOf("") }
     var passwordVisible by remember { mutableStateOf(false) }
     var emailFocused by remember { mutableStateOf(false) }
     var passwordFocused by remember { mutableStateOf(false) }
@@ -58,7 +61,7 @@ fun LoginContent(
 
         OutlinedTextField(
             value = email,
-            onValueChange = { email = it },
+            onValueChange = onEmailChanged,
             label = {
                 Text(
                     "Email",
@@ -66,6 +69,7 @@ fun LoginContent(
                     fontWeight = if (email.isNotEmpty() || emailFocused) FontWeight.Medium else FontWeight.Normal
                 )
             },
+            isError = error != null, // <-- DITAMBAHKAN: Tampilkan error
             modifier = Modifier
                 .fillMaxWidth()
                 .shadow(
@@ -84,7 +88,13 @@ fun LoginContent(
                 focusedTextColor = Color.Black,
                 unfocusedTextColor = Color.Black,
                 focusedLabelColor = Color.White,
-                unfocusedLabelColor = Color.White
+                unfocusedLabelColor = Color.White,
+
+                // -- WARNA SAAT ERROR (KUNCI UTAMANYA DI SINI) --
+                errorContainerColor = Color.White.copy(alpha = 0.95f), // Background tetap putih
+                errorBorderColor = Color.White, // Border PUTIH saat error
+                errorLabelColor = Color.White, // Label "Email" tetap putih
+                errorTextColor = Color.Black // Teks yang diketik tetap hitam
             )
         )
 
@@ -92,21 +102,22 @@ fun LoginContent(
 
         // Password TextField dengan floating label
         val passwordElevation by animateDpAsState(
-            targetValue = if (password.isNotEmpty() || passwordFocused) 8.dp else 2.dp,
+            targetValue = if (pass.isNotEmpty() || passwordFocused) 8.dp else 2.dp,
             animationSpec = tween(300),
             label = "passwordElevation"
         )
 
         OutlinedTextField(
-            value = password,
-            onValueChange = { password = it },
+            value = pass,
+            onValueChange = onPassChanged,
             label = {
                 Text(
                     "Password",
-                    color = if (password.isNotEmpty() || passwordFocused) Color.White else Color.Gray.copy(alpha = 0.6f),
-                    fontWeight = if (password.isNotEmpty() || passwordFocused) FontWeight.Medium else FontWeight.Normal
+                    color = if (pass.isNotEmpty() || passwordFocused) Color.White else Color.Gray.copy(alpha = 0.6f),
+                    fontWeight = if (pass.isNotEmpty() || passwordFocused) FontWeight.Medium else FontWeight.Normal
                 )
             },
+            isError = error != null, // <-- DITAMBAHKAN: Tampilkan error,
             modifier = Modifier
                 .fillMaxWidth()
                 .shadow(
@@ -135,27 +146,42 @@ fun LoginContent(
                 focusedTextColor = Color.Black,
                 unfocusedTextColor = Color.Black,
                 focusedLabelColor = Color.White,
-                unfocusedLabelColor = Color.White
+                unfocusedLabelColor = Color.White,
+
+                // -- WARNA SAAT ERROR (KUNCI UTAMANYA DI SINI) --
+                errorContainerColor = Color.White.copy(alpha = 0.95f), // Background tetap putih
+                errorBorderColor = Color.White, // Border PUTIH saat error
+                errorLabelColor = Color.White, // Label "Email" tetap putih
+                errorTextColor = Color.Black // Teks yang diketik tetap hitam
             )
         )
 
-        Spacer(modifier = Modifier.height(8.dp))
+        if (error != null){
+            Text(
+                text = error,
+                color = MaterialTheme.colorScheme.error, // Gunakan warna error dari tema
+                modifier = Modifier
+                    .padding(top = 8.dp)
+                    .align(Alignment.Start)
+            )
+        } else {
+            Spacer(modifier = Modifier.height(8.dp))
+        }
+
         Text("Forgot password?", color = Color.White, fontSize = 12.sp, modifier = Modifier.align(Alignment.End))
 
         Spacer(modifier = Modifier.height(32.dp))
 
         Button(
-            onClick = {
-                onLoginClicked(email, password)
-            },
-            enabled = !uiState.isLoading,
+            onClick = onLoginClicked,
+            enabled = !isLoading,
             modifier = Modifier
                 .fillMaxWidth()
                 .height(50.dp),
             shape = RoundedCornerShape(15.dp),
             colors = ButtonDefaults.buttonColors(containerColor = Color(0xFFFF004E))
         ) {
-            if (uiState.isLoading) {
+            if (isLoading) {
                 CircularProgressIndicator(color = Color.White, modifier = Modifier.size(24.dp))
             } else {
                 Text("Sign in", fontSize = 16.sp, color = Color.White)
