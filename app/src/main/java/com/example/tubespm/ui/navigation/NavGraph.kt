@@ -35,6 +35,7 @@ import com.example.tubespm.ui.screens.pembahasan.PembahasanScreen
 import com.example.tubespm.ui.screens.siswa.quiz.QuizMode
 import com.example.tubespm.ui.screens.siswa.quiz.QuizScreen
 import com.example.tubespm.ui.screens.siswa.homepage.HomeScreen
+import com.example.tubespm.ui.screens.siswa.profile.EditProfileScreen
 import com.example.tubespm.ui.screens.siswa.profile.ProfileScreen
 
 @Composable
@@ -44,7 +45,20 @@ fun NavGraph(navController: NavHostController) {
         composable("home") { HomeScreen() }
         composable("exercises") { ExerciseScreen() }
         composable("activity") { ActivityScreen(navController = navController) }
-        composable("profile") { ProfileScreen() }
+        composable("profile") {
+            ProfileScreen(
+                onEditClick = {
+                    navController.navigate("edit_profile")
+                },
+                onSettingsClick = {}
+            )
+        }
+
+        composable("edit_profile") {
+            EditProfileScreen (
+                onBackClick = {navController.popBackStack()}
+            )
+        }
 
         // Activity list screens
         composable("activity_tryout_list") {

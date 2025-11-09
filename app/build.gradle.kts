@@ -66,6 +66,12 @@ dependencies {
     // WAJIB (untuk arsitektur reaktif kita)
     implementation("com.google.firebase:firebase-firestore")
 
+    // Untuk menyimpan file/gambar
+    implementation("com.google.firebase:firebase-storage-ktx:21.0.2")
+
+    // Untuk memuat gambar dari URL/URI dengan mudah
+    implementation("io.coil-kt:coil-compose:2.6.0")
+
     // SANGAT DIREKOMENDASIKAN (untuk coroutine yang konsisten)
     implementation("com.google.firebase:firebase-auth") // Diubah dari non-KTX
 

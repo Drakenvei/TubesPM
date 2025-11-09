@@ -22,7 +22,6 @@ import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
-import androidx.core.splashscreen.SplashScreen
 import androidx.navigation.NavHostController
 import androidx.navigation.compose.rememberNavController
 import com.example.tubespm.ui.theme.TubesPMTheme
