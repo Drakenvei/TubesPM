@@ -136,7 +136,11 @@ class AuthViewModel @Inject constructor(
                 val userMap = mapOf(
                     "name" to name,
                     "email" to email,
-                    "role" to "siswa"
+                    "role" to "siswa",
+                    "school" to "",
+                    "profileImageUrl" to "",
+                    "tryoutCompleted" to 0,
+                    "latihanCompleted" to 0
                 )
                 db.collection("users").document(uid).set(userMap).await()
 
