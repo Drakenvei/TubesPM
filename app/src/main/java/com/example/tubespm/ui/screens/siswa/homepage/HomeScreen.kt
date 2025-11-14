@@ -41,6 +41,8 @@ import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.Dp
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
+import androidx.navigation.NavController
+import androidx.navigation.NavHostController
 import com.example.tubespm.R
 import com.example.tubespm.ui.theme.TubesPMTheme
 import com.google.firebase.auth.FirebaseAuth
@@ -48,7 +50,7 @@ import com.google.firebase.firestore.FirebaseFirestore
 
 @OptIn(ExperimentalMaterial3Api::class, ExperimentalAnimationApi::class)
 @Composable
-fun HomeScreen() {
+fun HomeScreen(navController : NavController) {
     val auth = FirebaseAuth.getInstance()
     val db = FirebaseFirestore.getInstance()
 
@@ -154,7 +156,9 @@ fun HomeScreen() {
                     // Notification Bell with Badge
                     Box {
                         IconButton(
-                            onClick = { /* TODO: Open notifications */ },
+                            onClick = { /* TODO: Open notifications */
+                                navController.navigate("notification")
+                            },
                             modifier = Modifier
                                 .clip(CircleShape)
                                 .background(Color.White.copy(alpha = 0.2f))
@@ -350,7 +354,7 @@ fun HomeScreen() {
         }
 
         Spacer(modifier = Modifier.height(32.dp))
-
+    //yg ngerjain backend tolong ini dibuat warna nya looping yah, tiap 5 tryout warna nya looping
         val tryoutScores = remember {
             listOf(
                 ChartData("Tryout 1", 567, Color(0xFFE91E63)),
@@ -370,6 +374,8 @@ fun HomeScreen() {
         )
     }
 }
+
+private fun Nothing?.navigate(string: String) {}
 
 @Composable
 fun CustomBarChart(
@@ -819,10 +825,10 @@ fun LatestQuestionCard(
     }
 }
 
-@Preview(showBackground = true)
-@Composable
-fun HomeScreenPreview() {
-    TubesPMTheme {
-        HomeScreen()
-    }
-}
+//@Preview(showBackground = true)
+//@Composable
+//fun HomeScreenPreview() {
+//    TubesPMTheme {
+//        HomeScreen()
+//    }
+//}
