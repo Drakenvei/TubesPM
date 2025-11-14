@@ -1,4 +1,4 @@
-package com.example.tubespm.ui.screens.siswa.activity
+package com.example.tubespm.ui.screens.siswa.activity.tryout
 
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
@@ -22,16 +22,24 @@ import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.compose.ui.window.Dialog
+import com.example.tubespm.data.model.Section
 import com.example.tubespm.data.model.Tryout
-import com.example.tubespm.data.model.TryoutSection
 
 @Composable
-fun TryoutBelumDikerjakanContent(tryouts: List<Tryout>, onCardClick: (Tryout) -> Unit) {
+fun TryoutBelumDikerjakanContent(
+    activities: List<ActivityTryoutDetail>,
+    onCardClick: (ActivityTryoutDetail) -> Unit
+) {
+    if (activities.isEmpty()) {
+        Box(modifier = Modifier.fillMaxSize(), contentAlignment = Alignment.Center) {
+            Text("Tidak ada tryout yang belum dikerjakan.")
+        }
+    }
     LazyColumn(contentPadding = PaddingValues(16.dp), verticalArrangement = Arrangement.spacedBy(16.dp)) {
-        items(tryouts) { tryout ->
+        items(activities) { activityDetail ->
             TryoutActivityCard(
-                tryout = tryout,
-                onClick = { onCardClick(tryout) }
+                tryout = activityDetail.tryout, //data dari UserActivity
+                onClick = { onCardClick(activityDetail) }
             )
         }
     }
@@ -50,6 +58,7 @@ fun TryoutActivityCard(tryout: Tryout, onClick: () -> Unit){
             Spacer(Modifier.height(8.dp))
             Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
                 tryout.sections.forEach { section ->
+                    // Kita bisa panggil TryoutSectionRow karena kita punya data 'section'
                     TryoutSectionRow(section = section)
                 }
             }
@@ -58,17 +67,17 @@ fun TryoutActivityCard(tryout: Tryout, onClick: () -> Unit){
 }
 
 @Composable
-fun TryoutSectionRow(section: TryoutSection) {
+fun TryoutSectionRow(section: Section) {
     Row(modifier = Modifier.fillMaxWidth(), verticalAlignment = Alignment.CenterVertically) {
         Box(
             modifier = Modifier.clip(RoundedCornerShape(8.dp)).background(Color.White.copy(alpha = 0.9f)).padding(horizontal = 10.dp, vertical = 4.dp)
         ) {
-            Text(section.title, color = Color(0xFFE61C5D), fontWeight = FontWeight.Bold, fontSize = 14.sp)
+            Text(section.sectionId.uppercase(), color = Color(0xFFE61C5D), fontWeight = FontWeight.Bold, fontSize = 14.sp)
         }
         Spacer(Modifier.weight(1f))
-        InfoRow(icon = Icons.Filled.Description, text = "${section.totalQuestions} soal")
+        InfoRow(icon = Icons.Filled.Description, text = "${section.sectionQuestionCount} soal")
         Spacer(Modifier.width(16.dp))
-        InfoRow(icon = Icons.Filled.Timer, text = "${section.totalDuration} menit")
+        InfoRow(icon = Icons.Filled.Timer, text = "${section.sectionDuration} menit")
     }
 }
 
@@ -80,7 +89,7 @@ fun TryoutDetailDialog(
     tryout: Tryout,
     onDismiss: () -> Unit,
     onStart: () -> Unit,
-    onCancel: () -> Unit // Parameter onCancel tetap ada
+    onCancel: () -> Unit
 ) {
     Dialog(onDismissRequest = onDismiss) {
         Surface(
@@ -92,7 +101,6 @@ fun TryoutDetailDialog(
                     .fillMaxWidth()
                     .padding(16.dp)
             ) {
-                // DIUBAH: Header sekarang dinamis
                 Row(
                     modifier = Modifier.fillMaxWidth(),
                     verticalAlignment = Alignment.CenterVertically,
@@ -117,31 +125,30 @@ fun TryoutDetailDialog(
 
                 Spacer(Modifier.height(16.dp))
 
-                // Detail konten tetap sama
                 Text("Detail Tryout", fontWeight = FontWeight.Bold, fontSize = 16.sp)
                 Spacer(Modifier.height(4.dp))
                 Text("Kode Paket: ${tryout.code}", style = MaterialTheme.typography.bodyMedium)
-                Text("Jumlah Soal: ${tryout.totalQuestions}", style = MaterialTheme.typography.bodyMedium)
+                Text("Jumlah Soal: ${tryout.totalQuestionCount}", style = MaterialTheme.typography.bodyMedium)
                 Text("Durasi: ${tryout.totalDuration} menit", style = MaterialTheme.typography.bodyMedium)
                 Divider(Modifier.padding(vertical = 12.dp))
 
                 LazyColumn(modifier = Modifier.heightIn(max = 300.dp)) {
                     items(tryout.sections) { section ->
-                        Text(section.displayName, fontWeight = FontWeight.Bold, fontSize = 16.sp)
+                        Text(section.sectionName, fontWeight = FontWeight.Bold, fontSize = 16.sp)
                         Spacer(Modifier.height(8.dp))
                         Column(modifier = Modifier.padding(start = 8.dp)) {
-                            section.subSections.forEachIndexed { index, subSection ->
+                            section.subtests.forEachIndexed { index, subtest ->
                                 Column(modifier = Modifier.padding(bottom = 8.dp)) {
                                     Text(
-                                        "${index + 1}. ${subSection.name} (${subSection.questionCount} soal, ${subSection.duration} menit)",
+                                        "${index + 1}. ${subtest.subtestName} (${subtest.questionCount} soal, ${subtest.duration} menit)",
                                         style = MaterialTheme.typography.bodyMedium,
                                         fontWeight = FontWeight.SemiBold
                                     )
-                                    if (subSection.kisiKisi.isNotEmpty()) {
+                                    if (subtest.topics.isNotEmpty()) {
                                         Column(modifier = Modifier.padding(start = 16.dp, top = 4.dp)) {
-                                            subSection.kisiKisi.forEach { kisi ->
+                                            subtest.topics.forEach { topic ->
                                                 Text(
-                                                    text = "- $kisi", // DIUBAH: Bullet point disesuaikan
+                                                    text = "- ${topic.name}",
                                                     style = MaterialTheme.typography.bodySmall,
                                                     color = Color.DarkGray
                                                 )

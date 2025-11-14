@@ -1,5 +1,7 @@
 package com.example.tubespm.di
 
+import com.example.tubespm.repository.ActivityRepository
+import com.example.tubespm.repository.ActivityRepositoryImpl
 import com.example.tubespm.repository.ExerciseCatalogRepository
 import com.example.tubespm.repository.ExerciseCatalogRepositoryImpl
 import com.example.tubespm.repository.UserRepository
@@ -48,5 +50,14 @@ object AppModule {
         db = db,
         storage = storage
     )
+
+    @Provides
+    @Singleton
+    fun provideActivityRepository(
+        db: FirebaseFirestore,
+        auth: FirebaseAuth
+    ): ActivityRepository {
+        return ActivityRepositoryImpl(db, auth)
+    }
 
 }

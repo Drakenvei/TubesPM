@@ -1,16 +1,16 @@
-package com.example.tubespm.ui.screens.siswa.activity
+package com.example.tubespm.ui.screens.siswa.activity.latihan
 
 import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.*
+import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.ArrowBack
 import androidx.compose.material3.*
 import androidx.compose.material3.TabRowDefaults.tabIndicatorOffset
 import androidx.compose.runtime.*
-import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Color
-import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
@@ -19,16 +19,15 @@ import com.example.tubespm.data.model.*
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
-fun ActivityTryoutScreen(navController : NavController) {
-    val belumDikerjakanList = remember { sampleTryoutList() }
-    val dalamProsesList = remember { sampleInProgressList() }
-    val selesaiList = remember { sampleCompletedList() }
+fun ActivityLatihanScreen(navController: NavController) {
+    val belumDikerjakanList = remember { sampleLatihanList() }
+    val dalamProsesList = remember { sampleLatihanInProgressList() }
+    val selesaiList = remember { sampleLatihanCompletedList() }
 
     var selectedTabIndex by remember { mutableStateOf(0) }
-    var tabs = listOf("Belum Dikerjakan", "Dalam Proses", "Selesai")
+    val tabs = listOf("Belum Dikerjakan", "Dalam Proses", "Selesai")
 
-    // State untuk mengontrol dialog detail
-    var showDetailDialogFor by remember { mutableStateOf<Tryout?>(null) }
+    var showDetailDialogFor by remember { mutableStateOf<LatihanSoal?>(null) }
 
     Column (
         modifier = Modifier
@@ -38,7 +37,7 @@ fun ActivityTryoutScreen(navController : NavController) {
         TopAppBar(
             title = {
                 Text(
-                    text = "Daftar Tryout",
+                    text = "Daftar Latihan",
                     style = MaterialTheme.typography.headlineMedium.copy(
                         fontWeight = FontWeight.Bold,
                         color = Color.White
@@ -46,8 +45,7 @@ fun ActivityTryoutScreen(navController : NavController) {
                 )
             },
             navigationIcon = {
-                // Tombol kembali ditambahkan di sini
-                IconButton(onClick = { navController.popBackStack() }) {
+                IconButton(onClick = {navController.popBackStack()}) {
                     Icon(
                         imageVector = Icons.AutoMirrored.Filled.ArrowBack,
                         contentDescription = "Kembali",
@@ -56,10 +54,9 @@ fun ActivityTryoutScreen(navController : NavController) {
                 }
             },
             colors = TopAppBarDefaults.topAppBarColors(
-                containerColor = Color(0xFFE61C5D) // Mengatur warna background
+                containerColor = Color(0xFFE61C5D)
             )
         )
-        // --- AKHIR PERUBAHAN ---
 
         TabRow(
             selectedTabIndex = selectedTabIndex,
@@ -79,49 +76,72 @@ fun ActivityTryoutScreen(navController : NavController) {
             }
         }
         when (selectedTabIndex) {
-            0 -> TryoutBelumDikerjakanContent(
-                    tryouts = belumDikerjakanList,
-                    onCardClick = { tryout ->
-                        showDetailDialogFor = tryout
-                    }
-                )
-            1 -> TryoutDalamProsesContent(
-                tryouts = dalamProsesList,
+            0 -> LatihanBelumDikerjakanContent(belumDikerjakanList) { latihan ->
+                showDetailDialogFor = latihan
+            }
+            1 -> LatihanDalamProsesContent(
+                latihanList = dalamProsesList,
                 onContinueClick = {
-                    navController.navigate("tryout_quiz")
+                    navController.navigate("latihan_quiz")
                 }
             )
-            2 -> TryoutSelesaiContent(selesaiList)
+            2 -> LatihanSelesaiContent(
+                latihanList = selesaiList,
+                navController = navController  // Tambahkan parameter ini
+            )
         }
     }
 
-    // Tampilkan dialog jika 'showDetailDialogFor' tidak null
-    showDetailDialogFor?.let { tryout ->
-        TryoutDetailDialog(
-            tryout = tryout,
+    // Dialog Detail
+    showDetailDialogFor?.let { latihan ->
+        LatihanDetailDialog(
+            latihan = latihan,
             onDismiss = { showDetailDialogFor = null },
             onStart = {
                 // INI BAGIAN PENTINGNYA
                 // 1. Tutup dialog
                 showDetailDialogFor = null
                 // 2. Lakukan navigasi ke QuizScreen
-                navController.navigate("tryout_quiz")
+                navController.navigate("latihan_quiz")
             },
-            onCancel = {
-                // TODO: Logika untuk membatalkan/menghapus tryout dari daftar
-                showDetailDialogFor = null
-            }
+            onCancel = { showDetailDialogFor = null }
         )
     }
-
 }
 
-// InfoRow adalah component
+// Component yang dipakai
 @Composable
-fun InfoRow(icon: ImageVector, text: String) {
-    Row(verticalAlignment = Alignment.CenterVertically) {
-        Icon(icon, contentDescription = null, tint = Color.White, modifier = Modifier.size(20.dp))
-        Spacer(Modifier.width(8.dp))
-        Text(text, color = Color.White, fontSize = 14.sp)
+fun SubtestTag(text: String) {
+    Box(
+        modifier = Modifier
+            .clip(RoundedCornerShape(8.dp))
+            .background(Color.White.copy(alpha = 0.9f))
+            .padding(horizontal = 10.dp, vertical = 4.dp)
+    ) {
+        Text(
+            text,
+            color = Color(0xFFE61C5D),
+            fontWeight = FontWeight.Bold,
+            fontSize = 14.sp
+        )
+    }
+}
+
+@Composable
+fun ActionButton(text: String, onClick: () -> Unit){
+    Button(
+        onClick = onClick,
+        shape = RoundedCornerShape(12.dp),
+        colors = ButtonDefaults.buttonColors(containerColor = Color(0xFF30D158)),
+        modifier = Modifier
+            .fillMaxWidth()
+            .height(48.dp)
+    ) {
+        Text(
+            text,
+            color = Color.Black,
+            fontWeight = FontWeight.Bold,
+            fontSize = 16.sp
+        )
     }
 }

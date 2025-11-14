@@ -27,6 +27,7 @@ import androidx.compose.ui.window.Dialog
 import androidx.hilt.navigation.compose.hiltViewModel
 import com.example.tubespm.data.model.Section
 import com.example.tubespm.data.model.Tryout
+import com.example.tubespm.ui.screens.siswa.exercises.tryout.TryoutCatalogItem
 import com.example.tubespm.ui.screens.siswa.exercises.tryout.TryoutViewModel
 import com.google.firebase.firestore.Query
 
@@ -44,7 +45,7 @@ fun TryoutScreen(
     val searchQuery by viewModel.searchQuery.collectAsState()
 
     // State lokal untuk dialog bisa tetap di sini
-    var selectedTryout by remember { mutableStateOf<Tryout?>(null) }
+    var selectedTryoutItem by remember { mutableStateOf<TryoutCatalogItem?>(null) }
 
     Column (
         modifier = Modifier
@@ -96,9 +97,9 @@ fun TryoutScreen(
                     verticalArrangement = Arrangement.spacedBy(16.dp)
                 ) {
                     // 4. Gunakan data dari uiState.tryouts
-                    items(uiState.tryouts) { tryout ->
-                        TryoutCard(tryout) {
-                            selectedTryout = tryout
+                    items(uiState.tryouts) { item ->
+                        TryoutCard(item.tryout) { //Kirim 'item.tryout' ke Card
+                            selectedTryoutItem = item //Simpan seluruh 'item'
                         }
                     }
                 }
@@ -108,14 +109,18 @@ fun TryoutScreen(
     }
 
     // Modal Detail
-    selectedTryout?.let {
+    selectedTryoutItem?.let { item -> //'item' adalah TryoutCatalogItem
         TryoutDetailDialog(
-            tryout = it,
-            onDismiss = { selectedTryout = null },
+            tryout = item.tryout, //Kirim data tryout-nya
+            isTaken = item.isTaken, //Kirim status 'isTaken'
+            onDismiss = { selectedTryoutItem = null },
             onStart = {
                 // Aksi ketika tombol "Ambil Tryout" ditekan
+                viewModel.takeTryout(item.tryout)
+
+                // Tutup dialog setelah diambil
                 // Misalnya navigasi ke halaman pengerjaan
-                selectedTryout = null
+                selectedTryoutItem = null
             }
         )
     }
@@ -231,6 +236,7 @@ fun TryoutSectionRow(section: Section) {
 @Composable
 fun TryoutDetailDialog(
     tryout: Tryout,
+    isTaken: Boolean,
     onDismiss: () -> Unit,
     onStart: () -> Unit
 ) {
@@ -322,15 +328,19 @@ fun TryoutDetailDialog(
 
                 Button(
                     onClick = onStart,
-                    colors = ButtonDefaults.buttonColors(containerColor = Color(0xFF30D158)),
+                    enabled = !isTaken, //Nonaktifkan jika 'isTaken' true
+                    colors = ButtonDefaults.buttonColors(
+                        containerColor = if (isTaken) Color.Gray else Color(0xFF30D158),
+                        disabledContainerColor = Color.Gray.copy(alpha = 0.5f)
+                    ),
                     shape = RoundedCornerShape(12.dp),
                     modifier = Modifier
                         .fillMaxWidth()
                         .height(50.dp)
                 ) {
                     Text(
-                        "Ambil Tryout",
-                        color = Color.Black,
+                        text = if (isTaken) "Sudah Diambil" else "Ambil Tryout",
+                        color = if (isTaken) Color.White else Color.Black,
                         fontWeight = FontWeight.Bold,
                         textAlign = TextAlign.Center,
                         fontSize = 18.sp
