@@ -6,9 +6,9 @@ import androidx.navigation.compose.NavHost
 import androidx.navigation.compose.composable
 import com.example.tubespm.data.model.sampleQuestionsWithExplanation
 import com.example.tubespm.data.model.sampleQuizQuestions
-import com.example.tubespm.ui.screens.siswa.activity.latihan.ActivityLatihanScreen
+import com.example.tubespm.ui.screens.siswa.activity.ActivityLatihanScreen
 import com.example.tubespm.ui.screens.siswa.activity.ActivityScreen
-import com.example.tubespm.ui.screens.siswa.activity.tryout.ActivityTryoutScreen
+import com.example.tubespm.ui.screens.siswa.activity.ActivityTryoutScreen
 import com.example.tubespm.ui.screens.siswa.exercises.ExerciseScreen
 import com.example.tubespm.ui.screens.pembahasan.PembahasanScreen
 import com.example.tubespm.ui.screens.siswa.quiz.QuizMode

@@ -1,4 +1,4 @@
-package com.example.tubespm.ui.screens.siswa.activity.latihan
+package com.example.tubespm.ui.screens.siswa.activity
 
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column

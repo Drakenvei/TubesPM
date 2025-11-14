@@ -1,4 +1,4 @@
-package com.example.tubespm.ui.screens.siswa.activity.tryout
+package com.example.tubespm.ui.screens.siswa.activity
 
 import com.example.tubespm.data.model.Tryout
 import com.example.tubespm.data.model.UserActivity

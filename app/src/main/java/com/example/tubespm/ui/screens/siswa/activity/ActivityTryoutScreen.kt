@@ -1,4 +1,4 @@
-package com.example.tubespm.ui.screens.siswa.activity.tryout
+package com.example.tubespm.ui.screens.siswa.activity
 
 import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.*
