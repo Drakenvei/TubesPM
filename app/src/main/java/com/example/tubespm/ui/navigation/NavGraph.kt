@@ -22,6 +22,7 @@ import com.example.tubespm.ui.screens.siswa.activity.ActivityScreen
 import com.example.tubespm.ui.screens.siswa.activity.ActivityTryoutScreen
 import com.example.tubespm.ui.screens.siswa.exercises.ExerciseScreen
 import com.example.tubespm.ui.screens.siswa.homepage.HomeScreen
+import com.example.tubespm.ui.screens.siswa.notification.NotificationScreen
 import com.example.tubespm.ui.screens.siswa.profile.EditProfileScreen
 import com.example.tubespm.ui.screens.siswa.profile.ProfileScreen
 import com.example.tubespm.ui.screens.siswa.quiz.QuizMode
@@ -56,7 +57,7 @@ fun StudentNavGraph(
             .padding(paddingValues)
     ) {
         // --- Bottom bar screens ---
-        composable("home") { HomeScreen() }
+        composable("home") { HomeScreen(navController = navController) }
         composable("exercises") { ExerciseScreen() }
         composable("activity") { ActivityScreen(navController = navController) }
         composable("profile") {
@@ -64,6 +65,10 @@ fun StudentNavGraph(
                 onEditClick = { navController.navigate("edit_profile") },
                 onSettingsClick = {}
             )
+        }
+
+        composable("notification") {
+            NotificationScreen(onBackClick = {navController.popBackStack()})
         }
 
         // --- Profile / Edit ---
