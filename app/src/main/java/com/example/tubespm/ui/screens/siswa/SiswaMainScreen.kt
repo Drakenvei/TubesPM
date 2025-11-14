@@ -9,16 +9,17 @@ import androidx.compose.ui.Modifier
 import androidx.navigation.compose.currentBackStackEntryAsState
 import androidx.navigation.compose.rememberNavController
 import com.example.tubespm.ui.navigation.BottomNavBar
-import com.example.tubespm.ui.navigation.NavGraph
+import com.example.tubespm.ui.navigation.StudentNavGraph
 
 @Composable
 fun SiswaMainScreen() {
     val navController = rememberNavController()
 
-//    Dapatkan rute (sebagai String) yang sedang aktif
+    // Dapatkan rute yang sedang aktif
     val navBackStackEntry by navController.currentBackStackEntryAsState()
     val currentRoute = navBackStackEntry?.destination?.route
 
+    // TAMPILKAN BOTTOM BAR HANYA DI 4 ROUTE UTAMA
     val showBottomBar = when (currentRoute) {
         "home",
         "exercises",
@@ -28,7 +29,6 @@ fun SiswaMainScreen() {
     }
 
     Scaffold(
-        // 3. Jadikan bottomBar kondisional berdasarkan variabel showBottomBar
         bottomBar = {
             if (showBottomBar) {
                 BottomNavBar(navController)
@@ -36,10 +36,9 @@ fun SiswaMainScreen() {
         },
         contentWindowInsets = WindowInsets(0, 0, 0, 0)
     ) { innerPadding ->
-        Surface(
-            modifier = Modifier.padding(innerPadding)
-        ) {
-            NavGraph(navController = navController)
-        }
+        StudentNavGraph(
+            navController = navController,
+            paddingValues = innerPadding
+        )
     }
 }
