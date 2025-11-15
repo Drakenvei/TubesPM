@@ -7,7 +7,12 @@ import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
-import androidx.compose.material.icons.filled.*
+import androidx.compose.material.icons.filled.Add
+import androidx.compose.material.icons.filled.Assignment
+import androidx.compose.material.icons.filled.Description
+import androidx.compose.material.icons.filled.Schedule
+import androidx.compose.material.icons.filled.Search
+import androidx.compose.material.icons.filled.Settings
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
@@ -19,6 +24,9 @@ import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import com.example.tubespm.ui.theme.TubesPMTheme
 
+// ======================================================
+// DATA MODEL TRYOUT
+// ======================================================
 data class TryoutPackage(
     val id: String,
     val name: String,
@@ -29,10 +37,17 @@ data class TryoutPackage(
     val literasiMenit: Int
 )
 
+// ======================================================
+// SCREEN UTAMA MANAGEMEN TRYOUT + LATIHAN SOAL (TAB)
+// ======================================================
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
-fun ManajemenTryoutScreen() {
+fun ManajemenTryoutScreen(
+    // padding dari AdminRoot / AdminMainScreen (Scaffold dengan BottomNavbarAdmin)
+    paddingValuesFromNavHost: PaddingValues
+) {
     var searchQuery by remember { mutableStateOf("") }
+    var selectedTab by remember { mutableStateOf(0) }
 
     val tryoutPackages = remember {
         listOf(
@@ -66,7 +81,10 @@ fun ManajemenTryoutScreen() {
         )
     }
 
+    // PERBAIKAN: kasih background langsung ke Scaffold
     Scaffold(
+        modifier = Modifier.fillMaxSize(),
+        containerColor = Color(0xFFF5F5F5), // <<-- BUKAN hitam lagi
         topBar = {
             TopAppBar(
                 title = {
@@ -82,7 +100,10 @@ fun ManajemenTryoutScreen() {
                         )
                         Spacer(modifier = Modifier.width(12.dp))
                         Text(
-                            text = "Manajemen Tryout",
+                            text = if (selectedTab == 0)
+                                "Manajemen Tryout"
+                            else
+                                "Manajemen Latihan Soal",
                             color = Color.White,
                             fontSize = 20.sp,
                             fontWeight = FontWeight.SemiBold
@@ -90,97 +111,149 @@ fun ManajemenTryoutScreen() {
                     }
                 },
                 colors = TopAppBarDefaults.topAppBarColors(
-                    containerColor = Color(0xFFFF9966)
+                    containerColor = Color(0xFFFF9966),
+                    titleContentColor = Color.White
                 )
             )
         },
         floatingActionButton = {
             FloatingActionButton(
-                onClick = { /* Handle add new tryout */ },
+                onClick = {
+                    // TODO:
+                    // if (selectedTab == 0) { tambah paket tryout }
+                    // else { tambah paket latihan soal }
+                },
                 containerColor = Color(0xFF00C853),
                 contentColor = Color.White,
                 shape = CircleShape
             ) {
                 Icon(
                     imageVector = Icons.Default.Add,
-                    contentDescription = "Add Tryout",
+                    contentDescription = "Add",
                     modifier = Modifier.size(32.dp)
                 )
             }
-        },
-        bottomBar = {
-            NavigationBar(
-                containerColor = Color.White,
-                contentColor = Color.Gray
-            ) {
-                NavigationBarItem(
-                    selected = false,
-                    onClick = { },
-                    icon = { Icon(Icons.Default.Home, contentDescription = "Home") }
-                )
-                NavigationBarItem(
-                    selected = false,
-                    onClick = { },
-                    icon = { Icon(Icons.Default.Search, contentDescription = "Search") }
-                )
-                NavigationBarItem(
-                    selected = true,
-                    onClick = { },
-                    icon = { Icon(Icons.Default.Description, contentDescription = "Activity") },
-                    label = { Text("Activity") }
-                )
-                NavigationBarItem(
-                    selected = false,
-                    onClick = { },
-                    icon = { Icon(Icons.Default.Person, contentDescription = "Profile") }
-                )
-            }
         }
-    ) { paddingValues ->
+    ) { innerPadding ->
+        // PERBAIKAN: Column tidak lagi pakai background sendiri,
+        // jadi semua area termasuk padding atas & bawah sudah abu-abu.
         Column(
             modifier = Modifier
                 .fillMaxSize()
-                .padding(paddingValues)
-                .background(Color(0xFFF5F5F5))
+                // padding dari TopAppBar / FAB
+                .padding(innerPadding)
+                // padding dari AdminRoot (untuk menghindari overlap bottom bar)
+                .padding(paddingValuesFromNavHost)
         ) {
-            // Search Bar
-            OutlinedTextField(
-                value = searchQuery,
-                onValueChange = { searchQuery = it },
-                modifier = Modifier
-                    .fillMaxWidth()
-                    .padding(16.dp),
-                placeholder = { Text("Search", color = Color.Gray) },
-                leadingIcon = {
-                    Icon(
-                        imageVector = Icons.Default.Search,
-                        contentDescription = "Search",
-                        tint = Color.Gray
-                    )
-                },
-                colors = OutlinedTextFieldDefaults.colors(
-                    focusedContainerColor = Color(0xFFE0E0E0),
-                    unfocusedContainerColor = Color(0xFFE0E0E0),
-                    focusedBorderColor = Color.Transparent,
-                    unfocusedBorderColor = Color.Transparent
-                ),
-                shape = RoundedCornerShape(8.dp)
-            )
 
-            // Tryout List
-            LazyColumn(
-                modifier = Modifier.fillMaxSize(),
-                contentPadding = PaddingValues(horizontal = 16.dp, vertical = 8.dp),
-                verticalArrangement = Arrangement.spacedBy(16.dp)
+            // ==================================================
+            // TABROW: TRYOUT & LATIHAN SOAL
+            // ==================================================
+            TabRow(
+                selectedTabIndex = selectedTab,
+                containerColor = Color.White,
+                contentColor = Color.Black
             ) {
-                items(tryoutPackages) { tryoutPackage ->
-                    TryoutPackageCard(tryoutPackage)
+                Tab(
+                    selected = selectedTab == 0,
+                    onClick = { selectedTab = 0 }
+                ) {
+                    Text(
+                        text = "Tryout",
+                        modifier = Modifier.padding(vertical = 12.dp),
+                        fontWeight = if (selectedTab == 0) FontWeight.Bold else FontWeight.Normal
+                    )
+                }
+                Tab(
+                    selected = selectedTab == 1,
+                    onClick = { selectedTab = 1 }
+                ) {
+                    Text(
+                        text = "Latihan Soal",
+                        modifier = Modifier.padding(vertical = 12.dp),
+                        fontWeight = if (selectedTab == 1) FontWeight.Bold else FontWeight.Normal
+                    )
+                }
+            }
+
+            // ==================================================
+            // KONTEN PER TAB
+            // ==================================================
+            when (selectedTab) {
+                0 -> {
+                    TryoutTabContent(
+                        searchQuery = searchQuery,
+                        onSearchQueryChange = { searchQuery = it },
+                        tryoutPackages = tryoutPackages
+                    )
+                }
+                1 -> {
+                    // Kalau nanti butuh padding tambahan dari NavHost bisa dikirim di sini,
+                    // untuk sekarang cukup kosong.
+                    LatihanSoalTabContent(
+                        contentPadding = PaddingValues(0.dp)
+                    )
                 }
             }
         }
     }
 }
 
+// ======================================================
+// KONTEN TAB "TRYOUT"
+// ======================================================
+@Composable
+fun TryoutTabContent(
+    searchQuery: String,
+    onSearchQueryChange: (String) -> Unit,
+    tryoutPackages: List<TryoutPackage>
+) {
+    Column {
+        // Search Bar
+        OutlinedTextField(
+            value = searchQuery,
+            onValueChange = onSearchQueryChange,
+            modifier = Modifier
+                .fillMaxWidth()
+                .padding(horizontal = 16.dp, vertical = 12.dp),
+            placeholder = { Text("Search Tryout", color = Color.Gray) },
+            leadingIcon = {
+                Icon(
+                    imageVector = Icons.Default.Search,
+                    contentDescription = "Search",
+                    tint = Color.Gray
+                )
+            },
+            colors = OutlinedTextFieldDefaults.colors(
+                focusedContainerColor = Color(0xFFE0E0E0),
+                unfocusedContainerColor = Color(0xFFE0E0E0),
+                focusedBorderColor = Color.Transparent,
+                unfocusedBorderColor = Color.Transparent
+            ),
+            shape = RoundedCornerShape(8.dp),
+            singleLine = true
+        )
+
+        // List Tryout
+        LazyColumn(
+            modifier = Modifier.fillMaxSize(),
+            contentPadding = PaddingValues(horizontal = 16.dp, vertical = 8.dp),
+            verticalArrangement = Arrangement.spacedBy(16.dp)
+        ) {
+            items(
+                tryoutPackages.filter {
+                    it.name.contains(searchQuery, ignoreCase = true)
+                }
+            ) { tryoutPackage ->
+                TryoutPackageCard(tryoutPackage)
+            }
+        }
+    }
+}
+
+// ======================================================
+// CARD PAKET TRYOUT
+// ======================================================
 @Composable
 fun TryoutPackageCard(tryoutPackage: TryoutPackage) {
     Card(
@@ -194,58 +267,24 @@ fun TryoutPackageCard(tryoutPackage: TryoutPackage) {
         Column(
             modifier = Modifier.padding(16.dp)
         ) {
-            // Header with title, status and settings
+            // Header: title + settings icon
             Row(
                 modifier = Modifier.fillMaxWidth(),
                 horizontalArrangement = Arrangement.SpaceBetween,
                 verticalAlignment = Alignment.CenterVertically
             ) {
-                Row(
-                    verticalAlignment = Alignment.CenterVertically,
+                Text(
+                    text = tryoutPackage.name,
+                    color = Color.White,
+                    fontSize = 18.sp,
+                    fontWeight = FontWeight.Bold,
                     modifier = Modifier.weight(1f)
-                ) {
-                    Text(
-                        text = tryoutPackage.name,
-                        color = Color.White,
-                        fontSize = 18.sp,
-                        fontWeight = FontWeight.Bold
-                    )
-                    if (tryoutPackage.isActive) {
-                        Spacer(modifier = Modifier.width(8.dp))
-                        Surface(
-                            color = Color.White.copy(alpha = 0.3f),
-                            shape = RoundedCornerShape(4.dp)
-                        ) {
-                            Text(
-                                text = "active",
-                                color = Color.White,
-                                fontSize = 12.sp,
-                                modifier = Modifier.padding(horizontal = 8.dp, vertical = 4.dp)
-                            )
-                        }
-                    }
-                }
-                IconButton(onClick = { /* Handle settings */ }) {
+                )
+                IconButton(onClick = { /* TODO: pengaturan paket tryout */ }) {
                     Icon(
                         imageVector = Icons.Default.Settings,
                         contentDescription = "Settings",
                         tint = Color.White
-                    )
-                }
-            }
-
-            if (!tryoutPackage.isActive && tryoutPackage.id == "TO-002") {
-                Spacer(modifier = Modifier.height(8.dp))
-                Surface(
-                    color = Color.White.copy(alpha = 0.3f),
-                    shape = RoundedCornerShape(4.dp),
-                    modifier = Modifier.align(Alignment.CenterHorizontally)
-                ) {
-                    Text(
-                        text = "inactive",
-                        color = Color.White,
-                        fontSize = 12.sp,
-                        modifier = Modifier.padding(horizontal = 12.dp, vertical = 6.dp)
                     )
                 }
             }
@@ -267,12 +306,55 @@ fun TryoutPackageCard(tryoutPackage: TryoutPackage) {
                 soal = tryoutPackage.literasiSoal,
                 menit = tryoutPackage.literasiMenit
             )
+
+            // Status badge di pojok kanan bawah (hanya jika ada data soal/menit)
+            val hasData = tryoutPackage.tpsSoal > 0 || tryoutPackage.literasiSoal > 0
+            if (hasData) {
+                Spacer(modifier = Modifier.height(12.dp))
+                Row(
+                    modifier = Modifier.fillMaxWidth(),
+                    horizontalArrangement = Arrangement.End
+                ) {
+                    val bgColor: Color
+                    val textColor: Color
+                    val textLabel: String
+
+                    if (tryoutPackage.isActive) {
+                        bgColor = Color.White
+                        textColor = Color(0xFFE91E63)
+                        textLabel = "active"
+                    } else {
+                        bgColor = Color(0xFFB0BEC5)
+                        textColor = Color.White
+                        textLabel = "inactive"
+                    }
+
+                    Surface(
+                        color = bgColor,
+                        shape = RoundedCornerShape(8.dp)
+                    ) {
+                        Text(
+                            text = textLabel,
+                            color = textColor,
+                            fontSize = 12.sp,
+                            modifier = Modifier.padding(horizontal = 12.dp, vertical = 6.dp)
+                        )
+                    }
+                }
+            }
         }
     }
 }
 
+// ======================================================
+// SECTION TPS / LITERASI
+// ======================================================
 @Composable
-fun TryoutSection(title: String, soal: Int, menit: Int) {
+fun TryoutSection(
+    title: String,
+    soal: Int,
+    menit: Int
+) {
     Row(
         modifier = Modifier.fillMaxWidth(),
         verticalAlignment = Alignment.CenterVertically
@@ -292,14 +374,12 @@ fun TryoutSection(title: String, soal: Int, menit: Int) {
 
         Spacer(modifier = Modifier.width(16.dp))
 
-        Row(
-            verticalAlignment = Alignment.CenterVertically
-        ) {
+        Row(verticalAlignment = Alignment.CenterVertically) {
             Icon(
                 imageVector = Icons.Default.Description,
                 contentDescription = "Soal",
                 tint = Color.White,
-                modifier = Modifier.size(20.dp)
+                modifier = Modifier.size(18.dp)
             )
             Spacer(modifier = Modifier.width(4.dp))
             Text(
@@ -309,16 +389,14 @@ fun TryoutSection(title: String, soal: Int, menit: Int) {
             )
         }
 
-        Spacer(modifier = Modifier.width(24.dp))
+        Spacer(modifier = Modifier.width(20.dp))
 
-        Row(
-            verticalAlignment = Alignment.CenterVertically
-        ) {
+        Row(verticalAlignment = Alignment.CenterVertically) {
             Icon(
                 imageVector = Icons.Default.Schedule,
                 contentDescription = "Waktu",
                 tint = Color.White,
-                modifier = Modifier.size(20.dp)
+                modifier = Modifier.size(18.dp)
             )
             Spacer(modifier = Modifier.width(4.dp))
             Text(
@@ -330,10 +408,12 @@ fun TryoutSection(title: String, soal: Int, menit: Int) {
     }
 }
 
-@Preview(showBackground = true)
+@Preview(showBackground = true, showSystemUi = true)
 @Composable
 fun ManajemenTryoutScreenPreview() {
     TubesPMTheme {
-        ManajemenTryoutScreen()
+        ManajemenTryoutScreen(
+            paddingValuesFromNavHost = PaddingValues(0.dp)
+        )
     }
 }
