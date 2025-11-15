@@ -119,8 +119,8 @@ fun ActivityTryoutScreen(
                 2 -> TryoutSelesaiContent(
                     activities = uiState.completed,
                     onResultClick = { activityDetail ->
-                        // TODO: Navigasi ke halaman hasil/pembahasan
-                        // navController.navigate("tryout_result/${activityDetail.userActivity.id}")
+                        // Navigasi ke halaman hasil/pembahasan
+                         navController.navigate("pembahasan/${activityDetail.userActivity.id}")
                     }
                 )
             }

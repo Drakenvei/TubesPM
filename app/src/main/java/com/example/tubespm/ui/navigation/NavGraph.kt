@@ -13,7 +13,6 @@ import androidx.navigation.compose.composable
 import androidx.navigation.compose.rememberNavController
 import androidx.navigation.navArgument
 
-import com.example.tubespm.data.model.sampleQuestionsWithExplanation
 import com.example.tubespm.data.model.sampleQuizQuestions
 import com.example.tubespm.ui.screens.*
 import com.example.tubespm.ui.screens.admin.homepage.AdminHomeScreen
@@ -109,10 +108,14 @@ fun StudentNavGraph(
 //        }
 
         // --- Pembahasan ---
-        composable("pembahasan_latihan") {
+        composable(
+            route = "pembahasan/{activityId}",
+            arguments = listOf(navArgument("activityId") {type = NavType.StringType })
+        ) {
+            // Kita tidak perlu meneruskan activityId,
+            // PembahasanViewModel akan mengambilnya dari SavedStateHandle
             PembahasanScreen(
                 navController = navController,
-                questions = sampleQuestionsWithExplanation()
             )
         }
     }

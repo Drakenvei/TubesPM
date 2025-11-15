@@ -57,7 +57,7 @@ fun EmptyNotificationState() {
             contentAlignment = Alignment.Center
         ) {
             Image(
-                painter = painterResource(id = com.example.tubespm.R.drawable.logobelut),
+                painter = painterResource(id = com.example.tubespm.R.drawable.mailboxicon),
                 contentDescription = "MailBoxNotification",
                 modifier = Modifier
                     .size(180.dp)
