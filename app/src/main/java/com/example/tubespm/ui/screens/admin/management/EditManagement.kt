@@ -9,8 +9,7 @@ import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.ArrowBack
 import androidx.compose.material.icons.filled.Settings
 import androidx.compose.material3.*
-import androidx.compose.runtime.Composable
-import androidx.compose.runtime.remember
+import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
@@ -19,7 +18,7 @@ import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
-import androidx.compose.ui.window.Dialog   // <--- IMPORT PENTING
+import androidx.compose.ui.window.Dialog
 
 // -------------------------------
 // DATA MODEL SECTION
@@ -40,7 +39,7 @@ fun EditManagementDialog(
     paket: TryoutPackage,
     onDismiss: () -> Unit,
     onDeactivatePackage: () -> Unit,
-    onAddMoreSection: () -> Unit
+    onAddMoreSection: () -> Unit // masih dipertahankan untuk nanti (Firebase, dsb.)
 ) {
     Dialog(onDismissRequest = onDismiss) {
         Surface(
@@ -69,37 +68,20 @@ private fun EditManagementContent(
     onDeactivatePackage: () -> Unit,
     onAddMoreSection: () -> Unit
 ) {
-    // Untuk sekarang ini masih DUMMY section (belum dari Firebase)
+    // STATE popup edit section
+    var showEditSectionDialog by remember { mutableStateOf(false) }
+    var selectedSectionForEdit by remember { mutableStateOf<TryoutSection?>(null) }
+
+    // STATE popup add section
+    var showAddSectionDialog by remember { mutableStateOf(false) }
+
+    // DUMMY section
     val sections = remember {
         listOf(
-            TryoutSection(
-                id = "1",
-                title = "Penalaran Umum",
-                type = "TPS",
-                timeMinutes = 20,
-                questionCount = 20
-            ),
-            TryoutSection(
-                id = "2",
-                title = "Pengetahuan Kuantitatif",
-                type = "TPS",
-                timeMinutes = 20,
-                questionCount = 20
-            ),
-            TryoutSection(
-                id = "3",
-                title = "Literasi Indonesia",
-                type = "Literasi",
-                timeMinutes = 20,
-                questionCount = 20
-            ),
-            TryoutSection(
-                id = "4",
-                title = "Literasi B. Inggris",
-                type = "Literasi",
-                timeMinutes = 20,
-                questionCount = 20
-            )
+            TryoutSection("1", "Penalaran Umum", "TPS", 20, 20),
+            TryoutSection("2", "Pengetahuan Kuantitatif", "TPS", 20, 20),
+            TryoutSection("3", "Literasi Indonesia", "Literasi", 20, 20),
+            TryoutSection("4", "Literasi B. Inggris", "Literasi", 20, 20)
         )
     }
 
@@ -138,7 +120,13 @@ private fun EditManagementContent(
             verticalArrangement = Arrangement.spacedBy(12.dp)
         ) {
             items(sections) { section ->
-                SectionCard(section = section)
+                SectionCard(
+                    section = section,
+                    onEditClick = { clicked ->
+                        selectedSectionForEdit = clicked
+                        showEditSectionDialog = true
+                    }
+                )
             }
         }
 
@@ -146,7 +134,10 @@ private fun EditManagementContent(
 
         // Tombol Add More Section
         OutlinedButton(
-            onClick = onAddMoreSection,
+            onClick = {
+                showAddSectionDialog = true
+                onAddMoreSection() // callback eksternal (opsional)
+            },
             modifier = Modifier.align(Alignment.End),
             colors = ButtonDefaults.outlinedButtonColors(
                 contentColor = Color.Gray
@@ -177,13 +168,58 @@ private fun EditManagementContent(
 
         Spacer(modifier = Modifier.height(4.dp))
     }
+
+    // ---------- POPUP EDIT SECTION ----------
+    if (showEditSectionDialog && selectedSectionForEdit != null) {
+        val section = selectedSectionForEdit!!
+        EditSectionDialog(
+            paketName = paket.name,
+            sectionName = section.title,
+            initialState = EditSectionUiState(
+                type = section.type,
+                subtest = section.title,
+                timeMinutes = section.timeMinutes,
+                questionCount = section.questionCount
+            ),
+            onDismiss = {
+                showEditSectionDialog = false
+                selectedSectionForEdit = null
+            },
+            onSaveSection = {
+                // TODO: update ke Firebase / ViewModel
+                showEditSectionDialog = false
+                selectedSectionForEdit = null
+            },
+            onEditSoalTryout = {
+                // TODO: navigate ke layar edit soal
+            }
+        )
+    }
+
+    // ---------- POPUP ADD SECTION ----------
+    if (showAddSectionDialog) {
+        AddSectionDialog(
+            paketName = paket.name,
+            onDismiss = { showAddSectionDialog = false },
+            onSaveSection = { newState ->
+                // TODO: simpan section baru ke Firebase / ViewModel
+                showAddSectionDialog = false
+            },
+            onEditSoalTryout = {
+                // TODO: navigate ke layar edit soal baru
+            }
+        )
+    }
 }
 
 // -------------------------------
 // CARD SATU SECTION
 // -------------------------------
 @Composable
-private fun SectionCard(section: TryoutSection) {
+private fun SectionCard(
+    section: TryoutSection,
+    onEditClick: (TryoutSection) -> Unit
+) {
     Surface(
         modifier = Modifier.fillMaxWidth(),
         color = Color(0xFFE0E0E0),
@@ -206,9 +242,7 @@ private fun SectionCard(section: TryoutSection) {
                 )
 
                 IconButton(
-                    onClick = {
-                        // TODO: masuk ke halaman edit section ini
-                    },
+                    onClick = { onEditClick(section) },
                     modifier = Modifier.size(24.dp)
                 ) {
                     Icon(
@@ -238,17 +272,17 @@ private fun InfoRow(label: String, value: String) {
         Text(
             text = label,
             fontSize = 13.sp,
-            color = Color(0xFF616161),   // Abu gelap, lebih jelas
+            color = Color(0xFF616161),
             modifier = Modifier.width(90.dp)
         )
         Surface(
-            color = Color(0xFF9E9E9E), // sedikit lebih gelap agar teks putih kontras
+            color = Color(0xFF9E9E9E),
             shape = RoundedCornerShape(10.dp)
         ) {
             Text(
                 text = value,
                 fontSize = 11.sp,
-                color = Color.White,   // teks putih biar jelas
+                color = Color.White,
                 modifier = Modifier.padding(horizontal = 6.dp, vertical = 2.dp),
                 textAlign = TextAlign.Center
             )
@@ -256,7 +290,6 @@ private fun InfoRow(label: String, value: String) {
     }
 }
 
-// Preview sederhana tanpa Dialog, hanya kontennya
 @Preview(showBackground = true)
 @Composable
 private fun EditManagementContentPreview() {
