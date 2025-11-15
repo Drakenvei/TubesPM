@@ -15,49 +15,57 @@ import androidx.navigation.compose.composable
 import androidx.navigation.compose.rememberNavController
 import com.example.tubespm.ui.navigation.BottomNavbarAdmin
 import com.example.tubespm.ui.screens.admin.homepage.AdminHomeScreen
-import com.example.tubespm.ui.screens.admin.profile.*
+import com.example.tubespm.ui.screens.admin.profile.AdminProfileScreen
+import com.example.tubespm.ui.screens.admin.ManajemenTryoutScreen
 
 @Composable
 fun AdminMainScreen(
-    rootNavController: NavHostController // NavController untuk navigasi Lintas-Grafik/Aplikasi Utama
+    rootNavController: NavHostController
 ) {
-    val adminNavController = rememberNavController() // NavController untuk navigasi di dalam AdminMainScreen
+    val adminNavController = rememberNavController() // NavController untuk navigasi internal Admin
 
     Scaffold(
         bottomBar = { BottomNavbarAdmin(navController = adminNavController) }
-    ) { paddingValues -> // paddingValues dari Scaffold (BENAR)
+    ) { paddingValues -> // paddingValues ini datang dari Scaffold, untuk BottomBar
 
         NavHost(
             navController = adminNavController,
-            startDestination = "admin_home"
+            startDestination = "admin_home",
+            // PERBAIKAN: Hapus modifier = Modifier.fillMaxSize() dari NavHost.
+            // Biarkan padding diatur oleh setiap Composable di dalamnya.
         ) {
             // Rute 1: Admin Home
             composable("admin_home") {
                 AdminHomeScreen(paddingValues = paddingValues)
             }
 
-            // Rute 2: Admin Management (Contoh)
+            // Rute 2: Admin Management (SUDAH DIPERBAIKI)
             composable("admin_management") {
-                Box(modifier = Modifier.fillMaxSize(), contentAlignment = Alignment.Center) {
-                    Text("Halaman Management")
-                }
+                ManajemenTryoutScreen(paddingValuesFromNavHost = paddingValues)
             }
 
             // Rute 3: Admin Report (Contoh)
             composable("admin_report") {
-                Box(modifier = Modifier.fillMaxSize(), contentAlignment = Alignment.Center) {
+                Box(
+                    modifier = Modifier
+                        .fillMaxSize()
+                        .padding(paddingValues), // Terapkan padding di sini
+                    contentAlignment = Alignment.Center
+                ) {
                     Text("Halaman Report")
                 }
             }
 
-            // Rute 4: Admin Profile ⬅️ PERBAIKAN DI SINI
+            // Rute 4: Admin Profile
             composable("admin_profile") {
                 AdminProfileScreen (
                     paddingValues = paddingValues,
-                    adminName = "Admin",
-                    adminEmail = "admin@gmail.com",
-                    // 3. Ganti navController yang error dengan adminNavController
-                    onLogoutClick = { adminNavController.popBackStack() }
+                    // Tambahkan parameter adminName dan adminEmail jika diperlukan di AdminProfileScreen
+                    // adminName = "Admin",
+                    // adminEmail = "admin@gmail.com",
+                    onLogoutClick = {
+                        adminNavController.popBackStack()
+                    }
                 )
             }
         }
