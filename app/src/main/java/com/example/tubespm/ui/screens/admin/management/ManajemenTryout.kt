@@ -1,6 +1,5 @@
-package com.example.tubespm.ui.screens.admin
+package com.example.tubespm.ui.screens.admin.management
 
-import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
@@ -18,11 +17,12 @@ import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
-import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
+import androidx.compose.ui.text.font.FontWeight
 import com.example.tubespm.ui.theme.TubesPMTheme
+import com.example.tubespm.ui.screens.admin.management.EditManagementDialog
 
 // ======================================================
 // DATA MODEL TRYOUT
@@ -49,6 +49,12 @@ fun ManajemenTryoutScreen(
     var searchQuery by remember { mutableStateOf("") }
     var selectedTab by remember { mutableStateOf(0) }
 
+    // state untuk dialog edit paket
+    var showEditManagementDialog by remember { mutableStateOf(false) }
+    var selectedPackageForEdit by remember { mutableStateOf<TryoutPackage?>(null) }
+
+    // >>> DATA INI MASIH DUMMY, HARD-CODED DI DALAM KODE <<<
+    // Kalau mau ambil dari Firebase, bagian ini nanti diganti dengan hasil query.
     val tryoutPackages = remember {
         listOf(
             TryoutPackage(
@@ -81,10 +87,9 @@ fun ManajemenTryoutScreen(
         )
     }
 
-    // PERBAIKAN: kasih background langsung ke Scaffold
     Scaffold(
         modifier = Modifier.fillMaxSize(),
-        containerColor = Color(0xFFF5F5F5), // <<-- BUKAN hitam lagi
+        containerColor = Color(0xFFF5F5F5),
         topBar = {
             TopAppBar(
                 title = {
@@ -135,15 +140,11 @@ fun ManajemenTryoutScreen(
             }
         }
     ) { innerPadding ->
-        // PERBAIKAN: Column tidak lagi pakai background sendiri,
-        // jadi semua area termasuk padding atas & bawah sudah abu-abu.
         Column(
             modifier = Modifier
                 .fillMaxSize()
-                // padding dari TopAppBar / FAB
-                .padding(innerPadding)
-                // padding dari AdminRoot (untuk menghindari overlap bottom bar)
-                .padding(paddingValuesFromNavHost)
+                .padding(innerPadding)            // padding dari Scaffold (top bar, FAB)
+                .padding(paddingValuesFromNavHost) // padding dari NavHost / bottom bar
         ) {
 
             // ==================================================
@@ -184,16 +185,40 @@ fun ManajemenTryoutScreen(
                     TryoutTabContent(
                         searchQuery = searchQuery,
                         onSearchQueryChange = { searchQuery = it },
-                        tryoutPackages = tryoutPackages
+                        tryoutPackages = tryoutPackages,
+                        onClickSettings = { pkg ->
+                            selectedPackageForEdit = pkg
+                            showEditManagementDialog = true
+                        }
                     )
                 }
+
                 1 -> {
-                    // Kalau nanti butuh padding tambahan dari NavHost bisa dikirim di sini,
-                    // untuk sekarang cukup kosong.
                     LatihanSoalTabContent(
                         contentPadding = PaddingValues(0.dp)
                     )
                 }
+            }
+
+            // ==================================================
+            // DIALOG EDIT MANAGEMENT (POPU PAKET)
+            // ==================================================
+            if (showEditManagementDialog && selectedPackageForEdit != null) {
+                EditManagementDialog(
+                    paket = selectedPackageForEdit!!,
+                    onDismiss = {
+                        showEditManagementDialog = false
+                        selectedPackageForEdit = null
+                    },
+                    onDeactivatePackage = {
+                        // TODO: logika nonaktifkan paket di sini (update ke Firebase, dsb.)
+                        showEditManagementDialog = false
+                        selectedPackageForEdit = null
+                    },
+                    onAddMoreSection = {
+                        // TODO: logika tambah section baru
+                    }
+                )
             }
         }
     }
@@ -206,7 +231,8 @@ fun ManajemenTryoutScreen(
 fun TryoutTabContent(
     searchQuery: String,
     onSearchQueryChange: (String) -> Unit,
-    tryoutPackages: List<TryoutPackage>
+    tryoutPackages: List<TryoutPackage>,
+    onClickSettings: (TryoutPackage) -> Unit
 ) {
     Column {
         // Search Bar
@@ -245,7 +271,10 @@ fun TryoutTabContent(
                     it.name.contains(searchQuery, ignoreCase = true)
                 }
             ) { tryoutPackage ->
-                TryoutPackageCard(tryoutPackage)
+                TryoutPackageCard(
+                    tryoutPackage = tryoutPackage,
+                    onClickSettings = onClickSettings
+                )
             }
         }
     }
@@ -255,7 +284,10 @@ fun TryoutTabContent(
 // CARD PAKET TRYOUT
 // ======================================================
 @Composable
-fun TryoutPackageCard(tryoutPackage: TryoutPackage) {
+fun TryoutPackageCard(
+    tryoutPackage: TryoutPackage,
+    onClickSettings: (TryoutPackage) -> Unit
+) {
     Card(
         modifier = Modifier.fillMaxWidth(),
         shape = RoundedCornerShape(16.dp),
@@ -280,7 +312,7 @@ fun TryoutPackageCard(tryoutPackage: TryoutPackage) {
                     fontWeight = FontWeight.Bold,
                     modifier = Modifier.weight(1f)
                 )
-                IconButton(onClick = { /* TODO: pengaturan paket tryout */ }) {
+                IconButton(onClick = { onClickSettings(tryoutPackage) }) {
                     Icon(
                         imageVector = Icons.Default.Settings,
                         contentDescription = "Settings",
@@ -337,7 +369,10 @@ fun TryoutPackageCard(tryoutPackage: TryoutPackage) {
                             text = textLabel,
                             color = textColor,
                             fontSize = 12.sp,
-                            modifier = Modifier.padding(horizontal = 12.dp, vertical = 6.dp)
+                            modifier = Modifier.padding(
+                                horizontal = 12.dp,
+                                vertical = 6.dp
+                            )
                         )
                     }
                 }

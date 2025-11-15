@@ -13,11 +13,9 @@
 
     import com.example.tubespm.data.model.sampleQuestionsWithExplanation
     import com.example.tubespm.data.model.sampleQuizQuestions
-    import com.example.tubespm.ui.screens.*
     import com.example.tubespm.ui.screens.admin.homepage.AdminHomeScreen
     import com.example.tubespm.ui.screens.admin.profile.AdminProfileScreen
-    import com.example.tubespm.ui.screens.admin.ManajemenTryoutScreen
-    import com.example.tubespm.ui.screens.admin.LatihanSoalTabContent
+    import com.example.tubespm.ui.screens.admin.management.ManajemenTryoutScreen
     import com.example.tubespm.ui.screens.pembahasan.PembahasanScreen
     import com.example.tubespm.ui.screens.siswa.activity.ActivityLatihanScreen
     import com.example.tubespm.ui.screens.siswa.activity.ActivityScreen

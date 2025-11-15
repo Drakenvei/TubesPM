@@ -8,7 +8,6 @@ import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
-import androidx.compose.foundation.layout.PaddingValues
 import androidx.navigation.NavHostController
 import androidx.navigation.compose.NavHost
 import androidx.navigation.compose.composable
@@ -16,7 +15,7 @@ import androidx.navigation.compose.rememberNavController
 import com.example.tubespm.ui.navigation.BottomNavbarAdmin
 import com.example.tubespm.ui.screens.admin.homepage.AdminHomeScreen
 import com.example.tubespm.ui.screens.admin.profile.AdminProfileScreen
-import com.example.tubespm.ui.screens.admin.ManajemenTryoutScreen
+import com.example.tubespm.ui.screens.admin.management.ManajemenTryoutScreen
 
 @Composable
 fun AdminMainScreen(
