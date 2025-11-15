@@ -12,11 +12,11 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextAlign
-import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
+import androidx.hilt.navigation.compose.hiltViewModel
 import androidx.navigation.NavHostController
-import com.example.tubespm.data.model.QuizQuestion
+import com.example.tubespm.data.model.QuizQuestions
 import com.example.tubespm.ui.screens.siswa.quiz.components.QuestionNavigator
 import com.example.tubespm.ui.screens.siswa.quiz.components.QuizBottomNavigation
 import com.example.tubespm.ui.screens.siswa.quiz.components.QuizTopBar
@@ -31,40 +31,24 @@ enum class QuizMode {
 @Composable
 fun QuizScreen(
     navController: NavHostController,
-    questions: List<QuizQuestion>,
-    mode: QuizMode,
-    onSessionFinished: (Map<Int, Int>) -> Unit
+    activityId: String, //terima ID
+    viewModel: QuizViewModel = hiltViewModel()
 ) {
-    var currentQuestionIndex by remember { mutableStateOf(0) }
-    val userAnswers = remember { mutableStateMapOf<Int, Int>() }
-    val flaggedQuestions = remember { mutableStateSetOf<Int>() }
+    val uiState by viewModel.uiState.collectAsState()
 
     // DITAMBAHKAN: State untuk mengontrol visibilitas dialog konfirmasi
     var showExitDialog by remember { mutableStateOf(false) }
 
-    var remainingTimeInSeconds by remember { mutableStateOf(3600L) }
-
-    if (mode == QuizMode.TRYOUT) {
-        LaunchedEffect(key1 = remainingTimeInSeconds) {
-            if (remainingTimeInSeconds > 0) {
-                delay(1000L)
-                remainingTimeInSeconds--
-            } else {
-                onSessionFinished(userAnswers)
-            }
-        }
-    }
-
-    val currentQuestion = questions[currentQuestionIndex]
-    val isFlagged = flaggedQuestions.contains(currentQuestion.id)
-
     Scaffold(
         topBar = {
             QuizTopBar(
-                mode = mode,
-                remainingTimeInSeconds = remainingTimeInSeconds,
+                mode = uiState.quizMode,
+                remainingTimeInSeconds = uiState.remainingTimeInSeconds,
                 onBackClicked = { showExitDialog = true },
-                onSubmitClicked = { onSessionFinished(userAnswers) }
+                onSubmitClicked = {
+                    viewModel.submitQuiz()
+                    navController.popBackStack()
+                }
             )
         }
     ) { paddingValues ->
@@ -74,58 +58,87 @@ fun QuizScreen(
                 .padding(paddingValues)
                 .background(Color.White)
         ) {
-            QuestionNavigator(
-                questionCount = questions.size,
-                currentIndex = currentQuestionIndex,
-                answeredIndices = userAnswers.keys.map { qId -> questions.indexOfFirst { it.id == qId } }.toSet(),
-                flaggedIndices = flaggedQuestions.map { qId -> questions.indexOfFirst { it.id == qId } }.toSet(),
-                onQuestionSelected = { index -> currentQuestionIndex = index }
-            )
-            Divider()
-
-            Column(
-                modifier = Modifier
-                    .weight(1f)
-                    .padding(16.dp),
-                horizontalAlignment = Alignment.CenterHorizontally
-            ) {
-                Text(currentQuestion.subtest, style = MaterialTheme.typography.titleMedium, color = Color.Gray)
-                Spacer(Modifier.height(32.dp))
-                Text(currentQuestion.questionText, style = MaterialTheme.typography.headlineMedium, fontWeight = FontWeight.Bold, textAlign = TextAlign.Center)
-                Spacer(Modifier.weight(1f))
-
-                currentQuestion.options.forEachIndexed { index, optionText ->
-                    AnswerOption(
-                        optionLabel = ('A' + index).toString(),
-                        optionText = optionText,
-                        isSelected = userAnswers[currentQuestion.id] == index,
-                        onClick = { userAnswers[currentQuestion.id] = index }
-                    )
-                    Spacer(Modifier.height(12.dp))
+            if (uiState.isLoading) {
+                Box(modifier = Modifier.fillMaxSize(), contentAlignment = Alignment.Center) {
+                    CircularProgressIndicator()
                 }
-                Spacer(Modifier.weight(1f))
+            } else if (uiState.error != null) {
+                Box(modifier = Modifier.fillMaxSize(), contentAlignment = Alignment.Center) {
+                    Text("Error: ${uiState.error}", color = MaterialTheme.colorScheme.error)
+                }
+            } else if (uiState.questions.isEmpty()) {
+                Box(modifier = Modifier.fillMaxSize(), contentAlignment = Alignment.Center) {
+                    Text("Soal tidak ditemukan.")
+                }
+            } else {
+                val currentQuestion = uiState.questions.getOrNull(uiState.currentQuestionIndex)
+                if (currentQuestion == null) return@Column // Safety check
 
-                Row(
+                val isFlagged = uiState.flaggedQuestions.contains(currentQuestion.id)
+
+                QuestionNavigator(
+                    questionCount = uiState.questions.size,
+                    currentIndex = uiState.currentQuestionIndex,
+                    // Ubah Set<QuestionID> menjadi Set<Index> untuk UI
+                    answeredIndices = uiState.userAnswers.keys.map { qId ->
+                        uiState.questions.indexOfFirst { it.id == qId }
+                    }.toSet(),
+                    flaggedIndices = uiState.flaggedQuestions.map { qId ->
+                        uiState.questions.indexOfFirst { it.id == qId }
+                    }.toSet(),
+                    onQuestionSelected = viewModel::selectQuestion // Kirim event
+                )
+                Divider()
+
+                Column(
                     modifier = Modifier
-                        .align(Alignment.End)
-                        .clickable {
-                            if (isFlagged) flaggedQuestions.remove(currentQuestion.id)
-                            else flaggedQuestions.add(currentQuestion.id)
-                        },
-                    verticalAlignment = Alignment.CenterVertically
+                        .weight(1f)
+                        .padding(16.dp),
+                    horizontalAlignment = Alignment.CenterHorizontally
                 ) {
-                    Text("Flag this question ?", fontSize = 12.sp, color = Color.Gray)
-                    Spacer(Modifier.width(4.dp))
-                    Icon(Icons.Default.Flag, "Flag", tint = if (isFlagged) Color(0xFFE61C5D) else Color.Gray)
+                    Text(currentQuestion.subtestId, style = MaterialTheme.typography.titleMedium, color = Color.Gray)
+                    Spacer(Modifier.height(32.dp))
+                    Text(currentQuestion.questionText, style = MaterialTheme.typography.headlineMedium, fontWeight = FontWeight.Bold, textAlign = TextAlign.Center)
+                    Spacer(Modifier.weight(1f))
+
+                    currentQuestion.options.forEachIndexed { index, optionText ->
+                        val optionLabel = ('A' + index).toString()
+                        AnswerOption(
+                            optionLabel = optionLabel,
+                            optionText = optionText,
+                            // --- LOGIKA ISSELECTED BARU ---
+                            isSelected = uiState.userAnswers[currentQuestion.id] == optionLabel,
+                            onClick = {
+                                // --- LOGIKA ONCLICK BARU ---
+                                viewModel.onAnswerSelected(currentQuestion, index)
+                            }
+                        )
+                        Spacer(Modifier.height(12.dp))
+                    }
+                    Spacer(Modifier.weight(1f))
+
+                    Row(
+                        modifier = Modifier
+                            .align(Alignment.End)
+                            .clickable {
+                                viewModel.toggleFlag(currentQuestion.id)
+                            },
+                        verticalAlignment = Alignment.CenterVertically
+                    ) {
+                        Text("Flag this question ?", fontSize = 12.sp, color = Color.Gray)
+                        Spacer(Modifier.width(4.dp))
+                        Icon(Icons.Default.Flag, "Flag", tint = if (isFlagged) Color(0xFFE61C5D) else Color.Gray)
+                    }
                 }
+
+                QuizBottomNavigation(
+                    onPreviousClicked = viewModel::previousQuestion, // <-- Event baru
+                    onNextClicked = viewModel::nextQuestion, // <-- Event baru
+                    isPreviousEnabled = uiState.currentQuestionIndex > 0,
+                    isNextEnabled = uiState.currentQuestionIndex < uiState.questions.size - 1
+                )
             }
 
-            QuizBottomNavigation(
-                onPreviousClicked = { if (currentQuestionIndex > 0) currentQuestionIndex-- },
-                onNextClicked = { if (currentQuestionIndex < questions.size - 1) currentQuestionIndex++ },
-                isPreviousEnabled = currentQuestionIndex > 0,
-                isNextEnabled = currentQuestionIndex < questions.size - 1
-            )
         }
     }
     if (showExitDialog) {

@@ -1,9 +1,11 @@
 package com.example.tubespm.di
 
+import com.example.tubespm.data.repository.QuizRepositoryImpl
 import com.example.tubespm.repository.ActivityRepository
 import com.example.tubespm.repository.ActivityRepositoryImpl
 import com.example.tubespm.repository.ExerciseCatalogRepository
 import com.example.tubespm.repository.ExerciseCatalogRepositoryImpl
+import com.example.tubespm.repository.QuizRepository
 import com.example.tubespm.repository.UserRepository
 import com.example.tubespm.repository.UserRepositoryImpl
 import com.google.firebase.auth.FirebaseAuth
@@ -58,6 +60,12 @@ object AppModule {
         auth: FirebaseAuth
     ): ActivityRepository {
         return ActivityRepositoryImpl(db, auth)
+    }
+
+    @Provides
+    @Singleton
+    fun provideQuizRepository(db: FirebaseFirestore): QuizRepository {
+        return QuizRepositoryImpl(db)
     }
 
 }

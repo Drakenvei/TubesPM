@@ -21,5 +21,7 @@ data class UserActivity(
     val answeredQuestionCount: Int = 0,
 
     @ServerTimestamp
-    val startedAt: Date? = null
+    val startedAt: Date? = null,
+
+    val deadline: Date? = null // Akan menyimpan Timestamp kapan kuis berakhir
 )

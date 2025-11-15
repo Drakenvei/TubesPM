@@ -7,9 +7,11 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.unit.dp
 import androidx.navigation.NavHostController
+import androidx.navigation.NavType
 import androidx.navigation.compose.NavHost
 import androidx.navigation.compose.composable
 import androidx.navigation.compose.rememberNavController
+import androidx.navigation.navArgument
 
 import com.example.tubespm.data.model.sampleQuestionsWithExplanation
 import com.example.tubespm.data.model.sampleQuizQuestions
@@ -87,22 +89,24 @@ fun StudentNavGraph(
         }
 
         // --- Quiz screens (tanpa parameter dulu) ---
-        composable("tryout_quiz") {
+        composable(
+            route = "tryout_quiz/{activityId}",
+            arguments = listOf(navArgument("activityId") { type = NavType.StringType })
+        ) { backStackEntry ->
+            val activityId = backStackEntry.arguments?.getString("activityId") ?: ""
             QuizScreen(
                 navController = navController,
-                questions = sampleQuizQuestions(),
-                mode = QuizMode.TRYOUT,
-                onSessionFinished = { navController.popBackStack() }
+                activityId = activityId // <-- Kirim ke QuizScreen
             )
         }
-        composable("latihan_quiz") {
-            QuizScreen(
-                navController = navController,
-                questions = sampleQuizQuestions(),
-                mode = QuizMode.LATIHAN,
-                onSessionFinished = { navController.popBackStack() }
-            )
-        }
+//        composable("latihan_quiz") {
+//            QuizScreen(
+//                navController = navController,
+//                questions = sampleQuizQuestions(),
+//                mode = QuizMode.LATIHAN,
+//                onSessionFinished = { navController.popBackStack() }
+//            )
+//        }
 
         // --- Pembahasan ---
         composable("pembahasan_latihan") {
