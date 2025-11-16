@@ -1,5 +1,6 @@
 package com.example.tubespm.repository
 
+import com.example.tubespm.data.model.LatihanSoal
 import com.example.tubespm.data.model.Tryout
 import com.example.tubespm.data.model.UserActivity
 import kotlinx.coroutines.flow.Flow
@@ -24,7 +25,15 @@ interface ActivityRepository {
     suspend fun addTryoutActivity(tryout: Tryout)
 
     /**
+     * Menambahkan latihan soal baru ke koleksi user_activities.
+     * Ini adalah fungsi "Ambil Latihan Soal".
+     */
+    suspend fun addLatihanActivity(latihan: LatihanSoal)
+
+    /**
      * Menghapus dokumen dari koleksi user_activities berdasarkan ID uniknya.
      */
     suspend fun cancelTryoutActivity(activityId: String)
+
+    suspend fun cancelLatihanActivity(activityId: String)
 }

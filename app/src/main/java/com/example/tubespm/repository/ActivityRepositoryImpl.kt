@@ -1,5 +1,6 @@
 package com.example.tubespm.repository
 
+import com.example.tubespm.data.model.LatihanSoal
 import com.example.tubespm.data.model.Tryout
 import com.example.tubespm.data.model.UserActivity
 import com.google.firebase.auth.FirebaseAuth
@@ -43,7 +44,7 @@ class ActivityRepositoryImpl @Inject constructor(
 
         return db.collection("user_activities")
             .whereEqualTo("userId", uid)
-            .whereEqualTo("type", "latihan") // <-- Filter "latihan"
+            .whereEqualTo("type", "latihan_soal") // <-- Filter "latihan"
             .snapshots()
             .map { snapshot ->
                 snapshot.toObjects(UserActivity::class.java)
@@ -69,7 +70,34 @@ class ActivityRepositoryImpl @Inject constructor(
         db.collection("user_activities").add(newActivity).await()
     }
 
+    override suspend fun addLatihanActivity(latihan: LatihanSoal) {
+        val uid = currentUserId ?: return // Jangan lakukan apa-apa jika user tidak login
+
+        // Buat data baru untuk 'user_activities'
+        val newActivity = mapOf(
+            "userId" to uid,
+            "type" to "latihan_soal", // <-- Tipe yang benar
+            "activityRefId" to latihan.id, // <-- ID dari dokumen latihan_soal
+            "activityTitle" to latihan.title,
+            "status" to "not_started",
+            "score" to 0,
+            "correctCount" to 0,
+            "answeredQuestionCount" to 0,
+            "startedAt" to FieldValue.serverTimestamp()
+        )
+
+        // Simpan ke firestore
+        db.collection("user_activities").add(newActivity).await()
+    }
+
     override suspend fun cancelTryoutActivity(activityId: String) {
+        db.collection("user_activities")
+            .document(activityId)
+            .delete()
+            .await()
+    }
+
+    override suspend fun cancelLatihanActivity(activityId: String) {
         db.collection("user_activities")
             .document(activityId)
             .delete()

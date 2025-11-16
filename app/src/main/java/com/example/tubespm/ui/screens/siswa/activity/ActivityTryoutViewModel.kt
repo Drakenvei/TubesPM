@@ -13,7 +13,7 @@ import kotlinx.coroutines.flow.update
 import kotlinx.coroutines.launch
 import javax.inject.Inject
 
-data class ActivityUiState(
+data class ActivityTryoutUiState(
     val isLoading: Boolean = true,
     val error: String? = null,
     val notStarted: List<ActivityTryoutDetail> = emptyList(),
@@ -22,11 +22,11 @@ data class ActivityUiState(
 )
 
 @HiltViewModel
-class ActivityViewModel @Inject constructor(
+class ActivityTryoutViewModel @Inject constructor(
     private val repository: ActivityRepository,
     private val catalogRepository: ExerciseCatalogRepository //INJECT REPO KATALOG
 ) : ViewModel() {
-    private val _uiState = MutableStateFlow(ActivityUiState())
+    private val _uiState = MutableStateFlow(ActivityTryoutUiState())
     val uiState = _uiState.asStateFlow()
 
     init {

@@ -3,10 +3,12 @@ package com.example.tubespm.ui.screens.siswa.activity
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
+import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.PaddingValues
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
+import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
@@ -32,13 +34,26 @@ import androidx.compose.ui.window.Dialog
 import com.example.tubespm.data.model.LatihanSoal
 
 @Composable
-fun LatihanBelumDikerjakanContent(latihanList: List<LatihanSoal>, onCardClick: (LatihanSoal) -> Unit){
+fun LatihanBelumDikerjakanContent(
+    latihanList: List<ActivityLatihanDetail>,
+    onCardClick: (ActivityLatihanDetail) -> Unit
+){
+    if (latihanList.isEmpty()) {
+        Box(modifier = Modifier.fillMaxSize(), contentAlignment = Alignment.Center) {
+            Text("Tidak ada latihan yang belum dikerjakan.")
+        }
+        return
+    }
+
     LazyColumn (
         contentPadding = PaddingValues(16.dp),
         verticalArrangement = Arrangement.spacedBy(16.dp)
     ) {
-        items(latihanList) { latihan->
-            LatihanCard(latihan = latihan, onClick = {onCardClick(latihan)} )
+        items(latihanList) { activityDetail->
+            LatihanCard(
+                latihan = activityDetail.latihanSoal, // <-- Kirim LatihanSoal
+                onClick = {onCardClick(activityDetail)} // <-- Kirim ActivityLatihanDetail
+            )
         }
     }
 }
@@ -140,10 +155,16 @@ fun LatihanDetailDialog(
                     style = MaterialTheme.typography.bodyMedium
                 )
                 Text(
+                    "Kode Paket: ${latihan.code}",
+                    style = MaterialTheme.typography.bodyMedium
+                )
+                Text(
                     "Jumlah Soal: ${latihan.questionCount} soal",
                     style = MaterialTheme.typography.bodyMedium
                 )
+
                 Divider(Modifier.padding(vertical = 12.dp))
+
                 Text(
                     "Kisi-Kisi",
                     fontWeight = FontWeight.Bold,
@@ -154,9 +175,9 @@ fun LatihanDetailDialog(
                     modifier = Modifier
                         .padding(start = 8.dp)
                 ) {
-                    latihan.kisiKisi.forEach { item ->
+                    latihan.topics.forEach { topic ->
                         Text(
-                            "- $item",
+                            "- ${topic.name}",
                             style = MaterialTheme.typography.bodyMedium,
                             modifier = Modifier.padding(bottom = 4.dp)
                         )

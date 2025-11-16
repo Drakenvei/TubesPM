@@ -1,10 +1,13 @@
 package com.example.tubespm.ui.screens.siswa.activity
 
 import androidx.compose.foundation.layout.Arrangement
+import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.PaddingValues
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
+import androidx.compose.foundation.layout.fillMaxSize
+import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
@@ -28,27 +31,42 @@ import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.navigation.NavController
 import com.example.tubespm.data.model.LatihanCompleted
+import com.example.tubespm.data.model.LatihanSoal
 
 @Composable
 fun LatihanSelesaiContent(
-    latihanList: List<LatihanCompleted>,
-    navController: NavController  // Tambahkan parameter
+    latihanList: List<ActivityLatihanDetail>,
+    onResultClick: (ActivityLatihanDetail) -> Unit
 ){
+    if (latihanList.isEmpty()) {
+        Box(modifier = Modifier.fillMaxSize(), contentAlignment = Alignment.Center) {
+            Text("Tidak ada latihan yang telah selesai.")
+        }
+        return
+    }
+
     LazyColumn (
         contentPadding = PaddingValues(16.dp),
         verticalArrangement = Arrangement.spacedBy(16.dp)
     ) {
-        items(latihanList) { latihan ->
+        items(latihanList) { activityDetail ->
             LatihanCompletedCard(
-                latihan = latihan,
-                navController = navController  // Pass ke card
+                activityDetail = activityDetail, // <-- Kirim data gabungan
+                onResultClick = { onResultClick(activityDetail) }
             )
         }
     }
 }
 
 @Composable
-fun LatihanCompletedCard(latihan: LatihanCompleted, navController: NavController) {
+fun LatihanCompletedCard(
+    activityDetail: ActivityLatihanDetail, // <-- DIUBAH
+    onResultClick: () -> Unit // <-- DIUBAH
+) {
+    // Ambil data dari model gabungan
+    val latihan = activityDetail.latihanSoal
+    val userActivity = activityDetail.userActivity
+
     Card(
         shape = RoundedCornerShape(12.dp),
         colors = CardDefaults.cardColors(containerColor = Color(0xFFE61C5D))
@@ -64,6 +82,25 @@ fun LatihanCompletedCard(latihan: LatihanCompleted, navController: NavController
             SubtestTag(text = latihan.subtest)
             Spacer(Modifier.height(12.dp))
 
+            Row(
+                modifier = Modifier.fillMaxWidth(),
+                horizontalArrangement = Arrangement.SpaceBetween,
+                verticalAlignment = Alignment.CenterVertically
+            ) {
+                Text(
+                    "Skor Akhir:",
+                    color = Color.White,
+                    style = MaterialTheme.typography.bodyLarge,
+                    fontWeight = FontWeight.SemiBold
+                )
+                Text(
+                    text = userActivity.score.toString(), // <-- Ambil skor
+                    color = Color.White,
+                    style = MaterialTheme.typography.headlineMedium,
+                    fontWeight = FontWeight.Bold
+                )
+            }
+
             // Baris ini juga akan rata kiri
             Row(verticalAlignment = Alignment.CenterVertically) {
                 Icon(
@@ -74,27 +111,18 @@ fun LatihanCompletedCard(latihan: LatihanCompleted, navController: NavController
                 )
                 Spacer(Modifier.width(6.dp))
                 Text(
-                    text = "Jawaban benar: ${latihan.correctAnswers}/${latihan.totalQuestions} soal",
+                    text = "Jawaban benar: ${userActivity.correctCount}/${latihan.questionCount} soal",
                     color = Color.White,
                     style = MaterialTheme.typography.bodyMedium
                 )
             }
+
             Spacer(Modifier.height(12.dp))
             ActionButton(
                 text = "Lihat Pembahasan",
-                onClick = {
-                    // Navigasi ke screen pembahasan
-                    navController.navigate("pembahasan_latihan")
-                }
+                onClick = onResultClick // <-- Hubungkan ke lambda
             )
-            Spacer(Modifier.height(8.dp))
 
-            Text(
-                text = "Tanggal Dikerjakan: ${latihan.completionDate}",
-                color = Color.White.copy(alpha = 0.9f),
-                fontSize = 12.sp,
-                modifier = Modifier.align(Alignment.End)
-            )
         }
     }
 }

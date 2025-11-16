@@ -1,10 +1,12 @@
 package com.example.tubespm.ui.screens.siswa.activity
 
 import androidx.compose.foundation.layout.Arrangement
+import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.PaddingValues
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
+import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
@@ -28,21 +30,28 @@ import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
-import com.example.tubespm.data.model.LatihanInProgress
+import com.example.tubespm.data.model.LatihanSoal
 
 @Composable
 fun LatihanDalamProsesContent(
-    latihanList: List<LatihanInProgress>,
-    onContinueClick: () -> Unit
+    latihanList: List<ActivityLatihanDetail>,
+    onContinueClick: (ActivityLatihanDetail) -> Unit
 ){
+    if (latihanList.isEmpty()) {
+        Box(modifier = Modifier.fillMaxSize(), contentAlignment = Alignment.Center) {
+            Text("Tidak ada latihan yang sedang dikerjakan.")
+        }
+        return
+    }
+
     LazyColumn (
         contentPadding = PaddingValues(16.dp),
         verticalArrangement = Arrangement.spacedBy(16.dp)
     ) {
-        items(latihanList) { latihan ->
+        items(latihanList) { activityDetail ->
             LatihanInProgressCard(
-                latihan = latihan,
-                onContinueClick = onContinueClick
+                activityDetail = activityDetail, // <-- Kirim data gabungan
+                onContinueClick = { onContinueClick(activityDetail) }
             )
         }
     }
@@ -50,9 +59,20 @@ fun LatihanDalamProsesContent(
 
 @Composable
 fun LatihanInProgressCard(
-    latihan: LatihanInProgress,
+    activityDetail: ActivityLatihanDetail, // <-- DIUBAH
     onContinueClick: () -> Unit
-) {
+){
+    // Ambil data dari model gabungan
+    val latihan = activityDetail.latihanSoal
+    val userActivity = activityDetail.userActivity
+
+    // Hitung progress
+    val progress = if (latihan.questionCount > 0) {
+        userActivity.answeredQuestionCount.toFloat() / latihan.questionCount.toFloat()
+    } else {
+        0f // Hindari pembagian dengan nol
+    }
+
     Card (
         shape = RoundedCornerShape(12.dp),
         colors = CardDefaults.cardColors(containerColor = Color(0xFFE61C5D))
@@ -80,14 +100,15 @@ fun LatihanInProgressCard(
                 )
                 Spacer(Modifier.width(6.dp))
                 Text(
-                    "${latihan.progress}/${latihan.totalQuestions} soal",
+                    // --- Gunakan data live ---
+                    "${userActivity.answeredQuestionCount} / ${latihan.questionCount} soal",
                     color = Color.White,
                     style = MaterialTheme.typography.bodyMedium
                 )
             }
             Spacer(Modifier.height(8.dp))
             LinearProgressIndicator(
-                progress = { latihan.progress.toFloat() / latihan.totalQuestions.toFloat()},
+                progress = { progress }, // <-- Gunakan progress yang dihitung
                 modifier = Modifier
                     .fillMaxWidth()
                     .height(8.dp)

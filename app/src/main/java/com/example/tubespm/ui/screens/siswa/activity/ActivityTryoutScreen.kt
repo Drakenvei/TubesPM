@@ -21,7 +21,7 @@ import androidx.navigation.NavController
 @Composable
 fun ActivityTryoutScreen(
     navController : NavController,
-    viewModel: ActivityViewModel = hiltViewModel() // inject viewmodel
+    viewModel: ActivityTryoutViewModel = hiltViewModel() // inject viewmodel
 ) {
     // AMBIL STATE DARI VIEWMODEL
     val uiState by viewModel.uiState.collectAsState()
