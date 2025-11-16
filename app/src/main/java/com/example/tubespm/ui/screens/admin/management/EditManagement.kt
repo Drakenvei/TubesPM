@@ -39,7 +39,8 @@ fun EditManagementDialog(
     paket: TryoutPackage,
     onDismiss: () -> Unit,
     onDeactivatePackage: () -> Unit,
-    onAddMoreSection: () -> Unit // masih dipertahankan untuk nanti (Firebase, dsb.)
+    onAddMoreSection: () -> Unit, // masih dipertahankan untuk nanti (Firebase, dsb.)
+    onGoToEditQuestion: () -> Unit
 ) {
     Dialog(onDismissRequest = onDismiss) {
         Surface(
@@ -52,7 +53,8 @@ fun EditManagementDialog(
                 paket = paket,
                 onClose = onDismiss,
                 onDeactivatePackage = onDeactivatePackage,
-                onAddMoreSection = onAddMoreSection
+                onAddMoreSection = onAddMoreSection,
+                onGoToEditQuestion = onGoToEditQuestion   // <-- diteruskan ke content
             )
         }
     }
@@ -66,7 +68,8 @@ private fun EditManagementContent(
     paket: TryoutPackage,
     onClose: () -> Unit,
     onDeactivatePackage: () -> Unit,
-    onAddMoreSection: () -> Unit
+    onAddMoreSection: () -> Unit,
+    onGoToEditQuestion: () -> Unit          // <-- PARAMETER BARU DI SINI
 ) {
     // STATE popup edit section
     var showEditSectionDialog by remember { mutableStateOf(false) }
@@ -190,9 +193,7 @@ private fun EditManagementContent(
                 showEditSectionDialog = false
                 selectedSectionForEdit = null
             },
-            onEditSoalTryout = {
-                // TODO: navigate ke layar edit soal
-            }
+            onEditSoalTryout = onGoToEditQuestion     // <-- navigasi ke Edit Soal
         )
     }
 
@@ -205,9 +206,7 @@ private fun EditManagementContent(
                 // TODO: simpan section baru ke Firebase / ViewModel
                 showAddSectionDialog = false
             },
-            onEditSoalTryout = {
-                // TODO: navigate ke layar edit soal baru
-            }
+            onEditSoalTryout = onGoToEditQuestion     // <-- navigasi ke Edit Soal
         )
     }
 }
@@ -306,6 +305,7 @@ private fun EditManagementContentPreview() {
         paket = dummyPackage,
         onClose = {},
         onDeactivatePackage = {},
-        onAddMoreSection = {}
+        onAddMoreSection = {},
+        onGoToEditQuestion = {}  // <-- stub untuk preview
     )
 }

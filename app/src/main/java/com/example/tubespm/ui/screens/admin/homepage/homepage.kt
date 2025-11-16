@@ -2,14 +2,14 @@ package com.example.tubespm.ui.screens.admin.homepage
 
 import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.*
-import androidx.compose.foundation.rememberScrollState
+import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
-import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
-import androidx.compose.material.icons.filled.*
+import androidx.compose.material.icons.filled.ArrowDropDown
+import androidx.compose.material.icons.filled.Person
 import androidx.compose.material3.*
-import androidx.compose.runtime.*
+import androidx.compose.runtime.Composable
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
@@ -32,143 +32,133 @@ fun AdminHomeScreen(
     val siswaAktif = 2456
     val soalDikerjakan = 2456
 
-    val scrollState = rememberScrollState()
-
-    // Column terluar (container utama)
-    Column(
+    Box(
         modifier = Modifier
             .fillMaxSize()
-//            .padding(paddingValues) // Terapkan padding dari Scaffold
+            .padding(paddingValues)          // padding dari Scaffold (supaya tidak ketutup bottom bar)
             .background(Color(0xFFF5F5F5))
-        // ⬅️ 1. HAPUS .verticalScroll(scrollState) DARI SINI
     ) {
-
-        // ===================== HEADER =====================
-        // Header ini sekarang TIDAK akan ikut scroll
-        Box(
-            modifier = Modifier
-                .fillMaxWidth()
-                .background(
-                    Brush.verticalGradient(
-                        listOf(Color(0xFFFF6F61), Color(0xFFE91E63))
-                    )
-                )
-                .padding(horizontal = 24.dp, vertical = 28.dp)
+        Column(
+            modifier = Modifier.fillMaxSize()
         ) {
-            Row(
-                verticalAlignment = Alignment.CenterVertically,
-                modifier = Modifier.fillMaxWidth()
+
+            // ===================== HEADER (TIDAK SCROLL) =====================
+            Box(
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .background(
+                        Brush.verticalGradient(
+                            listOf(Color(0xFFFF6F61), Color(0xFFE91E63))
+                        )
+                    )
+                    .padding(horizontal = 24.dp, vertical = 28.dp)
             ) {
-                Column {
-                    Text(
-                        text = "Welcome,",
-                        color = Color.White,
-                        fontSize = 20.sp
-                    )
-                    Text(
-                        text = adminName,
-                        color = Color.White,
-                        fontSize = 28.sp,
-                        fontWeight = FontWeight.Bold
-                    )
-                }
-                Spacer(modifier = Modifier.weight(1f))
-                Box(
-                    modifier = Modifier
-                        .size(48.dp)
-                        .clip(CircleShape)
-                        .background(Color(0x33FFFFFF)),
-                    contentAlignment = Alignment.Center
+                Row(
+                    verticalAlignment = Alignment.CenterVertically,
+                    modifier = Modifier.fillMaxWidth()
                 ) {
-                    Icon(
-                        imageVector = Icons.Default.Person,
-                        contentDescription = "Admin Profile",
-                        tint = Color.White
-                    )
+                    Column {
+                        Text(
+                            text = "Welcome,",
+                            color = Color.White,
+                            fontSize = 20.sp
+                        )
+                        Text(
+                            text = adminName,
+                            color = Color.White,
+                            fontSize = 28.sp,
+                            fontWeight = FontWeight.Bold
+                        )
+                    }
+                    Spacer(modifier = Modifier.weight(1f))
+                    Box(
+                        modifier = Modifier
+                            .size(48.dp)
+                            .clip(CircleShape)
+                            .background(Color(0x33FFFFFF)),
+                        contentAlignment = Alignment.Center
+                    ) {
+                        Icon(
+                            imageVector = Icons.Default.Person,
+                            contentDescription = "Admin Profile",
+                            tint = Color.White
+                        )
+                    }
                 }
             }
-        }
 
-        // ===================== KONTEN PUTIH =====================
-        Surface(
-            // ⬅️ 2. UBAH .fillMaxSize() MENJADI .weight(1f) & .fillMaxWidth()
-            // Ini membuat Surface mengisi sisa ruang yang tersedia di Column
-            modifier = Modifier
-                .fillMaxWidth()
-                .weight(1f),
-            shape = RoundedCornerShape(topStart = 24.dp, topEnd = 24.dp),
-            color = Color.White,
-            tonalElevation = 1.dp
-        ) {
-            // Column ini berisi konten yang BISA di-scroll
-            Column(
+            // ===================== KONTEN PUTIH (BISA DI-SCROLL) =====================
+            Surface(
                 modifier = Modifier
-                    // ⬅️ 3. TAMBAHKAN .verticalScroll(scrollState) & .fillMaxSize() DI SINI
-                    .fillMaxSize()
-                    .verticalScroll(scrollState)
-                    .padding(top = 20.dp) // Hapus padding bottom di sini
+                    .fillMaxWidth()
+                    .weight(1f),                       // isi sisa ruang di bawah header
+                shape = RoundedCornerShape(topStart = 24.dp, topEnd = 24.dp),
+                color = Color.White,
+                tonalElevation = 1.dp
             ) {
-
-                // ---------- GRID CARD 2x2 ----------
-                Column(
-                    modifier = Modifier
-                        .fillMaxWidth()
-                        .padding(horizontal = 16.dp)
+                LazyColumn(
+                    modifier = Modifier.fillMaxSize(),
+                    contentPadding = PaddingValues(
+                        top = 20.dp,
+                        start = 16.dp,
+                        end = 16.dp,
+                        bottom = 24.dp
+                    ),
+                    verticalArrangement = Arrangement.spacedBy(20.dp)
                 ) {
-                    Row(
-                        modifier = Modifier.fillMaxWidth(),
-                        horizontalArrangement = Arrangement.spacedBy(12.dp)
-                    ) {
-                        AdminStatCard(
-                            title = "Paket Tryout\nAktif",
-                            bigText = paketTryoutAktif.toString(),
-                            subtitle = "Paket aktif",
-                            modifier = Modifier.weight(1f)
-                        )
-                        AdminStatCard(
-                            title = "Soal Latihan",
-                            bigText = soalLatihan.toString(),
-                            subtitle = "Soal",
-                            modifier = Modifier.weight(1f)
-                        )
+                    // ---------- GRID CARD 2x2 ----------
+                    item {
+                        Column {
+                            Row(
+                                modifier = Modifier.fillMaxWidth(),
+                                horizontalArrangement = Arrangement.spacedBy(12.dp)
+                            ) {
+                                AdminStatCard(
+                                    title = "Paket Tryout\nAktif",
+                                    bigText = paketTryoutAktif.toString(),
+                                    subtitle = "Paket aktif",
+                                    modifier = Modifier.weight(1f)
+                                )
+                                AdminStatCard(
+                                    title = "Soal Latihan",
+                                    bigText = soalLatihan.toString(),
+                                    subtitle = "Soal",
+                                    modifier = Modifier.weight(1f)
+                                )
+                            }
+                            Spacer(modifier = Modifier.height(12.dp))
+                            Row(
+                                modifier = Modifier.fillMaxWidth(),
+                                horizontalArrangement = Arrangement.spacedBy(12.dp)
+                            ) {
+                                AdminStatCard(
+                                    title = "Siswa Aktif",
+                                    bigText = siswaAktif.toString(),
+                                    subtitle = "Siswa",
+                                    modifier = Modifier.weight(1f)
+                                )
+                                AdminStatCard(
+                                    title = "Soal Dikerjakan",
+                                    bigText = soalDikerjakan.toString(),
+                                    subtitle = "Soal",
+                                    modifier = Modifier.weight(1f)
+                                )
+                            }
+                        }
                     }
-                    Spacer(modifier = Modifier.height(12.dp))
-                    Row(
-                        modifier = Modifier.fillMaxWidth(),
-                        horizontalArrangement = Arrangement.spacedBy(12.dp)
-                    ) {
-                        AdminStatCard(
-                            title = "Siswa Aktif",
-                            bigText = siswaAktif.toString(),
-                            subtitle = "Siswa",
-                            modifier = Modifier.weight(1f)
-                        )
-                        AdminStatCard(
-                            title = "Soal Dikerjakan",
-                            bigText = soalDikerjakan.toString(),
-                            subtitle = "Soal",
-                            modifier = Modifier.weight(1f)
-                        )
+
+                    // ---------- KARTU GRAFIK ----------
+                    item {
+                        ActivityChartCard()
                     }
                 }
-
-                Spacer(modifier = Modifier.height(20.dp))
-
-                // ---------- KARTU GRAFIK ----------
-                ActivityChartCard()
-
-                // ⬅️ 4. (Opsional tapi disarankan) Tambah Spacer di akhir
-                // Agar kartu grafik tidak menempel di bagian bawah saat di-scroll
-                Spacer(modifier = Modifier.height(16.dp))
             }
         }
     }
 }
 
-
 @Composable
 private fun AdminStatCard(
-    // ... (Kode tidak berubah)
     title: String,
     bigText: String,
     subtitle: String,
@@ -209,11 +199,8 @@ private fun AdminStatCard(
 
 @Composable
 private fun ActivityChartCard() {
-    // ... (Kode tidak berubah)
     Surface(
-        modifier = Modifier
-            .fillMaxWidth()
-            .padding(horizontal = 16.dp, vertical = 8.dp),
+        modifier = Modifier.fillMaxWidth(),
         shape = RoundedCornerShape(22.dp),
         color = Color.White,
         shadowElevation = 4.dp
@@ -257,7 +244,9 @@ private fun ActivityChartCard() {
                     shape = RoundedCornerShape(50)
                 )
             }
+
             Spacer(modifier = Modifier.height(16.dp))
+
             Column(
                 horizontalAlignment = Alignment.CenterHorizontally,
                 modifier = Modifier.fillMaxWidth()

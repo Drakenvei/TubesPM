@@ -14,41 +14,49 @@ import androidx.navigation.compose.composable
 import androidx.navigation.compose.rememberNavController
 import com.example.tubespm.ui.navigation.BottomNavbarAdmin
 import com.example.tubespm.ui.screens.admin.homepage.AdminHomeScreen
-import com.example.tubespm.ui.screens.admin.profile.AdminProfileScreen
 import com.example.tubespm.ui.screens.admin.management.ManajemenTryoutScreen
+import com.example.tubespm.ui.screens.admin.management.EditQuestionScreen
+import com.example.tubespm.ui.screens.admin.profile.AdminProfileScreen
 
 @Composable
 fun AdminMainScreen(
     rootNavController: NavHostController
 ) {
-    val adminNavController = rememberNavController() // NavController untuk navigasi internal Admin
+    // NavController khusus untuk tab Admin
+    val adminNavController = rememberNavController()
 
     Scaffold(
         bottomBar = { BottomNavbarAdmin(navController = adminNavController) }
-    ) { paddingValues -> // paddingValues ini datang dari Scaffold, untuk BottomBar
+    ) { paddingValues ->
 
         NavHost(
             navController = adminNavController,
             startDestination = "admin_home",
-            // PERBAIKAN: Hapus modifier = Modifier.fillMaxSize() dari NavHost.
-            // Biarkan padding diatur oleh setiap Composable di dalamnya.
         ) {
             // Rute 1: Admin Home
             composable("admin_home") {
-                AdminHomeScreen(paddingValues = paddingValues)
+                AdminHomeScreen(
+                    paddingValues = paddingValues
+                )
             }
 
-            // Rute 2: Admin Management (SUDAH DIPERBAIKI)
+            // Rute 2: Admin Management
             composable("admin_management") {
-                ManajemenTryoutScreen(paddingValuesFromNavHost = paddingValues)
+                ManajemenTryoutScreen(
+                    paddingValuesFromNavHost = paddingValues,
+                    onGoToEditQuestion = {
+                        // pindah ke halaman edit soal
+                        adminNavController.navigate("admin_edit_question")
+                    }
+                )
             }
 
-            // Rute 3: Admin Report (Contoh)
+            // Rute 3: Admin Report (contoh placeholder)
             composable("admin_report") {
                 Box(
                     modifier = Modifier
                         .fillMaxSize()
-                        .padding(paddingValues), // Terapkan padding di sini
+                        .padding(paddingValues),
                     contentAlignment = Alignment.Center
                 ) {
                     Text("Halaman Report")
@@ -57,14 +65,24 @@ fun AdminMainScreen(
 
             // Rute 4: Admin Profile
             composable("admin_profile") {
-                AdminProfileScreen (
+                AdminProfileScreen(
                     paddingValues = paddingValues,
-                    // Tambahkan parameter adminName dan adminEmail jika diperlukan di AdminProfileScreen
-                    // adminName = "Admin",
-                    // adminEmail = "admin@gmail.com",
                     onLogoutClick = {
+                        // keluar dari stack admin, kembali ke root
                         adminNavController.popBackStack()
+                        // kalau mau kembali ke login di rootNavController bisa tambahkan:
+                        // rootNavController.navigate("login") { popUpTo(0) }
                     }
+                )
+            }
+
+            // Rute 5: Edit Question (halaman edit soal tryout)
+            composable("admin_edit_question") {
+                EditQuestionScreen(
+                    paketName = "TO-001 (Penalaran Umum)", // sementara dummy
+                    questionNumber = 1,
+                    paddingValuesFromNavHost = paddingValues,
+                    onBackClick = { adminNavController.popBackStack() }
                 )
             }
         }

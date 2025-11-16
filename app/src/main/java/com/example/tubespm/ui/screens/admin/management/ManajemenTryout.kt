@@ -17,12 +17,11 @@ import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
-import androidx.compose.ui.text.font.FontWeight
 import com.example.tubespm.ui.theme.TubesPMTheme
-import com.example.tubespm.ui.screens.admin.management.EditManagementDialog
 
 // ======================================================
 // DATA MODEL TRYOUT
@@ -44,7 +43,8 @@ data class TryoutPackage(
 @Composable
 fun ManajemenTryoutScreen(
     // padding dari AdminRoot / AdminMainScreen (Scaffold dengan BottomNavbarAdmin)
-    paddingValuesFromNavHost: PaddingValues
+    paddingValuesFromNavHost: PaddingValues,
+    onGoToEditQuestion: () -> Unit
 ) {
     var searchQuery by remember { mutableStateOf("") }
     var selectedTab by remember { mutableStateOf(0) }
@@ -54,7 +54,6 @@ fun ManajemenTryoutScreen(
     var selectedPackageForEdit by remember { mutableStateOf<TryoutPackage?>(null) }
 
     // >>> DATA INI MASIH DUMMY, HARD-CODED DI DALAM KODE <<<
-    // Kalau mau ambil dari Firebase, bagian ini nanti diganti dengan hasil query.
     val tryoutPackages = remember {
         listOf(
             TryoutPackage(
@@ -143,8 +142,8 @@ fun ManajemenTryoutScreen(
         Column(
             modifier = Modifier
                 .fillMaxSize()
-                .padding(innerPadding)            // padding dari Scaffold (top bar, FAB)
-                .padding(paddingValuesFromNavHost) // padding dari NavHost / bottom bar
+                .padding(innerPadding)             // padding dari Scaffold
+                .padding(paddingValuesFromNavHost) // padding dari NavHost
         ) {
 
             // ==================================================
@@ -201,7 +200,7 @@ fun ManajemenTryoutScreen(
             }
 
             // ==================================================
-            // DIALOG EDIT MANAGEMENT (POPU PAKET)
+            // DIALOG EDIT MANAGEMENT (POPUP PAKET)
             // ==================================================
             if (showEditManagementDialog && selectedPackageForEdit != null) {
                 EditManagementDialog(
@@ -211,13 +210,14 @@ fun ManajemenTryoutScreen(
                         selectedPackageForEdit = null
                     },
                     onDeactivatePackage = {
-                        // TODO: logika nonaktifkan paket di sini (update ke Firebase, dsb.)
+                        // TODO: logika nonaktifkan paket
                         showEditManagementDialog = false
                         selectedPackageForEdit = null
                     },
                     onAddMoreSection = {
                         // TODO: logika tambah section baru
-                    }
+                    },
+                    onGoToEditQuestion = onGoToEditQuestion
                 )
             }
         }
@@ -339,7 +339,7 @@ fun TryoutPackageCard(
                 menit = tryoutPackage.literasiMenit
             )
 
-            // Status badge di pojok kanan bawah (hanya jika ada data soal/menit)
+            // Status badge di pojok kanan bawah (hanya jika ada data)
             val hasData = tryoutPackage.tpsSoal > 0 || tryoutPackage.literasiSoal > 0
             if (hasData) {
                 Spacer(modifier = Modifier.height(12.dp))
@@ -448,7 +448,8 @@ fun TryoutSection(
 fun ManajemenTryoutScreenPreview() {
     TubesPMTheme {
         ManajemenTryoutScreen(
-            paddingValuesFromNavHost = PaddingValues(0.dp)
+            paddingValuesFromNavHost = PaddingValues(0.dp),
+            onGoToEditQuestion = {}          // ⬅️ TAMBAHKAN INI
         )
     }
 }

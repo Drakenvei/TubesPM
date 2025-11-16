@@ -14,11 +14,11 @@ import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.text.TextStyle
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextAlign
+import androidx.compose.ui.text.input.KeyboardType
 import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.compose.ui.window.Dialog
-import androidx.compose.ui.text.input.KeyboardType
 
 // ======================================
 // STATE UNTUK EDIT / ADD SECTION
@@ -45,14 +45,12 @@ fun EditSectionDialog(
 ) {
     SectionFormDialog(
         title = "Edit Section",
+        primaryButtonText = "Edit Section",
         paketName = paketName,
         initialState = initialState,
-        buttonLabel = "Edit Section",        // ⬅️ label khusus edit
         onDismiss = onDismiss,
-        onConfirm = { newState ->
-            onSaveSection(newState)
-            onEditSoalTryout()
-        }
+        onConfirm = onSaveSection,
+        onEditSoalTryout = onEditSoalTryout
     )
 }
 
@@ -75,14 +73,12 @@ fun AddSectionDialog(
 ) {
     SectionFormDialog(
         title = "Add Section",
+        primaryButtonText = "Tambah Section",
         paketName = paketName,
         initialState = initialState,
-        buttonLabel = "Tambah Section",      // ⬅️ label khusus add
         onDismiss = onDismiss,
-        onConfirm = { newState ->
-            onSaveSection(newState)
-            onEditSoalTryout()
-        }
+        onConfirm = onSaveSection,
+        onEditSoalTryout = onEditSoalTryout
     )
 }
 
@@ -93,11 +89,12 @@ fun AddSectionDialog(
 @Composable
 private fun SectionFormDialog(
     title: String,
+    primaryButtonText: String,            // "Edit Section" / "Tambah Section"
     paketName: String,
     initialState: EditSectionUiState,
-    buttonLabel: String,                       // ⬅️ label dinamis
     onDismiss: () -> Unit,
-    onConfirm: (EditSectionUiState) -> Unit
+    onConfirm: (EditSectionUiState) -> Unit,
+    onEditSoalTryout: () -> Unit         // 🔴 tombol khusus untuk ke halaman Edit Soal
 ) {
     var uiState by remember { mutableStateOf(initialState) }
 
@@ -305,8 +302,7 @@ private fun SectionFormDialog(
                             )
                         },
                         singleLine = true,
-                        modifier = Modifier
-                            .width(80.dp),
+                        modifier = Modifier.width(80.dp),
                         textStyle = TextStyle(
                             fontSize = 16.sp,
                             color = Color.Black,
@@ -358,8 +354,7 @@ private fun SectionFormDialog(
                             )
                         },
                         singleLine = true,
-                        modifier = Modifier
-                            .width(80.dp),
+                        modifier = Modifier.width(80.dp),
                         textStyle = TextStyle(
                             fontSize = 16.sp,
                             color = Color.Black,
@@ -387,11 +382,31 @@ private fun SectionFormDialog(
                     )
                 }
 
-                Spacer(modifier = Modifier.height(24.dp))
+                Spacer(modifier = Modifier.height(18.dp))
 
-                // ====================== BUTTON KONFIRMASI ======================
+                // ====================== BUTTON EDIT SOAL TRYOUT ======================
                 Button(
-                    onClick = { onConfirm(uiState) },
+                    onClick = onEditSoalTryout,        // 👉 pindah ke halaman Edit Soal
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .height(44.dp),
+                    shape = RoundedCornerShape(8.dp),
+                    colors = ButtonDefaults.buttonColors(
+                        containerColor = Color(0xFFE0E0E0),
+                        contentColor = Color.Black
+                    )
+                ) {
+                    Text(
+                        text = "Edit Soal Tryout",
+                        fontWeight = FontWeight.SemiBold
+                    )
+                }
+
+                Spacer(modifier = Modifier.height(8.dp))
+
+                // ====================== BUTTON UTAMA (EDIT / TAMBAH SECTION) ======================
+                Button(
+                    onClick = { onConfirm(uiState) },   // hanya simpan data section
                     modifier = Modifier
                         .fillMaxWidth()
                         .height(46.dp),
@@ -402,7 +417,7 @@ private fun SectionFormDialog(
                     )
                 ) {
                     Text(
-                        text = buttonLabel,              // ⬅️ pakai label dinamis
+                        text = primaryButtonText,
                         fontWeight = FontWeight.SemiBold
                     )
                 }
