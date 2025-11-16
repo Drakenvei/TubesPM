@@ -13,10 +13,10 @@ import androidx.navigation.compose.composable
 import androidx.navigation.compose.rememberNavController
 import androidx.navigation.navArgument
 
-import com.example.tubespm.data.model.sampleQuizQuestions
-import com.example.tubespm.ui.screens.*
 import com.example.tubespm.ui.screens.admin.homepage.AdminHomeScreen
 import com.example.tubespm.ui.screens.admin.profile.AdminProfileScreen
+import com.example.tubespm.ui.screens.admin.management.ManajemenTryoutScreen
+import com.example.tubespm.ui.screens.admin.management.EditQuestionScreen
 import com.example.tubespm.ui.screens.pembahasan.PembahasanScreen
 import com.example.tubespm.ui.screens.siswa.activity.ActivityLatihanScreen
 import com.example.tubespm.ui.screens.siswa.activity.ActivityScreen
@@ -69,7 +69,7 @@ fun StudentNavGraph(
         }
 
         composable("notification") {
-            NotificationScreen(onBackClick = {navController.popBackStack()})
+            NotificationScreen(onBackClick = { navController.popBackStack() })
         }
 
         // --- Profile / Edit ---
@@ -132,25 +132,39 @@ fun AdminNavGraph(
     NavHost(
         navController = navController,
         startDestination = "admin_home",
-        modifier = Modifier
-            .fillMaxSize()
-            .padding(paddingValues)
+        // UNTUK ADMIN: jangan padding di sini, biar masing-masing screen
+        // yang menerima paddingValues bisa mengatur sendiri.
+        modifier = Modifier.fillMaxSize()
     ) {
+
+        // ------------ Admin Home ------------
         composable("admin_home") {
-            AdminHomeScreen(paddingValues = paddingValues)
+            AdminHomeScreen(
+                paddingValues = paddingValues
+            )
         }
 
+        // ------------ Manajemen Tryout ------------
         composable("admin_management") {
-            Box(
-                modifier = Modifier
-                    .fillMaxSize()
-                    .padding(paddingValues),
-                contentAlignment = Alignment.Center
-            ) {
-                Text(text = "Halaman Management Admin")
-            }
+            ManajemenTryoutScreen(
+                paddingValuesFromNavHost = paddingValues,
+                onGoToEditQuestion = {
+                    navController.navigate("admin_edit_question")
+                }
+            )
         }
 
+        // ------------ Edit Question ------------
+        composable("admin_edit_question") {
+            EditQuestionScreen(
+                paketName = "TO-001 (Penalaran Umum)", // nanti bisa dibuat dinamis dengan navArgs
+                questionNumber = 1,
+                paddingValuesFromNavHost = paddingValues,
+                onBackClick = { navController.popBackStack() }
+            )
+        }
+
+        // ------------ Admin Report (contoh) ------------
         composable("admin_report") {
             Box(
                 modifier = Modifier
@@ -162,6 +176,7 @@ fun AdminNavGraph(
             }
         }
 
+        // ------------ Admin Profile ------------
         composable("admin_profile") {
             AdminProfileScreen(
                 paddingValues = paddingValues,
@@ -200,7 +215,6 @@ fun AdminRoot() {
 
     Scaffold(
         bottomBar = {
-            // Ganti BottomNavbarAdmin dengan nama composable navbar admin punyamu
             BottomNavbarAdmin(navController = navController)
         }
     ) { paddingValues ->
