@@ -87,7 +87,7 @@ fun StudentNavGraph(
             ActivityLatihanScreen(navController = navController)
         }
 
-        // --- Quiz screens (tanpa parameter dulu) ---
+        // --- Quiz screens ---
         composable(
             route = "tryout_quiz/{activityId}",
             arguments = listOf(navArgument("activityId") { type = NavType.StringType })
@@ -98,14 +98,16 @@ fun StudentNavGraph(
                 activityId = activityId // <-- Kirim ke QuizScreen
             )
         }
-//        composable("latihan_quiz") {
-//            QuizScreen(
-//                navController = navController,
-//                questions = sampleQuizQuestions(),
-//                mode = QuizMode.LATIHAN,
-//                onSessionFinished = { navController.popBackStack() }
-//            )
-//        }
+        composable(
+            route = "latihan_quiz/{activityId}",
+            arguments = listOf(navArgument("activityId") {type = NavType.StringType})
+        ) { backStackEntry ->
+            val activityId = backStackEntry.arguments?.getString("activityId") ?: ""
+            QuizScreen(
+                navController = navController,
+                activityId = activityId
+            )
+        }
 
         // --- Pembahasan ---
         composable(

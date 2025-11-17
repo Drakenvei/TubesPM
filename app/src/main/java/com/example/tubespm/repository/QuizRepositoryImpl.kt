@@ -23,15 +23,22 @@ class QuizRepositoryImpl @Inject constructor(
             .get().await().toObject(UserActivity::class.java)
     }
 
-    override suspend fun getTryoutMetadata(tryoutId: String): Tryout? {
-        return db.collection("tryouts").document(tryoutId)
+    override suspend fun getQuizMetadata(refId: String, type: String): Tryout? {
+        val collectionName = if (type == "tryout") "tryouts" else "latihan_soal"
+
+        // Kita convert ke object Tryout.
+        // Pastikan model LatihanSoal dan Tryout punya field yang mirip
+        // atau gunakan model Tryout sebagai wadah umum sementara.
+        return db.collection(collectionName).document(refId)
             .get().await().toObject(Tryout::class.java)
     }
 
-    override suspend fun getTryoutQuestions(tryoutId: String): List<QuizQuestion> {
-        return db.collection("tryouts").document(tryoutId)
+    override suspend fun getQuestions(refId: String, type: String): List<QuizQuestion> {
+        val collectionName = if (type == "tryout") "tryouts" else "latihan_soal"
+
+        return db.collection(collectionName).document(refId)
             .collection("questions")
-            .orderBy("questionNumber") // Pastikan soal terurut
+            .orderBy("questionNumber")
             .get().await().toObjects(QuizQuestion::class.java)
     }
 
@@ -71,20 +78,22 @@ class QuizRepositoryImpl @Inject constructor(
             .update("status", status).await()
     }
 
-    override suspend fun startQuizSession(activityId: String, durationInMinutes: Long): Date {
-        // Hitung deadline
-        val now = Calendar.getInstance()
-        now.add(Calendar.MINUTE, durationInMinutes.toInt())
-        val deadlineTime = now.time // Ini adalah objek Date
+    override suspend fun startQuizSession(activityId: String, durationInMinutes: Long): Date? {
+        val updates = mutableMapOf<String, Any>("status" to "in_progress")
+        var deadlineTime: Date? = null
 
-        // Update status dan deadline di Firestore
+        // Hanya set deadline jika durasi > 0 (yaitu Tryout)
+        if (durationInMinutes > 0) {
+            val now = Calendar.getInstance()
+            now.add(Calendar.MINUTE, durationInMinutes.toInt())
+            deadlineTime = now.time
+            updates["deadline"] = deadlineTime
+        }
+
         db.collection("user_activities").document(activityId)
-            .update(
-                "status", "in_progress",
-                "deadline", deadlineTime // Simpan timestamp deadline
-            ).await()
+            .update(updates).await()
 
-        return deadlineTime // Kembalikan deadline
+        return deadlineTime
     }
 
     override suspend fun updateAnswerCount(activityId: String, count: Int) {
@@ -98,14 +107,43 @@ class QuizRepositoryImpl @Inject constructor(
         correctCount: Int,
         answeredCount: Int
     ) {
-        val finalData = mapOf(
+        // 1. Ambil dulu dokumen activity untuk tahu userId dan type
+        val activityRef = db.collection("user_activities").document(activityId)
+        val activitySnapshot = activityRef.get().await()
+
+        val userId = activitySnapshot.getString("userId")
+        val type = activitySnapshot.getString("type") // "tryout" atau "latihan_soal"
+        val currentStatus = activitySnapshot.getString("status")
+
+        // Cek agar tidak double-count kalau user tekan submit berkali-kali
+        if (currentStatus == "completed") return
+
+        // 2. Siapkan update untuk user_activities
+        val activityUpdates = mapOf(
             "status" to "completed",
             "score" to score,
             "correctCount" to correctCount,
             "answeredQuestionCount" to answeredCount, // <-- Update hitungan
             "completedAt" to FieldValue.serverTimestamp()
         )
-        db.collection("user_activities").document(activityId)
-            .update(finalData).await()
+
+        // 3. Jalankan Batch Write (Atomik) agar aman
+        db.runBatch { batch ->
+            // A. Update status di user_activities
+            batch.update(activityRef, activityUpdates)
+
+            // B. Update counter di users (Hanya jika userId valid)
+            if (userId != null) {
+                val userRef = db.collection("users").document(userId)
+
+                if (type == "tryout"){
+                    // Increment tryoutCompleted + 1
+                    batch.update(userRef, "tryoutCompleted", FieldValue.increment(1))
+                } else {
+                    // Increment latihanCompleted + 1 (asumsi tipe lain adalah latihan)
+                    batch.update(userRef, "latihanCompleted", FieldValue.increment(1))
+                }
+            }
+        }.await()
     }
 }

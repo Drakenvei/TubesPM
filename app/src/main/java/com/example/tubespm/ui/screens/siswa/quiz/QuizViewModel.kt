@@ -5,6 +5,7 @@ import androidx.lifecycle.SavedStateHandle
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import com.example.tubespm.data.model.QuizQuestion
+import com.example.tubespm.data.model.Tryout
 import com.example.tubespm.repository.QuizRepository
 import dagger.hilt.android.lifecycle.HiltViewModel
 import kotlinx.coroutines.Job
@@ -55,48 +56,63 @@ class QuizViewModel @Inject constructor(
 
         viewModelScope.launch {
             try {
-                // 1. Ambil data aktivitas & metadata
-                val activity = repository.getActivity(activityId)
-                if (activity == null) throw Exception("Aktivitas tidak ditemukan")
+                // 1. Ambil data aktivitas
+                val activity = repository.getActivity(activityId) ?: throw Exception("Aktivitas null")
 
-                val tryout = repository.getTryoutMetadata(activity.activityRefId)
-                if (tryout == null) throw Exception("Tryout tidak ditemukan")
+                // 2. Tentukan Mode berdasarkan 'type' dari database
+                val mode = if (activity.type == "tryout") QuizMode.TRYOUT else QuizMode.LATIHAN
 
-                // 2. Ubah status menjadi "in_progress"
-                val deadline: Date
-                if (activity.status == "not_started" || activity.deadline == null) {
-                    // 1. Jika baru mulai, SET deadline di Firestore
-                    deadline = repository.startQuizSession(activityId, tryout.totalDuration.toLong())
-                } else {
-                    // 2. Jika dilanjutkan, AMBIL deadline yang ada
-                    deadline = activity.deadline!!
-                }
+                // 3. Ambil Judul & Soal (Menggunakan fungsi repository yang baru)
+                val quizMetadata = repository.getQuizMetadata(activity.activityRefId, activity.type)
+                val title = quizMetadata?.title ?: "Latihan Soal"
 
-                // 3. Hitung sisa waktu
-                val initialRemaining = (deadline.time - System.currentTimeMillis()) / 1000
-                if (initialRemaining <= 0) {
-                    // Waktu sudah habis, submit paksa
-                    submitQuiz()
-                    return@launch
-                }
+                val questions = repository.getQuestions(activity.activityRefId, activity.type)
 
-                // 4. Ambil soal
-                val questions = repository.getTryoutQuestions(activity.activityRefId)
                 if (questions.isEmpty()) throw Exception("Soal tidak ditemukan")
+
+                // 4. Logika Deadline & Timer
+                var deadline: Date? = activity.deadline
+                var remaining = 0L
+
+                if (mode == QuizMode.TRYOUT) {
+                    // --- LOGIKA KHUSUS TRYOUT (PAKAI TIMER) ---
+                    if (activity.status == "not_started" || deadline == null) {
+                        // Ambil durasi dari objek metadata yang sudah diambil di atas
+                        // Untuk penyederhanaan, kita asumsikan durasi ada atau default 120 menit,
+                        // atau Anda bisa fetch duration di step 3.
+                            val duration = quizMetadata?.totalDuration?.toLong() ?: 120L
+
+                        deadline = repository.startQuizSession(activityId, duration)
+                    }
+
+                    if (deadline != null) {
+                        remaining = (deadline.time - System.currentTimeMillis()) / 1000
+                    }
+                } else {
+                    // --- LOGIKA KHUSUS LATIHAN (TANPA TIMER) ---
+                    if (activity.status == "not_started") {
+                        repository.startQuizSession(activityId, 0) // 0 artinya tanpa deadline
+                    }
+                    remaining = 0 // Tidak ada hitung mundur
+                }
 
                 // 5. Update state awal
                 _uiState.update {
                     it.copy(
                         isLoading = false,
                         questions = questions,
-                        subtestName = tryout.title,
-                        remainingTimeInSeconds = initialRemaining, // Set sisa waktu
-                        deadline = deadline // Simpan deadline
+                        subtestName = title,
+                        quizMode = mode, // Set mode yang benar
+                        remainingTimeInSeconds = remaining,
+                        deadline = deadline,
+                        currentQuestionIndex = findFirstUnanswered(questions, emptyMap())
                     )
                 }
 
                 // 6. Mulai timer
-                startTimer()
+                if (mode == QuizMode.TRYOUT) {
+                    startTimer()
+                }
 
                 // 7. Dengarkan perubahan jawaban
                 listenForSavedAnswers()

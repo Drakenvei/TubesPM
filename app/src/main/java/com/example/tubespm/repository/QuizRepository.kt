@@ -11,11 +11,11 @@ interface QuizRepository {
     /** Mengambil 1 dokumen UserActivity untuk tahu tryout apa yang dikerjakan */
     suspend fun getActivity(activityId: String): UserActivity?
 
-    /** Mengambil 1 dokumen Tryout untuk tahu metadata (durasi, dll) */
-    suspend fun getTryoutMetadata(tryoutId: String): Tryout?
+    /** Mengambil 1 dokumen untuk tahu metadata (durasi, dll) */
+    suspend fun getQuizMetadata(refId: String, type: String): Tryout? // Mengembalikan Judul
 
-    /** Mengambil SEMUA soal untuk tryoutId tertentu */
-    suspend fun getTryoutQuestions(tryoutId: String): List<QuizQuestion>
+    /** Mengambil SEMUA soal untuk id tertentu */
+    suspend fun getQuestions(refId: String, type: String): List<QuizQuestion>
 
     /** Mengambil jawaban yang sudah disimpan user (Map<QuestionID, PilihanUser>) */
     fun getSavedAnswers(activityId: String): Flow<Map<String, String>>
@@ -36,7 +36,7 @@ interface QuizRepository {
      * Meng-update status ke 'in_progress' DAN mengatur deadline di Firestore.
      * Mengembalikan deadline yang telah di-commit.
      */
-    suspend fun startQuizSession(activityId: String, durationInMinutes: Long): Date
+    suspend fun startQuizSession(activityId: String, durationInMinutes: Long): Date?
 
     /** Meng-update jumlah soal terjawab di Firestore */
     suspend fun updateAnswerCount(activityId: String, count: Int)

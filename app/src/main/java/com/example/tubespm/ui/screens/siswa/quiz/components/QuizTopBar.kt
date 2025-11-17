@@ -35,7 +35,18 @@ fun QuizTopBar(
                     fontWeight = FontWeight.Bold,
                     modifier = Modifier.fillMaxWidth(),
                     textAlign = TextAlign.Center,
-                    fontSize = 18.sp
+                    fontSize = 18.sp,
+                    color = if (remainingTimeInSeconds < 900) Color.Red else Color.Black // Merah jika < 15 menit
+                )
+            } else {
+                // Tampilkan Teks "Mode Latihan"
+                Text(
+                    text = "Latihan Soal",
+                    fontWeight = FontWeight.Bold,
+                    modifier = Modifier.fillMaxWidth(),
+                    textAlign = TextAlign.Center,
+                    fontSize = 18.sp,
+                    color = Color(0xFFE61C5D)
                 )
             }
         },

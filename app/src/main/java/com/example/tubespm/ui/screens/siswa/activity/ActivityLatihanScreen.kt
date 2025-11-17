@@ -108,7 +108,7 @@ fun ActivityLatihanScreen(
                     latihanList = uiState.completed, // <-- Kirim data live
                     onResultClick = { activityDetail ->
                         // Kirim ID aktivitas unik
-                        navController.navigate("pembahasan_latihan/${activityDetail.userActivity.id}")
+                        navController.navigate("pembahasan/${activityDetail.userActivity.id}")
                     }
                 )
             }

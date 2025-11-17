@@ -48,7 +48,10 @@ class PembahasanViewModel @Inject constructor(
                 if (activity == null) throw Exception("Aktivitas tidak ditemukan")
 
                 // 2. Ambil semua soal dari bank soal (kunci jawaban & pembahasan)
-                val allQuestions = repository.getTryoutQuestions(activity.activityRefId)
+                val allQuestions = repository.getQuestions(
+                    refId = activity.activityRefId,
+                    type = activity.type
+                )
 
                 // 3. Ambil semua jawaban user (hanya butuh data terakhir, jadi pakai .first())
                 val userAnswers = repository.getSavedAnswers(activityId).first()

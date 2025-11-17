@@ -1,6 +1,8 @@
 package com.example.tubespm.data.model
 
 import com.google.firebase.firestore.DocumentId
+import com.google.firebase.firestore.ServerTimestamp
+import java.util.Date
 
 data class LatihanSoal(
     @DocumentId
@@ -11,5 +13,9 @@ data class LatihanSoal(
     val subtest: String = "",
     val questionCount: Int = 0,
     val status: String = "",
+
+    @ServerTimestamp
+    val createdAt: Date? = null,
+
     val topics: List<Topic> = emptyList() // data class Topic diambil dari model Tryout.kt
 )

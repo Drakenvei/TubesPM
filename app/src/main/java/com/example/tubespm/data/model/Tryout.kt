@@ -1,6 +1,8 @@
 package com.example.tubespm.data.model
 
 import com.google.firebase.firestore.DocumentId
+import com.google.firebase.firestore.ServerTimestamp
+import java.util.Date
 
 // Tambahkan default value (misal: "", 0, emptyList()) untuk SEMUA properti
 
@@ -39,6 +41,9 @@ data class Tryout(
     // Info total (denormalized dari database)
     val totalDuration: Int = 0,
     val totalQuestionCount: Int = 0,
+
+    @ServerTimestamp
+    val createdAt: Date? = null, // Bisa null jika data lama belum punya field ini
 
     // List of sections (nama field 'sections' sudah cocok dengan DB)
     val sections: List<Section> = emptyList()
