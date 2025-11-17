@@ -1,18 +1,10 @@
 package com.example.tubespm.ui.screens.siswa.activity
 
 import androidx.compose.foundation.background
-import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.*
-import androidx.compose.foundation.lazy.LazyColumn
-import androidx.compose.foundation.lazy.items
-import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.ArrowBack
-import androidx.compose.material.icons.filled.ArrowBack
-import androidx.compose.material.icons.filled.CheckCircle
-import androidx.compose.material.icons.filled.Close
-import androidx.compose.material.icons.filled.Description
 import androidx.compose.material3.*
 import androidx.compose.material3.TabRowDefaults.tabIndicatorOffset
 import androidx.compose.runtime.*
@@ -21,26 +13,24 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.text.font.FontWeight
-import androidx.compose.ui.text.style.TextAlign
-import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
-import androidx.compose.ui.window.Dialog
+import androidx.hilt.navigation.compose.hiltViewModel
 import androidx.navigation.NavController
 import com.example.tubespm.data.model.*
-import org.w3c.dom.Text
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
-fun ActivityLatihanScreen(navController: NavController) {
-    val belumDikerjakanList = remember { sampleLatihanList() }
-    val dalamProsesList = remember { sampleLatihanInProgressList() }
-    val selesaiList = remember { sampleLatihanCompletedList() }
+fun ActivityLatihanScreen(
+    navController: NavController,
+    viewModel: ActivityLatihanViewModel = hiltViewModel()
+) {
+    val uiState by viewModel.uiState.collectAsState()
 
     var selectedTabIndex by remember { mutableStateOf(0) }
     val tabs = listOf("Belum Dikerjakan", "Dalam Proses", "Selesai")
 
-    var showDetailDialogFor by remember { mutableStateOf<LatihanSoal?>(null) }
+    var showDetailDialogFor by remember { mutableStateOf<ActivityLatihanDetail?>(null) }
 
     Column (
         modifier = Modifier
@@ -88,36 +78,61 @@ fun ActivityLatihanScreen(navController: NavController) {
                 )
             }
         }
-        when (selectedTabIndex) {
-            0 -> LatihanBelumDikerjakanContent(belumDikerjakanList) { latihan ->
-                showDetailDialogFor = latihan
+        if (uiState.isLoading) {
+            Box(
+                modifier = Modifier.fillMaxSize(),
+                contentAlignment = Alignment.Center
+            ) {
+                CircularProgressIndicator()
             }
-            1 -> LatihanDalamProsesContent(
-                latihanList = dalamProsesList,
-                onContinueClick = {
-                    navController.navigate("latihan_quiz")
-                }
-            )
-            2 -> LatihanSelesaiContent(
-                latihanList = selesaiList,
-                navController = navController  // Tambahkan parameter ini
-            )
+        } else if (uiState.error != null) {
+            Box(modifier = Modifier.fillMaxSize(), contentAlignment = Alignment.Center) {
+                Text("Error: ${uiState.error}", color = MaterialTheme.colorScheme.error)
+            }
+        } else {
+            when (selectedTabIndex) {
+                0 -> LatihanBelumDikerjakanContent(
+                    latihanList = uiState.notStarted,
+                    onCardClick = { activityDetail ->
+                        showDetailDialogFor = activityDetail
+                    }
+                )
+                1 -> LatihanDalamProsesContent(
+                    latihanList = uiState.inProgress, // <-- Kirim data live
+                    onContinueClick = { activityDetail ->
+                        // Kirim ID aktivitas unik
+                        navController.navigate("latihan_quiz/${activityDetail.userActivity.id}")
+                    }
+                )
+                2 -> LatihanSelesaiContent(
+                    latihanList = uiState.completed, // <-- Kirim data live
+                    onResultClick = { activityDetail ->
+                        // Kirim ID aktivitas unik
+                        navController.navigate("pembahasan/${activityDetail.userActivity.id}")
+                    }
+                )
+            }
         }
+
     }
 
     // Dialog Detail
-    showDetailDialogFor?.let { latihan ->
+    showDetailDialogFor?.let { activityDetail ->
         LatihanDetailDialog(
-            latihan = latihan,
+            latihan = activityDetail.latihanSoal, // <-- Kirim LatihanSoal-nya
             onDismiss = { showDetailDialogFor = null },
             onStart = {
                 // INI BAGIAN PENTINGNYA
                 // 1. Tutup dialog
                 showDetailDialogFor = null
                 // 2. Lakukan navigasi ke QuizScreen
-                navController.navigate("latihan_quiz")
+                navController.navigate("latihan_quiz/${activityDetail.userActivity.id}")
             },
-            onCancel = { showDetailDialogFor = null }
+            onCancel = {
+                // --- Hubungkan tombol Batal ---
+                viewModel.cancelLatihan(activityDetail.userActivity.id)
+                showDetailDialogFor = null
+            }
         )
     }
 }

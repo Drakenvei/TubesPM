@@ -1,48 +1,21 @@
 package com.example.tubespm.data.model
 
+import com.google.firebase.firestore.DocumentId
+import com.google.firebase.firestore.ServerTimestamp
+import java.util.Date
+
 data class LatihanSoal(
-    val id: Int = 0,
+    @DocumentId
+    val id: String = "", // <-- ID unik Firestore (misal: latihan_aljabar_01)
+
+    val code: String = "", // <-- Kode buatan admin (misal: LAT-ALG-01)
     val title: String = "",
     val subtest: String = "",
     val questionCount: Int = 0,
-    val kisiKisi: List<String> = emptyList(),
-    val status: String = ""
-)
+    val status: String = "",
 
-// Data Dummy
-fun sampleLatihanList() = listOf(
-    LatihanSoal(
-        id = 1,
-        title = "Latihan Sakti 1 - Penalaran Umum",
-        subtest = "Penalaran Umum",
-        questionCount = 30,
-        kisiKisi = listOf(
-            "Analogi verbal",
-            "Hubungan sebab-akibat",
-            "Silogisme",
-            "Penarikan kesimpulan logis",
-            "Penalaran pola (gambar & teks)"
-        )
-    ),
-    LatihanSoal(
-        id = 2,
-        title = "Latihan Sakti 2 - Penalaran Umum",
-        subtest = "Penalaran Umum",
-        questionCount = 30,
-        kisiKisi = listOf("Kisi-kisi untuk latihan 2 Penalaran Umum.")
-    ),
-    LatihanSoal(
-        id = 3,
-        title = "Latihan Sakti 1 - Penalaran Matematika",
-        subtest = "Penalaran Matematika",
-        questionCount = 30,
-        kisiKisi = listOf("Kisi-kisi untuk latihan 1 Penalaran Matematika.")
-    ),
-    LatihanSoal(
-        id = 4,
-        title = "Latihan Sakti 3 - PPU",
-        subtest = "Pengetahuan dan Pemahaman Umum",
-        questionCount = 30,
-        kisiKisi = listOf("Kisi-kisi untuk latihan 3 PPU.")
-    )
+    @ServerTimestamp
+    val createdAt: Date? = null,
+
+    val topics: List<Topic> = emptyList() // data class Topic diambil dari model Tryout.kt
 )

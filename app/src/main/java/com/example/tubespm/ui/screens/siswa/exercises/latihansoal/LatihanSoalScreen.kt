@@ -25,7 +25,7 @@ import androidx.compose.ui.unit.sp
 import androidx.compose.ui.window.Dialog
 import androidx.hilt.navigation.compose.hiltViewModel
 import com.example.tubespm.data.model.LatihanSoal
-import com.example.tubespm.data.model.sampleLatihanList
+import com.example.tubespm.ui.screens.siswa.exercises.latihansoal.LatihanSoalCatalogItem
 import com.example.tubespm.ui.screens.siswa.exercises.latihansoal.LatihanSoalViewModel
 
 // Main Screen
@@ -38,7 +38,7 @@ fun LatihanSoalScreen(
     // ambil state query pencarian dari ViewModel
     val searchQuery by viewModel.searchQuery.collectAsState()
 
-    var selectedLatihan by remember { mutableStateOf<LatihanSoal?>(null) }
+    var selectedLatihanItem by remember { mutableStateOf<LatihanSoalCatalogItem?>(null) }
 
     Column (
         modifier = Modifier
@@ -90,9 +90,10 @@ fun LatihanSoalScreen(
                     verticalArrangement = Arrangement.spacedBy(16.dp)
                 ) {
                     // 4. Gunakan data dari uiState.exercises
-                    items(uiState.latihanSoal) { latihan ->
-                        LatihanSoalCard(latihan) {
-                            selectedLatihan = latihan
+                    // 'item' sekarang adalah LatihanSoalCatalogItem
+                    items(uiState.latihanSoal) { item ->
+                        LatihanSoalCard(item.latihanSoal) { // <-- Kirim 'item.latihanSoal'
+                            selectedLatihanItem = item // <-- Simpan seluruh 'item'
                         }
                     }
                 }
@@ -101,13 +102,14 @@ fun LatihanSoalScreen(
     }
 
     // Modal Detail
-    selectedLatihan?.let {
+    selectedLatihanItem?.let { item -> // 'item' adalah LatihanSoalCatalogItem
         LatihanDetailDialog(
-            latihan = it,
-            onDismiss = { selectedLatihan = null },
+            latihan = item.latihanSoal, // <-- Kirim data latihan-nya
+            isTaken = item.isTaken, // <-- Kirim status 'isTaken'
+            onDismiss = { selectedLatihanItem = null },
             onStart = {
-                // Aksi ketika tombol "Ambil Latihan" ditekan
-                selectedLatihan = null
+                viewModel.takeLatihan(item.latihanSoal) // Panggil fungsi viewModel
+                selectedLatihanItem = null
             }
         )
     }
@@ -198,6 +200,7 @@ fun LatihanSoalCard(latihan: LatihanSoal, onClick: () -> Unit) {
 @Composable
 fun LatihanDetailDialog(
     latihan: LatihanSoal,
+    isTaken: Boolean,
     onDismiss: () -> Unit,
     onStart: () -> Unit
 ) {
@@ -245,6 +248,7 @@ fun LatihanDetailDialog(
                 // Detail Latihan
                 Text("Detail Latihan", fontWeight = FontWeight.Bold, fontSize = 16.sp)
                 Spacer(Modifier.height(4.dp))
+                Text("Kode Paket: ${latihan.code}", style = MaterialTheme.typography.bodyMedium)
                 Text("Subtest: ${latihan.subtest}", style = MaterialTheme.typography.bodyMedium)
                 Text("Jumlah Soal: ${latihan.questionCount} soal", style = MaterialTheme.typography.bodyMedium)
 
@@ -254,9 +258,9 @@ fun LatihanDetailDialog(
                 Text("Kisi-kisi", fontWeight = FontWeight.Bold, fontSize = 16.sp)
                 Spacer(Modifier.height(8.dp))
                 Column(modifier = Modifier.padding(start = 8.dp)) {
-                    latihan.kisiKisi.forEach { item ->
+                    latihan.topics.forEach { topic ->
                         Text(
-                            "- $item",
+                            "- ${topic.name}",
                             style = MaterialTheme.typography.bodyMedium,
                             modifier = Modifier.padding(bottom = 4.dp)
                         )
@@ -268,15 +272,19 @@ fun LatihanDetailDialog(
                 // Tombol Ambil Latihan
                 Button(
                     onClick = onStart,
-                    colors = ButtonDefaults.buttonColors(containerColor = Color(0xFF30D158)),
+                    enabled = !isTaken, // <-- KUNCI UTAMA: Nonaktifkan jika 'isTaken' true
+                    colors = ButtonDefaults.buttonColors(
+                        containerColor = if (isTaken) Color.Gray else Color(0xFF30D158),
+                        disabledContainerColor = Color.Gray.copy(alpha = 0.5f)
+                    ),
                     shape = RoundedCornerShape(12.dp),
                     modifier = Modifier
                         .fillMaxWidth()
                         .height(50.dp)
                 ) {
                     Text(
-                        "Ambil Latihan",
-                        color = Color.Black,
+                        text = if (isTaken) "Sudah Diambil" else "Ambil Latihan", // Ubah teks
+                        color = if (isTaken) Color.White else Color.Black,
                         fontWeight = FontWeight.Bold,
                         textAlign = TextAlign.Center,
                         fontSize = 18.sp

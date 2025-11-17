@@ -7,12 +7,12 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.unit.dp
 import androidx.navigation.NavHostController
+import androidx.navigation.NavType
 import androidx.navigation.compose.NavHost
 import androidx.navigation.compose.composable
 import androidx.navigation.compose.rememberNavController
+import androidx.navigation.navArgument
 
-import com.example.tubespm.data.model.sampleQuestionsWithExplanation
-import com.example.tubespm.data.model.sampleQuizQuestions
 import com.example.tubespm.ui.screens.admin.homepage.AdminHomeScreen
 import com.example.tubespm.ui.screens.admin.profile.AdminProfileScreen
 import com.example.tubespm.ui.screens.admin.management.ManajemenTryoutScreen
@@ -87,29 +87,37 @@ fun StudentNavGraph(
             ActivityLatihanScreen(navController = navController)
         }
 
-        // --- Quiz screens (tanpa parameter dulu) ---
-        composable("tryout_quiz") {
+        // --- Quiz screens ---
+        composable(
+            route = "tryout_quiz/{activityId}",
+            arguments = listOf(navArgument("activityId") { type = NavType.StringType })
+        ) { backStackEntry ->
+            val activityId = backStackEntry.arguments?.getString("activityId") ?: ""
             QuizScreen(
                 navController = navController,
-                questions = sampleQuizQuestions(),
-                mode = QuizMode.TRYOUT,
-                onSessionFinished = { navController.popBackStack() }
+                activityId = activityId // <-- Kirim ke QuizScreen
             )
         }
-        composable("latihan_quiz") {
+        composable(
+            route = "latihan_quiz/{activityId}",
+            arguments = listOf(navArgument("activityId") {type = NavType.StringType})
+        ) { backStackEntry ->
+            val activityId = backStackEntry.arguments?.getString("activityId") ?: ""
             QuizScreen(
                 navController = navController,
-                questions = sampleQuizQuestions(),
-                mode = QuizMode.LATIHAN,
-                onSessionFinished = { navController.popBackStack() }
+                activityId = activityId
             )
         }
 
         // --- Pembahasan ---
-        composable("pembahasan_latihan") {
+        composable(
+            route = "pembahasan/{activityId}",
+            arguments = listOf(navArgument("activityId") {type = NavType.StringType })
+        ) {
+            // Kita tidak perlu meneruskan activityId,
+            // PembahasanViewModel akan mengambilnya dari SavedStateHandle
             PembahasanScreen(
                 navController = navController,
-                questions = sampleQuestionsWithExplanation()
             )
         }
     }
