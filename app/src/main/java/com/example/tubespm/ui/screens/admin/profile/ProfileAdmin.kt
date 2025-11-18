@@ -16,6 +16,7 @@ import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.text.font.FontWeight
+import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
@@ -42,19 +43,15 @@ val AdminProfileImage: @Composable () -> Unit = {
 
 @Composable
 fun AdminProfileScreen(
-    // 1. TAMBAHKAN 'paddingValues' SEBAGAI PARAMETER
     paddingValues: PaddingValues,
     adminName: String = "Admin",
     adminEmail: String = "admin@gmail.com",
     onLogoutClick: () -> Unit = {}
 ) {
-    // 2. HAPUS 'Scaffold' DARI SINI
-    // 'Column' sekarang menjadi container utama
     Column(
         modifier = Modifier
             .fillMaxSize()
             .verticalScroll(rememberScrollState())
-            // 3. TERAPKAN 'paddingValues' YANG DITERIMA DARI FUNGSI
             .padding(paddingValues),
         horizontalAlignment = Alignment.CenterHorizontally
     ) {
@@ -71,8 +68,6 @@ fun AdminProfileScreen(
                 ),
             contentAlignment = Alignment.TopCenter
         ) {
-            // Background bubbles (untuk detail, bisa diabaikan atau diganti)
-            //
             Column(
                 modifier = Modifier.padding(top = 40.dp),
                 horizontalAlignment = Alignment.CenterHorizontally
@@ -107,11 +102,23 @@ fun AdminProfileScreen(
                 horizontalArrangement = Arrangement.SpaceBetween,
                 verticalAlignment = Alignment.CenterVertically
             ) {
-                StatCard(title = "Jumlah User", value = "10", modifier = Modifier.weight(1f))
+                StatCard(
+                    title = "Jumlah User",
+                    value = "10",
+                    modifier = Modifier.weight(1f)
+                )
                 Spacer(modifier = Modifier.width(10.dp))
-                StatCard(title = "Jumlah Tryout", value = "5", modifier = Modifier.weight(1f))
+                StatCard(
+                    title = "Jumlah Tryout",
+                    value = "5",
+                    modifier = Modifier.weight(1f)
+                )
                 Spacer(modifier = Modifier.width(10.dp))
-                StatCard(title = "Jumlah Latihan Soal", value = "5", modifier = Modifier.weight(1f))
+                StatCard(
+                    title = "Jumlah Latihan Soal",
+                    value = "5",
+                    modifier = Modifier.weight(1f)
+                )
             }
 
             Spacer(modifier = Modifier.height(24.dp))
@@ -128,12 +135,22 @@ fun AdminProfileScreen(
                         .padding(horizontal = 20.dp, vertical = 10.dp)
                 ) {
                     ProfileInfoRow(label = "Nama:", value = adminName, isActionable = false)
-                    CustomDivider() // Ganti nama agar tidak konflik
+                    CustomDivider()
                     ProfileInfoRow(label = "Email:", value = adminEmail, isActionable = false)
                     CustomDivider()
-                    ProfileInfoRow(label = "Password:", value = "Change", isActionable = true, onClick = { /* TODO: Navigate to Change Password */ })
+                    ProfileInfoRow(
+                        label = "Password:",
+                        value = "Change",
+                        isActionable = true,
+                        onClick = { /* TODO: Navigate to Change Password */ }
+                    )
                     CustomDivider()
-                    ProfileInfoRow(label = "Profile Picture:", value = "Change", isActionable = true, onClick = { /* TODO: Handle Picture Change */ })
+                    ProfileInfoRow(
+                        label = "Profile Picture:",
+                        value = "Change",
+                        isActionable = true,
+                        onClick = { /* TODO: Handle Picture Change */ }
+                    )
                 }
             }
 
@@ -147,13 +164,13 @@ fun AdminProfileScreen(
                     .height(56.dp)
                     .clip(RoundedCornerShape(28.dp)),
                 colors = ButtonDefaults.buttonColors(
-                    containerColor = Color(0xFFFF6F61) // Warna merah sesuai gambar
+                    containerColor = Color(0xFFFF6F61)
                 )
             ) {
                 Text("Log Out", fontSize = 18.sp, fontWeight = FontWeight.Bold)
             }
 
-            Spacer(modifier = Modifier.height(24.dp)) // Padding di bawah
+            Spacer(modifier = Modifier.height(24.dp))
         }
     }
 }
@@ -163,7 +180,7 @@ fun AdminProfileScreen(
 @Composable
 fun StatCard(title: String, value: String, modifier: Modifier = Modifier) {
     Surface(
-        modifier = modifier.height(80.dp),
+        modifier = modifier.heightIn(min = 90.dp), // dinaikkan supaya 2 baris muat
         shape = RoundedCornerShape(12.dp),
         color = Color.White,
         shadowElevation = 2.dp,
@@ -172,7 +189,9 @@ fun StatCard(title: String, value: String, modifier: Modifier = Modifier) {
         Column(
             horizontalAlignment = Alignment.CenterHorizontally,
             verticalArrangement = Arrangement.Center,
-            modifier = Modifier.padding(8.dp)
+            modifier = Modifier
+                .fillMaxSize()
+                .padding(horizontal = 8.dp, vertical = 6.dp)
         ) {
             Text(
                 text = value,
@@ -182,8 +201,11 @@ fun StatCard(title: String, value: String, modifier: Modifier = Modifier) {
             )
             Text(
                 text = title,
-                fontSize = 10.sp,
-                color = Color(0xFF9E9E9E)
+                fontSize = 11.sp,
+                color = Color(0xFF9E9E9E),
+                maxLines = 2,                      // boleh 2 baris
+                textAlign = TextAlign.Center,
+                modifier = Modifier.fillMaxWidth()
             )
         }
     }
@@ -203,22 +225,20 @@ fun ProfileInfoRow(
             .padding(vertical = 8.dp),
         verticalAlignment = Alignment.CenterVertically
     ) {
-        // Label (Nama, Email, dll)
         Text(
             text = label,
             fontSize = 16.sp,
             color = Color(0xFF616161),
-            modifier = Modifier.width(130.dp) // Lebar tetap untuk label
+            modifier = Modifier.width(130.dp)
         )
 
         Spacer(modifier = Modifier.weight(1f))
 
-        // Nilai atau Tombol 'Change'
         if (isActionable) {
             TextButton(onClick = onClick, contentPadding = PaddingValues(0.dp)) {
                 Text(
                     text = value,
-                    color = Color(0xFFFF6F61), // Warna merah untuk 'Change'
+                    color = Color(0xFFFF6F61),
                     fontWeight = FontWeight.SemiBold,
                     fontSize = 16.sp
                 )
@@ -234,8 +254,6 @@ fun ProfileInfoRow(
     }
 }
 
-// Saya ganti nama 'Divider' menjadi 'CustomDivider' untuk menghindari
-// kemungkinan konflik nama jika Anda mengimpor 'Divider' dari M2 dan M3
 @Composable
 fun CustomDivider() {
     Divider(color = Color(0xFFEEEEEE), thickness = 1.dp)
@@ -247,8 +265,6 @@ fun CustomDivider() {
 @Composable
 fun AdminProfileScreenPreview() {
     TubesPMTheme {
-        // 4. PERBAIKI PREVIEW
-        // Berikan 'paddingValues' kosong agar preview tidak error
         AdminProfileScreen(paddingValues = PaddingValues(0.dp))
     }
 }

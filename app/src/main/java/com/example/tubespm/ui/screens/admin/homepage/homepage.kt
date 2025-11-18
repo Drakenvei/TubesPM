@@ -10,6 +10,10 @@ import androidx.compose.material.icons.filled.ArrowDropDown
 import androidx.compose.material.icons.filled.Person
 import androidx.compose.material3.*
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableStateOf
+import androidx.compose.runtime.remember
+import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
@@ -26,7 +30,6 @@ fun AdminHomeScreen(
     paddingValues: PaddingValues,
     adminName: String = "Admin"
 ) {
-    // dummy data
     val paketTryoutAktif = 25
     val soalLatihan = 2456
     val siswaAktif = 2456
@@ -35,14 +38,12 @@ fun AdminHomeScreen(
     Box(
         modifier = Modifier
             .fillMaxSize()
-            .padding(paddingValues)          // padding dari Scaffold (supaya tidak ketutup bottom bar)
+            .padding(paddingValues)
             .background(Color(0xFFF5F5F5))
     ) {
-        Column(
-            modifier = Modifier.fillMaxSize()
-        ) {
+        Column(modifier = Modifier.fillMaxSize()) {
 
-            // ===================== HEADER (TIDAK SCROLL) =====================
+            // ===================== HEADER =====================
             Box(
                 modifier = Modifier
                     .fillMaxWidth()
@@ -58,13 +59,9 @@ fun AdminHomeScreen(
                     modifier = Modifier.fillMaxWidth()
                 ) {
                     Column {
+                        Text("Welcome,", color = Color.White, fontSize = 20.sp)
                         Text(
-                            text = "Welcome,",
-                            color = Color.White,
-                            fontSize = 20.sp
-                        )
-                        Text(
-                            text = adminName,
+                            adminName,
                             color = Color.White,
                             fontSize = 28.sp,
                             fontWeight = FontWeight.Bold
@@ -79,34 +76,27 @@ fun AdminHomeScreen(
                         contentAlignment = Alignment.Center
                     ) {
                         Icon(
-                            imageVector = Icons.Default.Person,
-                            contentDescription = "Admin Profile",
-                            tint = Color.White
+                            Icons.Default.Person,
+                            tint = Color.White,
+                            contentDescription = "Admin Profile"
                         )
                     }
                 }
             }
 
-            // ===================== KONTEN PUTIH (BISA DI-SCROLL) =====================
+            // ===================== CONTENT =====================
             Surface(
                 modifier = Modifier
                     .fillMaxWidth()
-                    .weight(1f),                       // isi sisa ruang di bawah header
+                    .weight(1f),
                 shape = RoundedCornerShape(topStart = 24.dp, topEnd = 24.dp),
                 color = Color.White,
                 tonalElevation = 1.dp
             ) {
                 LazyColumn(
-                    modifier = Modifier.fillMaxSize(),
-                    contentPadding = PaddingValues(
-                        top = 20.dp,
-                        start = 16.dp,
-                        end = 16.dp,
-                        bottom = 24.dp
-                    ),
+                    contentPadding = PaddingValues(20.dp),
                     verticalArrangement = Arrangement.spacedBy(20.dp)
                 ) {
-                    // ---------- GRID CARD 2x2 ----------
                     item {
                         Column {
                             Row(
@@ -146,11 +136,7 @@ fun AdminHomeScreen(
                             }
                         }
                     }
-
-                    // ---------- KARTU GRAFIK ----------
-                    item {
-                        ActivityChartCard()
-                    }
+                    item { ActivityChartCard() }
                 }
             }
         }
@@ -165,119 +151,130 @@ private fun AdminStatCard(
     modifier: Modifier = Modifier
 ) {
     Surface(
-        modifier = modifier
-            .heightIn(min = 140.dp),
+        modifier = modifier.heightIn(min = 140.dp),
         shape = RoundedCornerShape(18.dp),
         color = Color(0xFFF29A3A),
         shadowElevation = 3.dp
     ) {
         Column(
-            modifier = Modifier
-                .fillMaxSize()
-                .padding(14.dp),
+            modifier = Modifier.padding(14.dp),
             verticalArrangement = Arrangement.SpaceBetween
         ) {
-            Text(
-                text = title,
-                color = Color.White,
-                fontSize = 14.sp
-            )
-            Text(
-                text = bigText,
-                color = Color.White,
-                fontSize = 28.sp,
-                fontWeight = FontWeight.Bold
-            )
-            Text(
-                text = subtitle,
-                color = Color(0xFFFFF3E0),
-                fontSize = 12.sp
-            )
+            Text(title, color = Color.White, fontSize = 14.sp)
+            Text(bigText, color = Color.White, fontSize = 28.sp, fontWeight = FontWeight.Bold)
+            Text(subtitle, color = Color(0xFFFFF3E0), fontSize = 12.sp)
         }
     }
 }
 
 @Composable
 private fun ActivityChartCard() {
+    val filterOptions = listOf("Daily", "Weekly", "Monthly")
+    var expanded by remember { mutableStateOf(false) }
+    var selectedFilter by remember { mutableStateOf("Weekly") }
+
     Surface(
         modifier = Modifier.fillMaxWidth(),
         shape = RoundedCornerShape(22.dp),
         color = Color.White,
         shadowElevation = 4.dp
     ) {
-        Column(
-            modifier = Modifier.padding(16.dp)
-        ) {
+        Column(modifier = Modifier.padding(16.dp)) {
+
             Row(
                 modifier = Modifier.fillMaxWidth(),
                 verticalAlignment = Alignment.CenterVertically
             ) {
-                Column(
-                    modifier = Modifier.weight(1f)
-                ) {
+
+                Column(modifier = Modifier.weight(1f)) {
+                    Text("Rata-rata Aktivitas", fontSize = 12.sp, color = Color(0xFF9E9E9E))
                     Text(
-                        text = "Rata-rata Aktivitas",
-                        fontSize = 12.sp,
-                        color = Color(0xFF9E9E9E)
-                    )
-                    Text(
-                        text = "Pengerjaan Soal",
+                        "Pengerjaan Soal",
                         fontSize = 18.sp,
-                        fontWeight = FontWeight.Bold,
-                        color = Color(0xFF333333)
+                        color = Color(0xFF333333),
+                        fontWeight = FontWeight.Bold
                     )
                 }
-                AssistChip(
-                    onClick = { /* TODO: ubah filter */ },
-                    label = {
-                        Text(
-                            text = "Weekly",
-                            fontSize = 12.sp
+
+                // ===== CHIP DROPDOWN =====
+                Box {
+                    AssistChip(
+                        onClick = { expanded = true },
+                        label = {
+                            Text(
+                                selectedFilter,
+                                fontSize = 12.sp,
+                                color = Color(0xFF333333)
+                            )
+                        },
+                        leadingIcon = {
+                            Icon(
+                                Icons.Default.ArrowDropDown,
+                                contentDescription = "Filter",
+                                tint = Color(0xFF333333)
+                            )
+                        },
+                        shape = RoundedCornerShape(50),
+                        colors = AssistChipDefaults.assistChipColors(
+                            containerColor = Color(0xFFF7F7F7),
+                            labelColor = Color(0xFF333333)
                         )
-                    },
-                    leadingIcon = {
-                        Icon(
-                            imageVector = Icons.Default.ArrowDropDown,
-                            contentDescription = "Filter"
-                        )
-                    },
-                    shape = RoundedCornerShape(50)
-                )
+                    )
+
+                    // ===== DROPDOWN MENU =====
+                    DropdownMenu(
+                        expanded = expanded,
+                        onDismissRequest = { expanded = false },
+                        containerColor = Color(0xFF1A1A1A) // dark dropdown
+                    ) {
+                        filterOptions.forEach { option ->
+                            DropdownMenuItem(
+                                text = {
+                                    Text(
+                                        text = option,
+                                        color = Color.White,   // WHITE TEXT
+                                        fontWeight = FontWeight.Medium
+                                    )
+                                },
+                                onClick = {
+                                    selectedFilter = option
+                                    expanded = false
+                                }
+                            )
+                        }
+                    }
+                }
             }
 
             Spacer(modifier = Modifier.height(16.dp))
 
-            Column(
-                horizontalAlignment = Alignment.CenterHorizontally,
-                modifier = Modifier.fillMaxWidth()
-            ) {
+            // ===== CHART VALUE =====
+            Column(horizontalAlignment = Alignment.CenterHorizontally) {
+
                 Box(
                     modifier = Modifier
                         .clip(RoundedCornerShape(12.dp))
                         .background(Color(0xFFF29A3A))
                         .padding(horizontal = 12.dp, vertical = 4.dp)
                 ) {
-                    Text(
-                        text = "2,313",
-                        color = Color.White,
-                        fontSize = 12.sp
-                    )
+                    Text("2,313", color = Color.White, fontSize = 12.sp)
                 }
+
                 Spacer(modifier = Modifier.height(8.dp))
+
+                // ===== BAR CHART =====
                 Row(
-                    modifier = Modifier
-                        .fillMaxWidth()
-                        .height(160.dp),
+                    modifier = Modifier.fillMaxWidth().height(160.dp),
                     horizontalArrangement = Arrangement.SpaceBetween,
                     verticalAlignment = Alignment.Bottom
                 ) {
                     val days = listOf("MON", "TUE", "WED", "THU", "FRI", "SAT", "SUN")
                     val heights = listOf(50, 35, 65, 55, 110, 40, 45)
+
                     days.forEachIndexed { index, day ->
                         Column(
-                            horizontalAlignment = Alignment.CenterHorizontally,
-                            verticalArrangement = Arrangement.Bottom,
-                            modifier = Modifier.weight(1f)
+                            modifier = Modifier.weight(1f),
+                            horizontalAlignment = Alignment.CenterHorizontally
                         ) {
                             Box(
                                 modifier = Modifier
@@ -287,11 +284,7 @@ private fun ActivityChartCard() {
                                     .background(Color(0xFFF29A3A))
                             )
                             Spacer(modifier = Modifier.height(6.dp))
-                            Text(
-                                text = day,
-                                fontSize = 10.sp,
-                                color = Color(0xFF616161)
-                            )
+                            Text(day, fontSize = 10.sp, color = Color(0xFF616161))
                         }
                     }
                 }
@@ -304,6 +297,6 @@ private fun ActivityChartCard() {
 @Composable
 fun AdminHomeScreenPreview() {
     TubesPMTheme {
-        AdminHomeScreen(paddingValues = PaddingValues(0.dp))
+        AdminHomeScreen(PaddingValues(0.dp))
     }
 }

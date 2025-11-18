@@ -2,7 +2,6 @@ package com.example.tubespm.ui.navigation
 
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Home
-import androidx.compose.material.icons.filled.ListAlt
 import androidx.compose.material.icons.filled.ManageAccounts
 import androidx.compose.material.icons.filled.Person
 import androidx.compose.material3.Icon
@@ -24,14 +23,14 @@ data class AdminNavItem(
 
 @Composable
 fun BottomNavbarAdmin(navController: NavHostController) {
+
+    // ONLY 3 ITEMS NOW
     val items = listOf(
         AdminNavItem("admin_home", "Home", Icons.Default.Home),
         AdminNavItem("admin_management", "Management", Icons.Default.ManageAccounts),
-        AdminNavItem("admin_report", "Report", Icons.Default.ListAlt),
         AdminNavItem("admin_profile", "Profile", Icons.Default.Person)
     )
 
-    // Dapatkan rute yang sedang aktif
     val navBackStackEntry by navController.currentBackStackEntryAsState()
     val currentRoute = navBackStackEntry?.destination?.route
 
@@ -40,16 +39,12 @@ fun BottomNavbarAdmin(navController: NavHostController) {
             NavigationBarItem(
                 selected = currentRoute == item.route,
                 onClick = {
-                    // Navigasi ke rute baru hanya jika itu bukan rute yang sedang aktif
                     if (currentRoute != item.route) {
                         navController.navigate(item.route) {
-                            // Hindari menumpuk layar Home
                             popUpTo(navController.graph.startDestinationId) {
                                 saveState = true
                             }
-                            // Hindari membuat instance destinasi yang sama berkali-kali
                             launchSingleTop = true
-                            // Pulihkan status ketika re-seleksi
                             restoreState = true
                         }
                     }
