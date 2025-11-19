@@ -34,8 +34,8 @@ class EditSectionViewModel : ViewModel() {
         val newSection = Section(
             sectionId = UUID.randomUUID().toString().take(8), // Generate ID simple
             sectionName = sectionData.subtest,
-            sectionDuration = sectionData.timeMinutes,
-            sectionQuestionCount = sectionData.questionCount
+//            sectionDuration = sectionData.timeMinutes,
+//            sectionQuestionCount = sectionData.questionCount
             // subtests bisa diisi default atau kosong
         )
 
@@ -59,8 +59,8 @@ class EditSectionViewModel : ViewModel() {
         val updatedSection = Section(
             sectionId = oldSectionId, // Pertahankan ID lama
             sectionName = sectionData.subtest,
-            sectionDuration = sectionData.timeMinutes,
-            sectionQuestionCount = sectionData.questionCount
+//            sectionDuration = sectionData.timeMinutes,
+//            sectionQuestionCount = sectionData.questionCount
         )
 
         updateTryoutSections(tryoutId, updatedSection, isAdd = false, onSuccess, onError)

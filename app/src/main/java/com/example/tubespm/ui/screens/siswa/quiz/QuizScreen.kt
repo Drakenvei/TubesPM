@@ -16,7 +16,6 @@ import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.hilt.navigation.compose.hiltViewModel
 import androidx.navigation.NavHostController
-import com.example.tubespm.data.model.QuizQuestions
 import com.example.tubespm.ui.screens.siswa.quiz.components.QuestionNavigator
 import com.example.tubespm.ui.screens.siswa.quiz.components.QuizBottomNavigation
 import com.example.tubespm.ui.screens.siswa.quiz.components.QuizTopBar
