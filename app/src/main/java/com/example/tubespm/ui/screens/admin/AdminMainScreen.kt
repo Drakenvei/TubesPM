@@ -6,24 +6,49 @@ import androidx.compose.foundation.layout.padding
 import androidx.compose.material3.Scaffold
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.lifecycle.viewmodel.compose.viewModel
 import androidx.navigation.NavHostController
+import androidx.navigation.NavType
 import androidx.navigation.compose.NavHost
 import androidx.navigation.compose.composable
 import androidx.navigation.compose.rememberNavController
+import androidx.navigation.navArgument
 import com.example.tubespm.ui.navigation.BottomNavbarAdmin
 import com.example.tubespm.ui.screens.admin.homepage.AdminHomeScreen
-import com.example.tubespm.ui.screens.admin.management.ManajemenTryoutScreen
 import com.example.tubespm.ui.screens.admin.management.EditQuestionScreen
+import com.example.tubespm.ui.screens.admin.management.ManajemenTryoutScreen
 import com.example.tubespm.ui.screens.admin.profile.AdminProfileScreen
 
 @Composable
 fun AdminMainScreen(
-    rootNavController: NavHostController
+    rootNavController: NavHostController,
+    // Inject ViewModel (bisa pakai hiltViewModel() jika sudah setup Hilt, atau viewModel() biasa)
+    viewModel: AdminMainViewModel = viewModel()
 ) {
-    // NavController khusus untuk tab Admin
+    // NavController khusus untuk tab Admin (Bottom Navigation)
     val adminNavController = rememberNavController()
+
+    // -------------------------------------------------------
+    // OBSERVASI EVENT LOGOUT
+    // -------------------------------------------------------
+    // Kita mendengarkan event dari ViewModel. Jika event "NavigateToLogin" muncul,
+    // kita kembalikan user ke layar Login (root).
+    LaunchedEffect(Unit) {
+        viewModel.eventChannel.collect { event ->
+            when (event) {
+                is AdminMainEvent.NavigateToLogin -> {
+                    // Hapus semua backstack admin dan kembali ke login
+                    rootNavController.navigate("login") { // Pastikan rute login Anda bernama "login"
+                        popUpTo(0) { inclusive = true }
+                        launchSingleTop = true
+                    }
+                }
+            }
+        }
+    }
 
     Scaffold(
         bottomBar = { BottomNavbarAdmin(navController = adminNavController) }
@@ -44,14 +69,14 @@ fun AdminMainScreen(
             composable("admin_management") {
                 ManajemenTryoutScreen(
                     paddingValuesFromNavHost = paddingValues,
-                    onGoToEditQuestion = {
-                        // pindah ke halaman edit soal
-                        adminNavController.navigate("admin_edit_question")
+                    // Navigasi ke Edit Question (menggunakan adminNavController)
+                    onGoToEditQuestion = { tryoutId, questionId, paketName, questionNumber ->
+                        adminNavController.navigate("admin_edit_question/$tryoutId/$questionId/$paketName/$questionNumber")
                     }
                 )
             }
 
-            // Rute 3: Admin Report (contoh placeholder)
+            // Rute 3: Admin Report
             composable("admin_report") {
                 Box(
                     modifier = Modifier
@@ -68,19 +93,32 @@ fun AdminMainScreen(
                 AdminProfileScreen(
                     paddingValues = paddingValues,
                     onLogoutClick = {
-                        // keluar dari stack admin, kembali ke root
-                        adminNavController.popBackStack()
-                        // kalau mau kembali ke login di rootNavController bisa tambahkan:
-                        // rootNavController.navigate("login") { popUpTo(0) }
+                        // PANGGIL FUNGSI LOGOUT DI VIEWMODEL
+                        viewModel.logout()
                     }
                 )
             }
 
-            // Rute 5: Edit Question (halaman edit soal tryout)
-            composable("admin_edit_question") {
+            // Rute 5: Edit Question
+            composable(
+                route = "admin_edit_question/{tryoutId}/{questionId}/{paketName}/{questionNumber}",
+                arguments = listOf(
+                    navArgument("tryoutId") { type = NavType.StringType },
+                    navArgument("questionId") { type = NavType.StringType },
+                    navArgument("paketName") { type = NavType.StringType },
+                    navArgument("questionNumber") { type = NavType.IntType }
+                )
+            ) { backStackEntry ->
+                val tryoutId = backStackEntry.arguments?.getString("tryoutId") ?: ""
+                val questionId = backStackEntry.arguments?.getString("questionId") ?: ""
+                val paketName = backStackEntry.arguments?.getString("paketName") ?: ""
+                val questionNumber = backStackEntry.arguments?.getInt("questionNumber") ?: 1
+
                 EditQuestionScreen(
-                    paketName = "TO-001 (Penalaran Umum)", // sementara dummy
-                    questionNumber = 1,
+                    tryoutId = tryoutId,
+                    questionId = questionId,
+                    paketName = paketName,
+                    questionNumber = questionNumber,
                     paddingValuesFromNavHost = paddingValues,
                     onBackClick = { adminNavController.popBackStack() }
                 )

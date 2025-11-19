@@ -15,21 +15,10 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextAlign
-import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.compose.ui.window.Dialog
-
-// -------------------------------
-// DATA MODEL SECTION
-// -------------------------------
-data class TryoutSection(
-    val id: String,
-    val title: String,
-    val type: String,       // "TPS" / "Literasi"
-    val timeMinutes: Int,
-    val questionCount: Int
-)
+import androidx.lifecycle.viewmodel.compose.viewModel
 
 // -------------------------------
 // DIALOG – POPUP EDIT MANAGEMENT
@@ -38,10 +27,17 @@ data class TryoutSection(
 fun EditManagementDialog(
     paket: TryoutPackage,
     onDismiss: () -> Unit,
-    onDeactivatePackage: () -> Unit,
-    onAddMoreSection: () -> Unit, // masih dipertahankan untuk nanti (Firebase, dsb.)
-    onGoToEditQuestion: () -> Unit
+    onDeactivatePackage: () -> Unit, // Callback ke parent (opsional, bisa dihandle VM juga)
+    onAddMoreSection: () -> Unit,
+    onGoToEditQuestion: () -> Unit,
+    // Inject ViewModel
+    viewModel: EditManagementViewModel = viewModel()
 ) {
+    // Load data saat Dialog pertama kali dibuka
+    LaunchedEffect(paket.id) {
+        viewModel.loadSections(paket.id)
+    }
+
     Dialog(onDismissRequest = onDismiss) {
         Surface(
             shape = RoundedCornerShape(12.dp),
@@ -51,10 +47,17 @@ fun EditManagementDialog(
         ) {
             EditManagementContent(
                 paket = paket,
+                viewModel = viewModel, // Pass VM ke konten
                 onClose = onDismiss,
-                onDeactivatePackage = onDeactivatePackage,
+                onDeactivatePackage = {
+                    // Panggil logika di VM, lalu tutup dialog/refresh parent
+                    viewModel.deactivatePackage(paket.id) {
+                        onDeactivatePackage() // trigger refresh di parent jika perlu
+                        onDismiss()
+                    }
+                },
                 onAddMoreSection = onAddMoreSection,
-                onGoToEditQuestion = onGoToEditQuestion   // <-- diteruskan ke content
+                onGoToEditQuestion = onGoToEditQuestion
             )
         }
     }
@@ -66,27 +69,21 @@ fun EditManagementDialog(
 @Composable
 private fun EditManagementContent(
     paket: TryoutPackage,
+    viewModel: EditManagementViewModel,
     onClose: () -> Unit,
     onDeactivatePackage: () -> Unit,
     onAddMoreSection: () -> Unit,
-    onGoToEditQuestion: () -> Unit          // <-- PARAMETER BARU DI SINI
+    onGoToEditQuestion: () -> Unit
 ) {
-    // STATE popup edit section
+    // Observasi State dari ViewModel
+    val uiState by viewModel.uiState.collectAsState()
+
+    // STATE popup edit section (UI State Lokal)
     var showEditSectionDialog by remember { mutableStateOf(false) }
-    var selectedSectionForEdit by remember { mutableStateOf<TryoutSection?>(null) }
+    var selectedSectionForEdit by remember { mutableStateOf<TryoutSectionUiModel?>(null) }
 
     // STATE popup add section
     var showAddSectionDialog by remember { mutableStateOf(false) }
-
-    // DUMMY section
-    val sections = remember {
-        listOf(
-            TryoutSection("1", "Penalaran Umum", "TPS", 20, 20),
-            TryoutSection("2", "Pengetahuan Kuantitatif", "TPS", 20, 20),
-            TryoutSection("3", "Literasi Indonesia", "Literasi", 20, 20),
-            TryoutSection("4", "Literasi B. Inggris", "Literasi", 20, 20)
-        )
-    }
 
     Column(
         modifier = Modifier
@@ -100,10 +97,7 @@ private fun EditManagementContent(
             verticalAlignment = Alignment.CenterVertically
         ) {
             IconButton(onClick = onClose) {
-                Icon(
-                    imageVector = Icons.Default.ArrowBack,
-                    contentDescription = "Back"
-                )
+                Icon(Icons.Default.ArrowBack, contentDescription = "Back")
             }
             Text(
                 text = "Edit ${paket.name}",
@@ -115,21 +109,31 @@ private fun EditManagementContent(
 
         Spacer(modifier = Modifier.height(8.dp))
 
-        // List section
-        LazyColumn(
-            modifier = Modifier
-                .fillMaxWidth()
-                .weight(1f, fill = false),
-            verticalArrangement = Arrangement.spacedBy(12.dp)
-        ) {
-            items(sections) { section ->
-                SectionCard(
-                    section = section,
-                    onEditClick = { clicked ->
-                        selectedSectionForEdit = clicked
-                        showEditSectionDialog = true
-                    }
-                )
+        // List section (Dynamic from Firestore)
+        if (uiState.isLoading) {
+            Box(modifier = Modifier.fillMaxWidth().height(200.dp), contentAlignment = Alignment.Center) {
+                CircularProgressIndicator(color = Color(0xFFE91E63))
+            }
+        } else if (uiState.sections.isEmpty()) {
+            Box(modifier = Modifier.fillMaxWidth().padding(20.dp), contentAlignment = Alignment.Center) {
+                Text("Belum ada section.", color = Color.Gray)
+            }
+        } else {
+            LazyColumn(
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .weight(1f, fill = false), // Biarkan wrap content jika sedikit, scroll jika banyak
+                verticalArrangement = Arrangement.spacedBy(12.dp)
+            ) {
+                items(uiState.sections) { section ->
+                    SectionCard(
+                        section = section,
+                        onEditClick = { clicked ->
+                            selectedSectionForEdit = clicked
+                            showEditSectionDialog = true
+                        }
+                    )
+                }
             }
         }
 
@@ -139,12 +143,10 @@ private fun EditManagementContent(
         OutlinedButton(
             onClick = {
                 showAddSectionDialog = true
-                onAddMoreSection() // callback eksternal (opsional)
+                // onAddMoreSection() // Optional external callback
             },
             modifier = Modifier.align(Alignment.End),
-            colors = ButtonDefaults.outlinedButtonColors(
-                contentColor = Color.Gray
-            )
+            colors = ButtonDefaults.outlinedButtonColors(contentColor = Color.Gray)
         ) {
             Text("Add More Section")
         }
@@ -163,10 +165,7 @@ private fun EditManagementContent(
             ),
             shape = RoundedCornerShape(8.dp)
         ) {
-            Text(
-                text = "Nonaktifkan Paket",
-                fontWeight = FontWeight.SemiBold
-            )
+            Text(text = "Nonaktifkan Paket", fontWeight = FontWeight.SemiBold)
         }
 
         Spacer(modifier = Modifier.height(4.dp))
@@ -175,7 +174,10 @@ private fun EditManagementContent(
     // ---------- POPUP EDIT SECTION ----------
     if (showEditSectionDialog && selectedSectionForEdit != null) {
         val section = selectedSectionForEdit!!
+
         EditSectionDialog(
+            tryoutId = paket.id,          // <-- ADDED: tryoutId
+            sectionId = section.id,       // <-- ADDED: sectionId
             paketName = paket.name,
             sectionName = section.title,
             initialState = EditSectionUiState(
@@ -187,47 +189,44 @@ private fun EditManagementContent(
             onDismiss = {
                 showEditSectionDialog = false
                 selectedSectionForEdit = null
+                // Optional: Refresh sections list after edit
+                viewModel.loadSections(paket.id)
             },
-            onSaveSection = {
-                // TODO: update ke Firebase / ViewModel
-                showEditSectionDialog = false
-                selectedSectionForEdit = null
-            },
-            onEditSoalTryout = onGoToEditQuestion     // <-- navigasi ke Edit Soal
+            // REMOVED: onSaveSection (Logic is now inside ViewModel)
+            onEditSoalTryout = onGoToEditQuestion
         )
     }
 
     // ---------- POPUP ADD SECTION ----------
     if (showAddSectionDialog) {
         AddSectionDialog(
+            tryoutId = paket.id,          // <-- ADDED: tryoutId
             paketName = paket.name,
-            onDismiss = { showAddSectionDialog = false },
-            onSaveSection = { newState ->
-                // TODO: simpan section baru ke Firebase / ViewModel
+            onDismiss = {
                 showAddSectionDialog = false
+                // Optional: Refresh sections list after add
+                viewModel.loadSections(paket.id)
             },
-            onEditSoalTryout = onGoToEditQuestion     // <-- navigasi ke Edit Soal
+            // REMOVED: onSaveSection (Logic is now inside ViewModel)
+            onEditSoalTryout = onGoToEditQuestion
         )
     }
 }
 
 // -------------------------------
-// CARD SATU SECTION
+// CARD SATU SECTION (UI Murni)
 // -------------------------------
 @Composable
 private fun SectionCard(
-    section: TryoutSection,
-    onEditClick: (TryoutSection) -> Unit
+    section: TryoutSectionUiModel,
+    onEditClick: (TryoutSectionUiModel) -> Unit
 ) {
     Surface(
         modifier = Modifier.fillMaxWidth(),
         color = Color(0xFFE0E0E0),
         shape = RoundedCornerShape(8.dp)
     ) {
-        Column(
-            modifier = Modifier.padding(12.dp)
-        ) {
-
+        Column(modifier = Modifier.padding(12.dp)) {
             Row(
                 modifier = Modifier.fillMaxWidth(),
                 horizontalArrangement = Arrangement.SpaceBetween,
@@ -239,21 +238,14 @@ private fun SectionCard(
                     fontWeight = FontWeight.SemiBold,
                     color = Color(0xFF212121)
                 )
-
                 IconButton(
                     onClick = { onEditClick(section) },
                     modifier = Modifier.size(24.dp)
                 ) {
-                    Icon(
-                        imageVector = Icons.Default.Settings,
-                        contentDescription = "Edit Section",
-                        tint = Color.Gray
-                    )
+                    Icon(Icons.Default.Settings, contentDescription = "Edit", tint = Color.Gray)
                 }
             }
-
             Spacer(modifier = Modifier.height(4.dp))
-
             InfoRow(label = "Tipe", value = section.type)
             InfoRow(label = "Waktu", value = "${section.timeMinutes} menit")
             InfoRow(label = "Jumlah Soal", value = "${section.questionCount} soal")
@@ -268,16 +260,8 @@ private fun InfoRow(label: String, value: String) {
         horizontalArrangement = Arrangement.spacedBy(8.dp),
         verticalAlignment = Alignment.CenterVertically
     ) {
-        Text(
-            text = label,
-            fontSize = 13.sp,
-            color = Color(0xFF616161),
-            modifier = Modifier.width(90.dp)
-        )
-        Surface(
-            color = Color(0xFF9E9E9E),
-            shape = RoundedCornerShape(10.dp)
-        ) {
+        Text(text = label, fontSize = 13.sp, color = Color(0xFF616161), modifier = Modifier.width(90.dp))
+        Surface(color = Color(0xFF9E9E9E), shape = RoundedCornerShape(10.dp)) {
             Text(
                 text = value,
                 fontSize = 11.sp,
@@ -287,25 +271,4 @@ private fun InfoRow(label: String, value: String) {
             )
         }
     }
-}
-
-@Preview(showBackground = true)
-@Composable
-private fun EditManagementContentPreview() {
-    val dummyPackage = TryoutPackage(
-        id = "TO-001",
-        name = "Tryout Sakti (TO-001)",
-        isActive = true,
-        tpsSoal = 80,
-        tpsMenit = 80,
-        literasiSoal = 80,
-        literasiMenit = 120
-    )
-    EditManagementContent(
-        paket = dummyPackage,
-        onClose = {},
-        onDeactivatePackage = {},
-        onAddMoreSection = {},
-        onGoToEditQuestion = {}  // <-- stub untuk preview
-    )
 }

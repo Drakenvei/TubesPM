@@ -17,17 +17,18 @@ import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
+import androidx.lifecycle.viewmodel.compose.viewModel // Pastikan import ini ada
 
 // ======================================================
-// DATA MODEL
+// DATA MODEL (UI Helper)
 // ======================================================
 data class PaketSoal(
-    val id: Int,
+    val id: String,
     val nama: String,
     val tpsCount: Int,
     val literasiCount: Int,
-    val tpsMenit: Int,
-    val literasiMenit: Int
+    val tpsMenit: Int = 0,
+    val literasiMenit: Int = 0
 )
 
 // ======================================================
@@ -36,26 +37,17 @@ data class PaketSoal(
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun LatihanSoalTabContent(
-    contentPadding: PaddingValues
+    contentPadding: PaddingValues,
+    // Inject ViewModel
+    viewModel: ManajemenLatihanSoalViewModel = viewModel()
 ) {
-    var searchQuery by remember { mutableStateOf("") }
-
-    val paketSoalList = remember {
-        listOf(
-            PaketSoal(1, "Paket Latihan Soal 1", 80, 80, 0, 0),
-            PaketSoal(2, "Paket Latihan Soal 2", 80, 80, 0, 0),
-            PaketSoal(3, "Paket Latihan Soal 3", 80, 80, 0, 0)
-        )
-    }
-
-    val filteredList = paketSoalList.filter {
-        it.nama.contains(searchQuery, ignoreCase = true)
-    }
+    // Observasi State dari ViewModel
+    val uiState by viewModel.uiState.collectAsState()
+    val searchQuery by viewModel.searchQuery.collectAsState()
 
     Column(
         modifier = Modifier
             .fillMaxSize()
-            // PERBAIKAN: background dulu, baru padding
             .background(Color(0xFFF5F5F5))
             .padding(contentPadding)
     ) {
@@ -65,7 +57,7 @@ fun LatihanSoalTabContent(
         // ===============================
         OutlinedTextField(
             value = searchQuery,
-            onValueChange = { searchQuery = it },
+            onValueChange = { viewModel.onSearchQueryChanged(it) }, // Kirim event ke VM
             modifier = Modifier
                 .fillMaxWidth()
                 .padding(horizontal = 16.dp, vertical = 12.dp),
@@ -90,20 +82,34 @@ fun LatihanSoalTabContent(
         // ===============================
         // LIST PAKET SOAL
         // ===============================
-        LazyColumn(
-            modifier = Modifier.fillMaxSize(),
-            contentPadding = PaddingValues(16.dp),
-            verticalArrangement = Arrangement.spacedBy(16.dp)
-        ) {
-            items(filteredList) { paket ->
-                PaketSoalCard(paket)
+        if (uiState.isLoading) {
+            Box(modifier = Modifier.fillMaxSize(), contentAlignment = Alignment.Center) {
+                CircularProgressIndicator(color = Color(0xFFE91E63))
+            }
+        } else {
+            LazyColumn(
+                modifier = Modifier.fillMaxSize(),
+                contentPadding = PaddingValues(16.dp),
+                verticalArrangement = Arrangement.spacedBy(16.dp)
+            ) {
+                if (uiState.paketSoalList.isEmpty()) {
+                    item {
+                        Box(modifier = Modifier.fillMaxWidth().padding(16.dp), contentAlignment = Alignment.Center) {
+                            Text("Data tidak ditemukan", color = Color.Gray)
+                        }
+                    }
+                } else {
+                    items(uiState.paketSoalList) { paket ->
+                        PaketSoalCard(paket)
+                    }
+                }
             }
         }
     }
 }
 
 // ======================================================
-// CARD ITEM
+// CARD ITEM (Tidak berubah, tetap UI murni)
 // ======================================================
 @Composable
 fun PaketSoalCard(paket: PaketSoal) {
@@ -164,7 +170,7 @@ fun PaketSoalCard(paket: PaketSoal) {
 }
 
 // ======================================================
-// SECTION REUSABLE
+// SECTION REUSABLE (Tidak berubah)
 // ======================================================
 @Composable
 fun PaketSoalSection(
@@ -175,7 +181,6 @@ fun PaketSoalSection(
         modifier = Modifier.fillMaxWidth(),
         verticalAlignment = Alignment.CenterVertically
     ) {
-
         // Label TPS / Literasi
         Surface(
             color = Color.White,

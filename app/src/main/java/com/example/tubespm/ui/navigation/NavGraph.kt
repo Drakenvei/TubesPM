@@ -13,6 +13,7 @@ import androidx.navigation.compose.composable
 import androidx.navigation.compose.rememberNavController
 import androidx.navigation.navArgument
 
+// Import screen Anda
 import com.example.tubespm.ui.screens.admin.homepage.AdminHomeScreen
 import com.example.tubespm.ui.screens.admin.profile.AdminProfileScreen
 import com.example.tubespm.ui.screens.admin.management.ManajemenTryoutScreen
@@ -26,12 +27,10 @@ import com.example.tubespm.ui.screens.siswa.homepage.HomeScreen
 import com.example.tubespm.ui.screens.siswa.notification.NotificationScreen
 import com.example.tubespm.ui.screens.siswa.profile.EditProfileScreen
 import com.example.tubespm.ui.screens.siswa.profile.ProfileScreen
-import com.example.tubespm.ui.screens.siswa.quiz.QuizMode
 import com.example.tubespm.ui.screens.siswa.quiz.QuizScreen
 
 // =======================================================
-// 0. LEGACY: kalau ada kode lama yang masih pakai NavGraph()
-//    Ini cuma wrapper ke StudentNavGraph dengan padding 0dp
+// 0. LEGACY
 // =======================================================
 @Composable
 fun NavGraph(navController: NavHostController) {
@@ -42,8 +41,7 @@ fun NavGraph(navController: NavHostController) {
 }
 
 // =======================================================
-// 1. NAVIGATION GRAPH SISWA (ISI SCREEN SAJA)
-//    ROUTE SISWA TIDAK DIUBAH: "home", "exercises", "activity", "profile"
+// 1. NAVIGATION GRAPH SISWA
 // =======================================================
 @Composable
 fun StudentNavGraph(
@@ -95,12 +93,12 @@ fun StudentNavGraph(
             val activityId = backStackEntry.arguments?.getString("activityId") ?: ""
             QuizScreen(
                 navController = navController,
-                activityId = activityId // <-- Kirim ke QuizScreen
+                activityId = activityId
             )
         }
         composable(
             route = "latihan_quiz/{activityId}",
-            arguments = listOf(navArgument("activityId") {type = NavType.StringType})
+            arguments = listOf(navArgument("activityId") { type = NavType.StringType })
         ) { backStackEntry ->
             val activityId = backStackEntry.arguments?.getString("activityId") ?: ""
             QuizScreen(
@@ -112,19 +110,15 @@ fun StudentNavGraph(
         // --- Pembahasan ---
         composable(
             route = "pembahasan/{activityId}",
-            arguments = listOf(navArgument("activityId") {type = NavType.StringType })
+            arguments = listOf(navArgument("activityId") { type = NavType.StringType })
         ) {
-            // Kita tidak perlu meneruskan activityId,
-            // PembahasanViewModel akan mengambilnya dari SavedStateHandle
-            PembahasanScreen(
-                navController = navController,
-            )
+            PembahasanScreen(navController = navController)
         }
     }
 }
 
 // =======================================================
-// 2. NAVIGATION GRAPH ADMIN (ISI SCREEN SAJA)
+// 2. NAVIGATION GRAPH ADMIN
 // =======================================================
 @Composable
 fun AdminNavGraph(
@@ -134,39 +128,57 @@ fun AdminNavGraph(
     NavHost(
         navController = navController,
         startDestination = "admin_home",
-        // UNTUK ADMIN: jangan padding di sini, biar masing-masing screen
-        // yang menerima paddingValues bisa mengatur sendiri.
         modifier = Modifier.fillMaxSize()
     ) {
 
         // ------------ Admin Home ------------
         composable("admin_home") {
-            AdminHomeScreen(
-                paddingValues = paddingValues
-            )
+            AdminHomeScreen(paddingValues = paddingValues)
         }
 
         // ------------ Manajemen Tryout ------------
         composable("admin_management") {
             ManajemenTryoutScreen(
                 paddingValuesFromNavHost = paddingValues,
-                onGoToEditQuestion = {
-                    navController.navigate("admin_edit_question")
+                // PERBAIKAN DI SINI:
+                // Tangkap 4 parameter yang dikirim dari ManajemenTryoutScreen
+                onGoToEditQuestion = { tryoutId, questionId, paketName, questionNumber ->
+
+                    // Gunakan parameter tersebut untuk navigasi
+                    navController.navigate("admin_edit_question/$tryoutId/$questionId/$paketName/$questionNumber")
                 }
             )
         }
 
-        // ------------ Edit Question ------------
-        composable("admin_edit_question") {
+        // ------------ Edit Question (DIPERBAIKI) ------------
+        composable(
+            // Tambahkan argumen di route
+            route = "admin_edit_question/{tryoutId}/{questionId}/{paketName}/{questionNumber}",
+            arguments = listOf(
+                navArgument("tryoutId") { type = NavType.StringType },
+                navArgument("questionId") { type = NavType.StringType },
+                navArgument("paketName") { type = NavType.StringType },
+                navArgument("questionNumber") { type = NavType.IntType }
+            )
+        ) { backStackEntry ->
+            // Ambil data dari argument
+            val tryoutId = backStackEntry.arguments?.getString("tryoutId") ?: ""
+            val questionId = backStackEntry.arguments?.getString("questionId") ?: ""
+            val paketName = backStackEntry.arguments?.getString("paketName") ?: ""
+            val questionNumber = backStackEntry.arguments?.getInt("questionNumber") ?: 1
+
+            // Panggil Screen dengan parameter lengkap
             EditQuestionScreen(
-                paketName = "TO-001 (Penalaran Umum)", // nanti bisa dibuat dinamis dengan navArgs
-                questionNumber = 1,
+                tryoutId = tryoutId,
+                questionId = questionId,
+                paketName = paketName,
+                questionNumber = questionNumber,
                 paddingValuesFromNavHost = paddingValues,
                 onBackClick = { navController.popBackStack() }
             )
         }
 
-        // ------------ Admin Report (contoh) ------------
+        // ------------ Admin Report ------------
         composable("admin_report") {
             Box(
                 modifier = Modifier
@@ -189,60 +201,35 @@ fun AdminNavGraph(
 }
 
 // =======================================================
-// 3. ROOT SISWA: SCAFFOLD + BOTTOM NAVBAR + StudentNavGraph
+// 3. ROOT SISWA
 // =======================================================
 @Composable
 fun StudentRoot() {
     val navController = rememberNavController()
-
-    Scaffold(
-        bottomBar = {
-            // Bottom navbar untuk siswa (file BottomNavBar.kt)
-            BottomNavBar(navController = navController)
-        }
-    ) { paddingValues ->
-        StudentNavGraph(
-            navController = navController,
-            paddingValues = paddingValues
-        )
+    Scaffold(bottomBar = { BottomNavBar(navController = navController) }) { paddingValues ->
+        StudentNavGraph(navController = navController, paddingValues = paddingValues)
     }
 }
 
 // =======================================================
-// 4. ROOT ADMIN: SCAFFOLD + BOTTOM NAVBAR ADMIN + AdminNavGraph
+// 4. ROOT ADMIN
 // =======================================================
 @Composable
 fun AdminRoot() {
     val navController = rememberNavController()
-
-    Scaffold(
-        bottomBar = {
-            BottomNavbarAdmin(navController = navController)
-        }
-    ) { paddingValues ->
-        AdminNavGraph(
-            navController = navController,
-            paddingValues = paddingValues
-        )
+    Scaffold(bottomBar = { BottomNavbarAdmin(navController = navController) }) { paddingValues ->
+        AdminNavGraph(navController = navController, paddingValues = paddingValues)
     }
 }
 
 // =======================================================
-// 5. ROUTER UTAMA BERDASARKAN ROLE USER
-//    Panggil ini dari MainActivity -> setContent { RoleRouter(role) }
+// 5. ROUTER UTAMA
 // =======================================================
 @Composable
 fun RoleRouter(userRole: String) {
     when (userRole) {
         "student" -> StudentRoot()
         "admin" -> AdminRoot()
-        else -> {
-            Box(
-                modifier = Modifier.fillMaxSize(),
-                contentAlignment = Alignment.Center
-            ) {
-                Text("Silakan Login")
-            }
-        }
+        else -> Box(modifier = Modifier.fillMaxSize(), contentAlignment = Alignment.Center) { Text("Silakan Login") }
     }
 }

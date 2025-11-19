@@ -1,4 +1,4 @@
-package com.example.tubespm.ui.screens.admin.profile // Pastikan package Anda benar
+package com.example.tubespm.ui.screens.admin.profile
 
 import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.*
@@ -9,7 +9,7 @@ import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Person
 import androidx.compose.material3.*
-import androidx.compose.runtime.Composable
+import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
@@ -20,11 +20,11 @@ import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
+import androidx.lifecycle.viewmodel.compose.viewModel
 import com.example.tubespm.ui.theme.TubesPMTheme
 
-// Dummy data untuk representasi gambar (gunakan Coil/Glide untuk gambar nyata)
+// Dummy data untuk representasi gambar
 val AdminProfileImage: @Composable () -> Unit = {
-    // Placeholder untuk gambar profil
     Box(
         modifier = Modifier
             .size(100.dp)
@@ -44,147 +44,155 @@ val AdminProfileImage: @Composable () -> Unit = {
 @Composable
 fun AdminProfileScreen(
     paddingValues: PaddingValues,
-    adminName: String = "Admin",
-    adminEmail: String = "admin@gmail.com",
-    onLogoutClick: () -> Unit = {}
+    // Callback logout tetap di-pass dari navigation (AdminMainScreen)
+    onLogoutClick: () -> Unit,
+    // Inject ViewModel
+    viewModel: AdminProfileViewModel = viewModel()
 ) {
-    Column(
-        modifier = Modifier
-            .fillMaxSize()
-            .verticalScroll(rememberScrollState())
-            .padding(paddingValues),
-        horizontalAlignment = Alignment.CenterHorizontally
-    ) {
+    val uiState by viewModel.uiState.collectAsState()
 
-        // ===================== HEADER MERAH & FOTO PROFIL =====================
-        Box(
-            modifier = Modifier
-                .fillMaxWidth()
-                .height(280.dp)
-                .background(
-                    Brush.verticalGradient(
-                        listOf(Color(0xFFFF6F61), Color(0xFFE91E63))
-                    )
-                ),
-            contentAlignment = Alignment.TopCenter
-        ) {
-            Column(
-                modifier = Modifier.padding(top = 40.dp),
-                horizontalAlignment = Alignment.CenterHorizontally
-            ) {
-                AdminProfileImage()
-                Spacer(modifier = Modifier.height(16.dp))
-                Text(
-                    text = adminName,
-                    color = Color.White,
-                    fontSize = 28.sp,
-                    fontWeight = FontWeight.Bold
-                )
-                Text(
-                    text = adminEmail,
-                    color = Color.White.copy(alpha = 0.8f),
-                    fontSize = 18.sp
-                )
-            }
+    if (uiState.isLoading) {
+        Box(modifier = Modifier.fillMaxSize().padding(paddingValues), contentAlignment = Alignment.Center) {
+            CircularProgressIndicator(color = Color(0xFFFF6F61))
         }
-
-        // ===================== KONTEN UTAMA (Kartu Putih) =====================
+    } else {
         Column(
             modifier = Modifier
-                .fillMaxWidth()
-                .offset(y = (-60).dp) // Geser ke atas agar menutupi header
-                .padding(horizontal = 24.dp)
+                .fillMaxSize()
+                .verticalScroll(rememberScrollState())
+                .padding(paddingValues),
+            horizontalAlignment = Alignment.CenterHorizontally
         ) {
 
-            // ---------- GRID STATISTIK ----------
-            Row(
-                modifier = Modifier.fillMaxWidth(),
-                horizontalArrangement = Arrangement.SpaceBetween,
-                verticalAlignment = Alignment.CenterVertically
-            ) {
-                StatCard(
-                    title = "Jumlah User",
-                    value = "10",
-                    modifier = Modifier.weight(1f)
-                )
-                Spacer(modifier = Modifier.width(10.dp))
-                StatCard(
-                    title = "Jumlah Tryout",
-                    value = "5",
-                    modifier = Modifier.weight(1f)
-                )
-                Spacer(modifier = Modifier.width(10.dp))
-                StatCard(
-                    title = "Jumlah Latihan Soal",
-                    value = "5",
-                    modifier = Modifier.weight(1f)
-                )
-            }
-
-            Spacer(modifier = Modifier.height(24.dp))
-
-            // ---------- FORM PROFIL ----------
-            Surface(
-                shape = RoundedCornerShape(16.dp),
-                color = Color.White,
-                shadowElevation = 4.dp
+            // ===================== HEADER MERAH & FOTO PROFIL =====================
+            Box(
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .height(280.dp)
+                    .background(
+                        Brush.verticalGradient(
+                            listOf(Color(0xFFFF6F61), Color(0xFFE91E63))
+                        )
+                    ),
+                contentAlignment = Alignment.TopCenter
             ) {
                 Column(
-                    modifier = Modifier
-                        .fillMaxWidth()
-                        .padding(horizontal = 20.dp, vertical = 10.dp)
+                    modifier = Modifier.padding(top = 40.dp),
+                    horizontalAlignment = Alignment.CenterHorizontally
                 ) {
-                    ProfileInfoRow(label = "Nama:", value = adminName, isActionable = false)
-                    CustomDivider()
-                    ProfileInfoRow(label = "Email:", value = adminEmail, isActionable = false)
-                    CustomDivider()
-                    ProfileInfoRow(
-                        label = "Password:",
-                        value = "Change",
-                        isActionable = true,
-                        onClick = { /* TODO: Navigate to Change Password */ }
+                    AdminProfileImage()
+                    Spacer(modifier = Modifier.height(16.dp))
+                    Text(
+                        text = uiState.name,
+                        color = Color.White,
+                        fontSize = 28.sp,
+                        fontWeight = FontWeight.Bold
                     )
-                    CustomDivider()
-                    ProfileInfoRow(
-                        label = "Profile Picture:",
-                        value = "Change",
-                        isActionable = true,
-                        onClick = { /* TODO: Handle Picture Change */ }
+                    Text(
+                        text = uiState.email,
+                        color = Color.White.copy(alpha = 0.8f),
+                        fontSize = 18.sp
                     )
                 }
             }
 
-            Spacer(modifier = Modifier.height(30.dp))
-
-            // ---------- TOMBOL LOGOUT ----------
-            Button(
-                onClick = onLogoutClick,
+            // ===================== KONTEN UTAMA (Kartu Putih) =====================
+            Column(
                 modifier = Modifier
                     .fillMaxWidth()
-                    .height(56.dp)
-                    .clip(RoundedCornerShape(28.dp)),
-                colors = ButtonDefaults.buttonColors(
-                    containerColor = Color(0xFFFF6F61)
-                )
+                    .offset(y = (-60).dp) // Geser ke atas agar menutupi header
+                    .padding(horizontal = 24.dp)
             ) {
-                Text("Log Out", fontSize = 18.sp, fontWeight = FontWeight.Bold)
-            }
 
-            Spacer(modifier = Modifier.height(24.dp))
+                // ---------- GRID STATISTIK (Dari ViewModel) ----------
+                Row(
+                    modifier = Modifier.fillMaxWidth(),
+                    horizontalArrangement = Arrangement.SpaceBetween,
+                    verticalAlignment = Alignment.CenterVertically
+                ) {
+                    StatCard(
+                        title = "Jumlah User",
+                        value = uiState.userCount,
+                        modifier = Modifier.weight(1f)
+                    )
+                    Spacer(modifier = Modifier.width(10.dp))
+                    StatCard(
+                        title = "Jumlah Tryout",
+                        value = uiState.tryoutCount,
+                        modifier = Modifier.weight(1f)
+                    )
+                    Spacer(modifier = Modifier.width(10.dp))
+                    StatCard(
+                        title = "Jumlah Latihan",
+                        value = uiState.exerciseCount,
+                        modifier = Modifier.weight(1f)
+                    )
+                }
+
+                Spacer(modifier = Modifier.height(24.dp))
+
+                // ---------- FORM PROFIL ----------
+                Surface(
+                    shape = RoundedCornerShape(16.dp),
+                    color = Color.White,
+                    shadowElevation = 4.dp
+                ) {
+                    Column(
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .padding(horizontal = 20.dp, vertical = 10.dp)
+                    ) {
+                        ProfileInfoRow(label = "Nama:", value = uiState.name, isActionable = false)
+                        CustomDivider()
+                        ProfileInfoRow(label = "Email:", value = uiState.email, isActionable = false)
+                        CustomDivider()
+                        ProfileInfoRow(
+                            label = "Password:",
+                            value = "Change",
+                            isActionable = true,
+                            onClick = { /* TODO */ }
+                        )
+                        CustomDivider()
+                        ProfileInfoRow(
+                            label = "Profile Picture:",
+                            value = "Change",
+                            isActionable = true,
+                            onClick = { /* TODO */ }
+                        )
+                    }
+                }
+
+                Spacer(modifier = Modifier.height(30.dp))
+
+                // ---------- TOMBOL LOGOUT ----------
+                Button(
+                    onClick = onLogoutClick,
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .height(56.dp)
+                        .clip(RoundedCornerShape(28.dp)),
+                    colors = ButtonDefaults.buttonColors(
+                        containerColor = Color(0xFFFF6F61)
+                    )
+                ) {
+                    Text("Log Out", fontSize = 18.sp, fontWeight = FontWeight.Bold)
+                }
+
+                Spacer(modifier = Modifier.height(24.dp))
+            }
         }
     }
 }
 
-// ===================== KOMPONEN REUSABLE =====================
+// ===================== KOMPONEN REUSABLE (Sama seperti sebelumnya) =====================
 
 @Composable
 fun StatCard(title: String, value: String, modifier: Modifier = Modifier) {
     Surface(
-        modifier = modifier.heightIn(min = 90.dp), // dinaikkan supaya 2 baris muat
+        modifier = modifier.heightIn(min = 90.dp),
         shape = RoundedCornerShape(12.dp),
         color = Color.White,
-        shadowElevation = 2.dp,
-        border = null
+        shadowElevation = 2.dp
     ) {
         Column(
             horizontalAlignment = Alignment.CenterHorizontally,
@@ -203,7 +211,7 @@ fun StatCard(title: String, value: String, modifier: Modifier = Modifier) {
                 text = title,
                 fontSize = 11.sp,
                 color = Color(0xFF9E9E9E),
-                maxLines = 2,                      // boleh 2 baris
+                maxLines = 2,
                 textAlign = TextAlign.Center,
                 modifier = Modifier.fillMaxWidth()
             )
@@ -231,25 +239,13 @@ fun ProfileInfoRow(
             color = Color(0xFF616161),
             modifier = Modifier.width(130.dp)
         )
-
         Spacer(modifier = Modifier.weight(1f))
-
         if (isActionable) {
             TextButton(onClick = onClick, contentPadding = PaddingValues(0.dp)) {
-                Text(
-                    text = value,
-                    color = Color(0xFFFF6F61),
-                    fontWeight = FontWeight.SemiBold,
-                    fontSize = 16.sp
-                )
+                Text(text = value, color = Color(0xFFFF6F61), fontWeight = FontWeight.SemiBold, fontSize = 16.sp)
             }
         } else {
-            Text(
-                text = value,
-                fontSize = 16.sp,
-                color = Color(0xFF333333),
-                fontWeight = FontWeight.SemiBold
-            )
+            Text(text = value, fontSize = 16.sp, color = Color(0xFF333333), fontWeight = FontWeight.SemiBold)
         }
     }
 }
@@ -257,14 +253,4 @@ fun ProfileInfoRow(
 @Composable
 fun CustomDivider() {
     Divider(color = Color(0xFFEEEEEE), thickness = 1.dp)
-}
-
-// ===================== PREVIEW =====================
-
-@Preview(showBackground = true)
-@Composable
-fun AdminProfileScreenPreview() {
-    TubesPMTheme {
-        AdminProfileScreen(paddingValues = PaddingValues(0.dp))
-    }
 }
