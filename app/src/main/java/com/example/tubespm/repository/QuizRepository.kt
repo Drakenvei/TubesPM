@@ -36,7 +36,11 @@ interface QuizRepository {
      * Meng-update status ke 'in_progress' DAN mengatur deadline di Firestore.
      * Mengembalikan deadline yang telah di-commit.
      */
-    suspend fun startQuizSession(activityId: String, durationInMinutes: Long): Date?
+    suspend fun startSubtestSession(
+        activityId: String,
+        durationInMinutes: Long,
+        subtestIndex: Int
+    ): Date?
 
     /** Meng-update jumlah soal terjawab di Firestore */
     suspend fun updateAnswerCount(activityId: String, count: Int)

@@ -27,6 +27,7 @@ enum class QuizMode {
     LATIHAN
 }
 
+@OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun QuizScreen(
     navController: NavHostController,
@@ -38,17 +39,38 @@ fun QuizScreen(
     // DITAMBAHKAN: State untuk mengontrol visibilitas dialog konfirmasi
     var showExitDialog by remember { mutableStateOf(false) }
 
+    // Ambil soal dari activeQuestions (bukan questions global)
+    val currentQuestion = uiState.activeQuestions.getOrNull(uiState.currentQuestionIndex)
+
     Scaffold(
         topBar = {
-            QuizTopBar(
-                mode = uiState.quizMode,
-                remainingTimeInSeconds = uiState.remainingTimeInSeconds,
-                onBackClicked = { showExitDialog = true },
-                onSubmitClicked = {
-                    viewModel.submitQuiz()
-                    navController.popBackStack()
-                }
-            )
+            if (!uiState.isLoading && uiState.error == null) {
+                QuizTopBar(
+                    mode = uiState.quizMode,
+                    title = uiState.subtestName, // Tampilkan nama subtest
+                    remainingTimeInSeconds = uiState.remainingTimeInSeconds,
+                    onBackClicked = { showExitDialog = true },
+                    onSubmitClicked = {
+                        if (uiState.isLastSubtest) {
+                            // KONDISI 1: Selesai (Latihan atau Subtest Terakhir)
+                            viewModel.submitQuiz()
+                            navController.popBackStack()
+                        } else {
+                            // KONDISI 2: Masih ada Subtest berikutnya (Mode Tryout)
+                            viewModel.finishCurrentSubtest() // Reset waktu & muat soal baru
+                        }
+                    },
+                    isLastSubtest = uiState.isLastSubtest // Kirim status ini ke TopBar
+                )
+            } else {
+                // Tampilkan TopBar kosong atau judul "Memuat..." saat loading
+                // Agar tidak muncul timer 00:00:00 yang membingungkan
+                TopAppBar(
+                    title = { Text("") }, // Kosongkan judul saat loading
+                    colors = TopAppBarDefaults.topAppBarColors(containerColor = Color.White)
+                )
+            }
+
         }
     ) { paddingValues ->
         Column(
@@ -65,25 +87,25 @@ fun QuizScreen(
                 Box(modifier = Modifier.fillMaxSize(), contentAlignment = Alignment.Center) {
                     Text("Error: ${uiState.error}", color = MaterialTheme.colorScheme.error)
                 }
-            } else if (uiState.questions.isEmpty()) {
+            } else if (uiState.activeQuestions.isEmpty()) {
                 Box(modifier = Modifier.fillMaxSize(), contentAlignment = Alignment.Center) {
                     Text("Soal tidak ditemukan.")
                 }
             } else {
-                val currentQuestion = uiState.questions.getOrNull(uiState.currentQuestionIndex)
+                val currentQuestion = uiState.activeQuestions.getOrNull(uiState.currentQuestionIndex)
                 if (currentQuestion == null) return@Column // Safety check
 
                 val isFlagged = uiState.flaggedQuestions.contains(currentQuestion.id)
 
                 QuestionNavigator(
-                    questionCount = uiState.questions.size,
+                    questionCount = uiState.activeQuestions.size,
                     currentIndex = uiState.currentQuestionIndex,
                     // Ubah Set<QuestionID> menjadi Set<Index> untuk UI
                     answeredIndices = uiState.userAnswers.keys.map { qId ->
-                        uiState.questions.indexOfFirst { it.id == qId }
+                        uiState.activeQuestions.indexOfFirst { it.id == qId }
                     }.toSet(),
                     flaggedIndices = uiState.flaggedQuestions.map { qId ->
-                        uiState.questions.indexOfFirst { it.id == qId }
+                        uiState.activeQuestions.indexOfFirst { it.id == qId }
                     }.toSet(),
                     onQuestionSelected = viewModel::selectQuestion // Kirim event
                 )
@@ -134,7 +156,7 @@ fun QuizScreen(
                     onPreviousClicked = viewModel::previousQuestion, // <-- Event baru
                     onNextClicked = viewModel::nextQuestion, // <-- Event baru
                     isPreviousEnabled = uiState.currentQuestionIndex > 0,
-                    isNextEnabled = uiState.currentQuestionIndex < uiState.questions.size - 1
+                    isNextEnabled = uiState.currentQuestionIndex < uiState.activeQuestions.size - 1
                 )
             }
 

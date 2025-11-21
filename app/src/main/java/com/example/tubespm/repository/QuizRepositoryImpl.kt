@@ -78,20 +78,32 @@ class QuizRepositoryImpl @Inject constructor(
             .update("status", status).await()
     }
 
-    override suspend fun startQuizSession(activityId: String, durationInMinutes: Long): Date? {
-        val updates = mutableMapOf<String, Any>("status" to "in_progress")
+    override suspend fun startSubtestSession(
+        activityId: String,
+        durationInMinutes: Long,
+        subtestIndex: Int
+    ): Date? {
+        val updates = mutableMapOf<String, Any>(
+            "status" to "in_progress",
+            "currentSubtestIndex" to subtestIndex
+        )
+
         var deadlineTime: Date? = null
 
-        // Hanya set deadline jika durasi > 0 (yaitu Tryout)
         if (durationInMinutes > 0) {
             val now = Calendar.getInstance()
             now.add(Calendar.MINUTE, durationInMinutes.toInt())
             deadlineTime = now.time
             updates["deadline"] = deadlineTime
+        } else {
+            // Jika latihan soal (durasi 0), hapus deadline atau set null
+            updates["deadline"] = FieldValue.delete()
         }
 
-        db.collection("user_activities").document(activityId)
-            .update(updates).await()
+        db.collection("user_activities")
+            .document(activityId)
+            .update(updates)
+            .await()
 
         return deadlineTime
     }

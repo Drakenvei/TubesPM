@@ -22,6 +22,7 @@ data class UserActivity(
 
     @ServerTimestamp
     val startedAt: Date? = null,
+    val deadline: Date? = null, // Akan menyimpan Timestamp kapan kuis berakhir
 
-    val deadline: Date? = null // Akan menyimpan Timestamp kapan kuis berakhir
+    val currentSubtestIndex: Int = 0 // Melacak kita ada di subtest ke-berapa (0, 1, 2...)
 )

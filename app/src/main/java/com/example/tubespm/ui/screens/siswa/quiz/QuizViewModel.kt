@@ -5,10 +5,10 @@ import androidx.lifecycle.SavedStateHandle
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import com.example.tubespm.data.model.QuizQuestion
-import com.example.tubespm.data.model.Tryout
 import com.example.tubespm.repository.QuizRepository
 import dagger.hilt.android.lifecycle.HiltViewModel
 import kotlinx.coroutines.Job
+import kotlinx.coroutines.NonCancellable
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.asStateFlow
@@ -16,20 +16,37 @@ import kotlinx.coroutines.flow.collect
 import kotlinx.coroutines.flow.distinctUntilChanged
 import kotlinx.coroutines.flow.update
 import kotlinx.coroutines.launch
+import kotlinx.coroutines.withContext
 import java.util.Date
 import javax.inject.Inject
 
 data class QuizUiState(
     val isLoading: Boolean = true,
     val error: String? = null,
-    val questions: List<QuizQuestion> = emptyList(),
+
+    // Data per subtest
+    val activeQuestions: List<QuizQuestion> = emptyList(),
+    val subtestName: String = "",
+    val currentSubtestIndex: Int = 0,
+    val totalSubtests: Int = 0,
+    val isLastSubtest: Boolean = false,
+
+    // Data Global
     val userAnswers: Map<String, String> = emptyMap(), // Map<QuestionID, AnswerString>
     val flaggedQuestions: Set<String> = emptySet(), // Set<QuestionID>
-    val currentQuestionIndex: Int = 0,
-    val subtestName: String = "Tryout", // Akan di-update
-    val remainingTimeInSeconds: Long = 3600L,
+    val currentQuestionIndex: Int = 0, // Index relatif terhadap activeQuestions (0..20)
+    val remainingTimeInSeconds: Long = 0L,
     val quizMode: QuizMode = QuizMode.TRYOUT,
-    val deadline: Date? = null // <-- Simpan deadline di state
+    val deadline: Date? = null
+)
+
+// Helper class untuk meratakan struktur
+data class FlattenedSubtest(
+    val sectionName: String,
+    val subtestName: String,
+    val subtestId: String,
+    val duration: Int,
+    val questionCount: Int
 )
 
 @HiltViewModel
@@ -44,6 +61,10 @@ class QuizViewModel @Inject constructor(
     private val activityId: String = savedStateHandle.get<String>("activityId")!!
     private var timerJob: Job? = null
 
+    // Simpan semua data mentah di sini (bukan di UI State)
+    private var allQuestionRaw: List<QuizQuestion> = emptyList()
+    private var allSubtestsFlat: List<FlattenedSubtest> = emptyList()
+
     init {
         loadQuizSession()
     }
@@ -56,70 +77,135 @@ class QuizViewModel @Inject constructor(
 
         viewModelScope.launch {
             try {
-                // 1. Ambil data aktivitas
+                // Ambil data aktivitas
                 val activity = repository.getActivity(activityId) ?: throw Exception("Aktivitas null")
 
-                // 2. Tentukan Mode berdasarkan 'type' dari database
+                // Tentukan Mode berdasarkan 'type' dari database
                 val mode = if (activity.type == "tryout") QuizMode.TRYOUT else QuizMode.LATIHAN
 
-                // 3. Ambil Judul & Soal (Menggunakan fungsi repository yang baru)
-                val quizMetadata = repository.getQuizMetadata(activity.activityRefId, activity.type)
-                val title = quizMetadata?.title ?: "Latihan Soal"
+                // Ambil Metadata Tryout & Ratakan Struktur Subtest
+                val tryoutMetadata = repository.getQuizMetadata(activity.activityRefId, activity.type)
+                    ?: throw Exception("Data soal null")
 
-                val questions = repository.getQuestions(activity.activityRefId, activity.type)
+                // Ambil Soal DULUAN agar kita tahu jumlahnya untuk mode Latihan
+                allQuestionRaw = repository.getQuestions(activity.activityRefId, activity.type)
 
-                if (questions.isEmpty()) throw Exception("Soal tidak ditemukan")
-
-                // 4. Logika Deadline & Timer
-                var deadline: Date? = activity.deadline
-                var remaining = 0L
-
+                // Logika Pembuatan Subtest List
                 if (mode == QuizMode.TRYOUT) {
-                    // --- LOGIKA KHUSUS TRYOUT (PAKAI TIMER) ---
-                    if (activity.status == "not_started" || deadline == null) {
-                        // Ambil durasi dari objek metadata yang sudah diambil di atas
-                        // Untuk penyederhanaan, kita asumsikan durasi ada atau default 120 menit,
-                        // atau Anda bisa fetch duration di step 3.
-                            val duration = quizMetadata?.totalDuration?.toLong() ?: 120L
-
-                        deadline = repository.startQuizSession(activityId, duration)
-                    }
-
-                    if (deadline != null) {
-                        remaining = (deadline.time - System.currentTimeMillis()) / 1000
+                    // Ratakan struktur Section -> Subtest menjadi List<FlattenedSubtest>
+                    allSubtestsFlat = tryoutMetadata.sections.flatMap { section ->
+                        section.subtests.map { subtest ->
+                            FlattenedSubtest(
+                                sectionName = section.sectionName,
+                                subtestName = subtest.subtestName,
+                                subtestId = subtest.subtestId,
+                                duration = subtest.duration, // Ambil durasi per subtest
+                                questionCount = subtest.questionCount
+                            )
+                        }
                     }
                 } else {
-                    // --- LOGIKA KHUSUS LATIHAN (TANPA TIMER) ---
-                    if (activity.status == "not_started") {
-                        repository.startQuizSession(activityId, 0) // 0 artinya tanpa deadline
-                    }
-                    remaining = 0 // Tidak ada hitung mundur
-                }
-
-                // 5. Update state awal
-                _uiState.update {
-                    it.copy(
-                        isLoading = false,
-                        questions = questions,
-                        subtestName = title,
-                        quizMode = mode, // Set mode yang benar
-                        remainingTimeInSeconds = remaining,
-                        deadline = deadline,
-                        currentQuestionIndex = findFirstUnanswered(questions, emptyMap())
+                    // Logika Latihan: Buat 1 Subtest Dummy yang berisi SEMUA soal
+                    // Karena Latihan Soal di database tidak punya array 'sections'
+                    allSubtestsFlat = listOf(
+                        FlattenedSubtest(
+                            sectionName = "Latihan",
+                            subtestName = tryoutMetadata.title,
+                            subtestId = "ALL_LATIHAN", // ID Dummy
+                            duration = 0, // Tidak ada durasi
+                            questionCount = allQuestionRaw.size
+                        )
                     )
                 }
 
-                // 6. Mulai timer
-                if (mode == QuizMode.TRYOUT) {
-                    startTimer()
+                /// Validasi agar tidak crash lagi
+                if (allSubtestsFlat.isEmpty()) {
+                    throw Exception("Struktur soal kosong. Cek database.")
                 }
 
-                // 7. Dengarkan perubahan jawaban
+                // Tentukan Subtest Mana Yang Aktif
+                // Ambil dari database (jika user resume) atau mulai dari 0
+                val targetIndex = activity.currentSubtestIndex.coerceIn(0, allSubtestsFlat.lastIndex)
+
+                // Muat subtest tersebut
+                loadSubtest(targetIndex, activity.deadline, mode)
+
+                // Listen Jawaban
                 listenForSavedAnswers()
 
             } catch (e: Exception) {
                 _uiState.update { it.copy(isLoading = false, error = e.localizedMessage) }
+                Log.e("QuizViewModel", "Error loading quiz: ${e.message}")
             }
+        }
+    }
+
+    // Logika Memuat Subtest Spesifik
+    private fun loadSubtest(index: Int, existingDeadline: Date?, mode: QuizMode) {
+        val currentSubtest = allSubtestsFlat[index]
+
+        // Filter soal: Hanya ambil soal yang subtestId-nya cocok
+        val subtestQuestions = if (mode == QuizMode.TRYOUT) {
+            allQuestionRaw.filter { it.subtestId == currentSubtest.subtestId }
+        } else {
+            // Latihan: Ambil SEMUA soal (karena cuma 1 sesi)
+            allQuestionRaw
+        }
+
+        viewModelScope.launch {
+            var deadline = existingDeadline
+            var remaining = 0L
+
+            // Atur timer
+            if (mode == QuizMode.TRYOUT) {
+                // Jika deadline null (baru masuk subtest ini), set deadline baru
+                if (existingDeadline == null) {
+                    deadline = repository.startSubtestSession(
+                        activityId,
+                        currentSubtest.duration.toLong(), // Durasi subtest ini
+                        index
+                    )
+                }
+
+                if (deadline != null) {
+                    remaining = (deadline.time - System.currentTimeMillis()) / 1000
+                }
+            } else {
+                // Mode latihan, update index saja tanpa timer
+                repository.startSubtestSession(activityId, 0, index)
+            }
+
+            _uiState.update {
+                it.copy(
+                    isLoading = false,
+                    activeQuestions = subtestQuestions, //Hanya soal subtest ini
+                    subtestName = currentSubtest.subtestName,
+                    currentSubtestIndex = index,
+                    totalSubtests = allSubtestsFlat.size,
+                    isLastSubtest = index == allSubtestsFlat.lastIndex,
+                    currentQuestionIndex = 0, // Reset ke soal no 1
+                    remainingTimeInSeconds = remaining,
+                    quizMode = mode,
+                    deadline = deadline
+                )
+            }
+
+            if (mode == QuizMode.TRYOUT) startTimer()
+        }
+    }
+
+    // Pindah ke Subtest Berikutnya (Dipanggil tombol "Lanjut Subtest" atau Waktu Habis)
+
+    fun finishCurrentSubtest(){
+        timerJob?.cancel()
+        val currentIndex = _uiState.value.currentSubtestIndex
+
+        if (currentIndex < allSubtestsFlat.lastIndex) {
+            // Masih ada subtest berikutnya -> Load Next (Deadline null agar dibuat baru)
+            loadSubtest(currentIndex + 1, null, _uiState.value.quizMode)
+        } else {
+            // Sudah subtest terakhir -> Submit Semua
+            submitQuiz()
         }
     }
 
@@ -128,11 +214,7 @@ class QuizViewModel @Inject constructor(
             repository.getSavedAnswers(activityId)
                 .distinctUntilChanged() // <-- Hanya jika ada jawaban BARU
                 .collect { answers ->
-                    _uiState.update {
-                        it.copy(
-                            userAnswers = answers,
-                        )
-                    }
+                    _uiState.update { it.copy( userAnswers = answers) }
                     // Update jumlah jawaban di Firestore
                     updateAnswerCountInDb(answers.size)
             }
@@ -160,7 +242,8 @@ class QuizViewModel @Inject constructor(
 
                 if (remaining <= 0) {
                     _uiState.update { it.copy(remainingTimeInSeconds = 0) }
-                    submitQuiz() // Waktu habis, submit!
+                    // Waktu habis = Lanjut Subtest / Submit
+                    finishCurrentSubtest()
                     break // Hentikan loop
                 }
 
@@ -211,12 +294,14 @@ class QuizViewModel @Inject constructor(
     }
 
     fun nextQuestion() {
-        val nextIndex = (_uiState.value.currentQuestionIndex + 1).coerceAtMost(_uiState.value.questions.size - 1)
+        val nextIndex = (_uiState.value.currentQuestionIndex + 1)
+            .coerceAtMost(_uiState.value.activeQuestions.size - 1)
         _uiState.update { it.copy(currentQuestionIndex = nextIndex) }
     }
 
     fun previousQuestion() {
-        val prevIndex = (_uiState.value.currentQuestionIndex - 1).coerceAtLeast(0)
+        val prevIndex = (_uiState.value.currentQuestionIndex - 1)
+            .coerceAtLeast(0)
         _uiState.update { it.copy(currentQuestionIndex = prevIndex) }
     }
 
@@ -224,7 +309,7 @@ class QuizViewModel @Inject constructor(
         timerJob?.cancel()
 
         viewModelScope.launch {
-            val questions = _uiState.value.questions
+            val questions = allQuestionRaw
             val answers = _uiState.value.userAnswers
 
             var correctCount = 0
@@ -241,12 +326,15 @@ class QuizViewModel @Inject constructor(
                 0
             }
 
-            repository.submitQuiz(
-                activityId = activityId,
-                score = score,
-                correctCount = correctCount,
-                answeredCount = answers.size
-            )
+            withContext(NonCancellable) {
+                repository.submitQuiz(
+                    activityId = activityId,
+                    score = score,
+                    correctCount = correctCount,
+                    answeredCount = answers.size
+                )
+            }
+
             // Navigasi kembali akan ditangani oleh Screen
         }
     }
