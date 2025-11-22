@@ -20,6 +20,9 @@ data class UserActivity(
 
     val answeredQuestionCount: Int = 0,
 
+    // Menyimpan skor per subtest. Contoh: {"pu": 650, "pk": 720}
+    val subtestScores: Map<String, Int> = emptyMap(),
+
     @ServerTimestamp
     val startedAt: Date? = null,
     val deadline: Date? = null, // Akan menyimpan Timestamp kapan kuis berakhir

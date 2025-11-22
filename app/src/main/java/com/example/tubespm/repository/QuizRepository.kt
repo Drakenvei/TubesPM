@@ -50,6 +50,7 @@ interface QuizRepository {
         activityId: String,
         score: Int,
         correctCount: Int,
-        answeredCount: Int
+        answeredCount: Int,
+        subtestScores: Map<String, Int>,
     )
 }

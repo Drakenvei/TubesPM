@@ -117,7 +117,8 @@ class QuizRepositoryImpl @Inject constructor(
         activityId: String,
         score: Int,
         correctCount: Int,
-        answeredCount: Int
+        answeredCount: Int,
+        subtestScores: Map<String, Int>
     ) {
         // 1. Ambil dulu dokumen activity untuk tahu userId dan type
         val activityRef = db.collection("user_activities").document(activityId)
@@ -136,6 +137,7 @@ class QuizRepositoryImpl @Inject constructor(
             "score" to score,
             "correctCount" to correctCount,
             "answeredQuestionCount" to answeredCount, // <-- Update hitungan
+            "subtestScores" to subtestScores,
             "completedAt" to FieldValue.serverTimestamp()
         )
 

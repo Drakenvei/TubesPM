@@ -117,7 +117,7 @@ fun TryoutCompletedCard(
                 modifier = Modifier.fillMaxWidth().height(48.dp)
             ) {
                 Text(
-                    "Lihat Pembahasan",
+                    "Lihat Analisis Skor",
                     color = Color.Black,
                     fontWeight = FontWeight.Bold,
                     fontSize = 16.sp

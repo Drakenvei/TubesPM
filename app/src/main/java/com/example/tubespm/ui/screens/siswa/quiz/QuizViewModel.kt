@@ -312,28 +312,46 @@ class QuizViewModel @Inject constructor(
             val questions = allQuestionRaw
             val answers = _uiState.value.userAnswers
 
-            var correctCount = 0
-            questions.forEach { question ->
-                if (answers[question.id] == question.correctAnswer) {
-                    correctCount++
+            var totalCorrect = 0
+
+            val questionBySubtest = questions.groupBy { it.subtestId }
+
+            val subtestScores = mutableMapOf<String, Int>()
+
+            questionBySubtest.forEach { (subtestId, subtestQuestions) ->
+                var correctInSubtest = 0
+
+                subtestQuestions.forEach { question ->
+                    if (answers[question.id] == question.correctAnswer) {
+                        correctInSubtest++
+                        totalCorrect++
+                    }
                 }
+
+                // Hitung Skor Simulasi (Skala 1000)
+                // Rumus: (Benar / Total Soal Subtest) * 900
+                val scoreVal = if (subtestQuestions.isNotEmpty()) {
+                    (correctInSubtest.toFloat() / subtestQuestions.size.toFloat() * 900).toInt()
+                } else {
+                    0
+                }
+
+                subtestScores[subtestId] = scoreVal
             }
 
-            // Skor sederhana (misal: 100 / totalSoal * benar)
-            val score = if (questions.isNotEmpty()) {
-                (100.0 / questions.size * correctCount).toInt()
+            val finalScore = if (subtestScores.isNotEmpty()) {
+                subtestScores.values.average().toInt()
             } else {
                 0
             }
 
-            withContext(NonCancellable) {
-                repository.submitQuiz(
-                    activityId = activityId,
-                    score = score,
-                    correctCount = correctCount,
-                    answeredCount = answers.size
-                )
-            }
+            repository.submitQuiz(
+                activityId = activityId,
+                score = finalScore,
+                correctCount = totalCorrect,
+                answeredCount = answers.size,
+                subtestScores = subtestScores
+            )
 
             // Navigasi kembali akan ditangani oleh Screen
         }

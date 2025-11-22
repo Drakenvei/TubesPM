@@ -22,6 +22,7 @@ import com.example.tubespm.ui.screens.pembahasan.PembahasanScreen
 import com.example.tubespm.ui.screens.siswa.activity.ActivityLatihanScreen
 import com.example.tubespm.ui.screens.siswa.activity.ActivityScreen
 import com.example.tubespm.ui.screens.siswa.activity.ActivityTryoutScreen
+import com.example.tubespm.ui.screens.siswa.analisis.AnalisisScoreScreen
 import com.example.tubespm.ui.screens.siswa.exercises.ExerciseScreen
 import com.example.tubespm.ui.screens.siswa.homepage.HomeScreen
 import com.example.tubespm.ui.screens.siswa.notification.NotificationScreen
@@ -83,6 +84,12 @@ fun StudentNavGraph(
         }
         composable("activity_latihan_list") {
             ActivityLatihanScreen(navController = navController)
+        }
+        composable(
+            route = "analisis/{activityId}",
+            arguments = listOf(navArgument("activityId") { type = NavType.StringType })
+        ) {
+            AnalisisScoreScreen(navController = navController)
         }
 
         // --- Quiz screens ---
