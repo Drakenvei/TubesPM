@@ -64,7 +64,7 @@ class UserRepositoryImpl @Inject constructor(
             "name" to name,
 //            "email" to email,
             "school" to school,
-            "profileImageUrl" to imageUrlToSave
+            "profile_picture" to imageUrlToSave
         )
 
         // 3. Update dokumen di Firestore

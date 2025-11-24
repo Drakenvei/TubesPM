@@ -1,14 +1,9 @@
 package com.example.tubespm.ui.screens.siswa.activity
 
-import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.shape.RoundedCornerShape
-import androidx.compose.material.icons.Icons
-import androidx.compose.material.icons.filled.Description
-import androidx.compose.material.icons.filled.Lock
-import androidx.compose.material.icons.filled.Timer
 import androidx.compose.material3.*
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.Alignment
@@ -18,22 +13,27 @@ import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
-import com.example.tubespm.data.model.InProgressSectionState
-import com.example.tubespm.data.model.TryoutInProgress
 
 @Composable
 fun TryoutDalamProsesContent(
-    tryouts: List<TryoutInProgress>,
-    onContinueClick: () -> Unit
+    activities: List<ActivityTryoutDetail>,
+    onContinueClick: (ActivityTryoutDetail) -> Unit
 ) {
+    if (activities.isEmpty()) {
+        Box(modifier = Modifier.fillMaxSize(), contentAlignment = Alignment.Center) {
+            Text("Tidak ada tryout yang sedang dikerjakan.")
+        }
+        return
+    }
+
     LazyColumn (
         contentPadding = PaddingValues(16.dp),
         verticalArrangement = Arrangement.spacedBy(16.dp)
     ) {
-        items(tryouts) { tryout ->
+        items(activities) { activityDetail ->
             TryoutInProgressCard(
-                tryout = tryout,
-                onContinueClick = onContinueClick
+                activityDetail = activityDetail,
+                onContinueClick = { onContinueClick(activityDetail) }
             )
         }
     }
@@ -41,9 +41,20 @@ fun TryoutDalamProsesContent(
 
 @Composable
 fun TryoutInProgressCard(
-    tryout: TryoutInProgress,
+    activityDetail: ActivityTryoutDetail, // <-- DIUBAH: Terima model gabungan
     onContinueClick: () -> Unit
 ) {
+    val tryout = activityDetail.tryout
+    val userActivity = activityDetail.userActivity
+
+    // Hitung progres
+    val progress = if (tryout.totalQuestionCount > 0) {
+        // Ambil data baru dari userActivity
+        userActivity.answeredQuestionCount.toFloat() / tryout.totalQuestionCount.toFloat()
+    } else {
+        0f // Hindari pembagian dengan nol
+    }
+
     Card (
         shape = RoundedCornerShape(12.dp),
         colors = CardDefaults.cardColors(containerColor = Color(0xFFE61C5D))
@@ -51,114 +62,63 @@ fun TryoutInProgressCard(
         Column (
             Modifier.padding(16.dp)
         ) {
+            // 1. Judul Tryout
             Text(
                 tryout.title,
                 style = MaterialTheme.typography.titleMedium.copy(color = Color.White),
                 fontWeight = FontWeight.Bold
             )
-            Spacer(Modifier.height(8.dp))
-            Column (
-                verticalArrangement = Arrangement.spacedBy(8.dp)
-            ) {
-                tryout.sections.forEach { section ->
-                    InProgressSection(
-                        section = section,
-                        onContinueClick = onContinueClick
-                    )
-                    if (tryout.sections.last() != section) {
-                        Divider(
-                            color = Color.White.copy(alpha = 0.3f),
-                            modifier = Modifier.padding(vertical = 8.dp)
-                        )
-                    }
-                }
-            }
-        }
-    }
-}
+            Spacer(Modifier.height(12.dp))
 
-@Composable
-fun InProgressSection(
-    section: InProgressSectionState,
-    onContinueClick: () -> Unit
-) {
-    Column {
-        Box(
-            modifier = Modifier
-                .clip(RoundedCornerShape(8.dp))
-                .background(Color.White)
-                .padding(horizontal = 10.dp, vertical = 4.dp)
-        ) {
-            Text(
-                section.title,
-                color = Color(0xFFE61C5D),
-                fontWeight = FontWeight.Bold,
-                fontSize = 14.sp
-            )
-        }
-        Spacer(Modifier.height(12.dp))
-
-        if (section.isLocked) {
-            Row (
-                Modifier.fillMaxWidth(),
-                verticalAlignment = Alignment.CenterVertically,
-                horizontalArrangement = Arrangement.SpaceBetween
-            ) {
-                InfoRow(
-                    icon = Icons.Default.Description,
-                    text = "${section.totalQuestions} soal"
-                )
-                InfoRow(
-                    icon = Icons.Default.Timer,
-                    text = "90 menit"
-                )
-            }
-            Spacer(Modifier.height(8.dp))
-            Button(
-                onClick = {},
-                enabled = false,
-                shape = RoundedCornerShape(12.dp),
-                colors = ButtonDefaults.buttonColors(
-                    disabledContainerColor = Color.Green.copy(alpha = 0.5f),
-                    disabledContentColor = Color.White
-                ),
-                modifier = Modifier
-                    .fillMaxWidth()
-                    .height(48.dp)
-            ) {
-                Icon(
-                    Icons.Default.Lock,
-                    contentDescription = null,
-                    modifier = Modifier.size(20.dp)
-                )
-                Spacer(Modifier.width(8.dp))
-                Text("Menunggu subtest sebelumnya")
-            }
-        } else {
+            // --- BAGIAN PROGRESS BAR (BARU) ---
             Row(
                 Modifier.fillMaxWidth(),
                 verticalAlignment = Alignment.CenterVertically,
                 horizontalArrangement = Arrangement.SpaceBetween
             ) {
-                InfoRow(
-                    icon = Icons.Default.Description,
-                    text = "${section.progress}/${section.totalQuestions} soal"
+                Text(
+                    "Progress:",
+                    color = Color.White,
+                    style = MaterialTheme.typography.bodyLarge,
+                    fontWeight = FontWeight.SemiBold
                 )
-                InfoRow(
-                    icon = Icons.Default.Timer,
-                    text = "Sisa waktu: ${section.remainingTime}"
+                Text(
+                    // Tampilkan "15 / 150 soal"
+                    "${userActivity.answeredQuestionCount} / ${tryout.totalQuestionCount} soal",
+                    color = Color.White,
+                    style = MaterialTheme.typography.bodyLarge,
+                    fontWeight = FontWeight.Bold
                 )
             }
             Spacer(Modifier.height(8.dp))
             LinearProgressIndicator(
-                progress = { section.progress.toFloat() / section.totalQuestions.toFloat() },
+                progress = { progress }, // <-- Set nilai progress
                 modifier = Modifier
                     .fillMaxWidth()
+                    .height(8.dp) // Buat sedikit lebih tebal
                     .clip(RoundedCornerShape(4.dp)),
-                color = Color.White,
-                trackColor = Color.White.copy(alpha = 0.3f)
+                color = Color.White, // Warna progress
+                trackColor = Color.White.copy(alpha = 0.3f) // Warna background
             )
-            Spacer(Modifier.height(8.dp))
+            // --- AKHIR BAGIAN PROGRESS BAR ---
+
+            Divider(
+                color = Color.White.copy(alpha = 0.3f),
+                modifier = Modifier.padding(vertical = 16.dp)
+            )
+
+            // 2. Daftar Section (re-use Composable yang ada)
+            Column (
+                verticalArrangement = Arrangement.spacedBy(8.dp)
+            ) {
+                tryout.sections.forEach { section ->
+                    TryoutSectionRow(section = section)
+                }
+            }
+
+            Spacer(Modifier.height(16.dp))
+
+            // 3. Tombol Lanjutkan
             Button(
                 onClick = onContinueClick,
                 shape = RoundedCornerShape(12.dp),

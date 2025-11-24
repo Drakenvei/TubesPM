@@ -14,21 +14,23 @@ import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
+import androidx.hilt.navigation.compose.hiltViewModel
 import androidx.navigation.NavController
-import com.example.tubespm.data.model.*
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
-fun ActivityTryoutScreen(navController : NavController) {
-    val belumDikerjakanList = remember { sampleTryoutList() }
-    val dalamProsesList = remember { sampleInProgressList() }
-    val selesaiList = remember { sampleCompletedList() }
+fun ActivityTryoutScreen(
+    navController : NavController,
+    viewModel: ActivityTryoutViewModel = hiltViewModel() // inject viewmodel
+) {
+    // AMBIL STATE DARI VIEWMODEL
+    val uiState by viewModel.uiState.collectAsState()
 
     var selectedTabIndex by remember { mutableStateOf(0) }
     var tabs = listOf("Belum Dikerjakan", "Dalam Proses", "Selesai")
 
     // State untuk mengontrol dialog detail
-    var showDetailDialogFor by remember { mutableStateOf<Tryout?>(null) }
+    var showDetailDialogFor by remember { mutableStateOf<ActivityTryoutDetail?>(null) }
 
     Column (
         modifier = Modifier
@@ -78,42 +80,71 @@ fun ActivityTryoutScreen(navController : NavController) {
                 )
             }
         }
-        when (selectedTabIndex) {
-            0 -> TryoutBelumDikerjakanContent(
-                    tryouts = belumDikerjakanList,
-                    onCardClick = { tryout ->
-                        showDetailDialogFor = tryout
+
+        // Konten berdasarkan state
+        if (uiState.isLoading){
+            Box (
+                modifier = Modifier
+                    .fillMaxSize(),
+                contentAlignment = Alignment.Center
+            ) {
+                CircularProgressIndicator()
+            }
+        } else if (uiState.error != null){
+            Box(
+                modifier = Modifier
+                    .fillMaxSize(),
+                contentAlignment = Alignment.Center
+            ) {
+                Text(
+                    "Error: ${uiState.error}",
+                    color = MaterialTheme.colorScheme.error
+                )
+            }
+        } else {
+            // Tampilkan konten tab berdasarkan uiState
+            when (selectedTabIndex) {
+                0 -> TryoutBelumDikerjakanContent(
+                    activities = uiState.notStarted, //Gunakan data asli
+                    onCardClick = { activityDetail ->
+                        showDetailDialogFor = activityDetail //Tampilkan dialog
                     }
                 )
-            1 -> TryoutDalamProsesContent(
-                tryouts = dalamProsesList,
-                onContinueClick = {
-                    navController.navigate("tryout_quiz")
-                }
-            )
-            2 -> TryoutSelesaiContent(selesaiList)
+                1 -> TryoutDalamProsesContent(
+                    activities = uiState.inProgress,
+                    onContinueClick = { activityDetail ->
+                        navController.navigate("tryout_quiz/${activityDetail.userActivity.id}")
+                    }
+                )
+                2 -> TryoutSelesaiContent(
+                    activities = uiState.completed,
+                    onResultClick = { activityDetail ->
+                        // Navigasi ke halaman hasil/pembahasan
+                         navController.navigate("analisis/${activityDetail.userActivity.id}")
+                    }
+                )
+            }
         }
+
     }
 
     // Tampilkan dialog jika 'showDetailDialogFor' tidak null
-    showDetailDialogFor?.let { tryout ->
+    showDetailDialogFor?.let { activityDetail ->
         TryoutDetailDialog(
-            tryout = tryout,
+            tryout = activityDetail.tryout, // <-- Kirim data Tryout (untuk UI)
             onDismiss = { showDetailDialogFor = null },
             onStart = {
-                // INI BAGIAN PENTINGNYA
-                // 1. Tutup dialog
                 showDetailDialogFor = null
-                // 2. Lakukan navigasi ke QuizScreen
-                navController.navigate("tryout_quiz")
+                // Kirim ID aktivitas unik (dari UserActivity) ke halaman kuis
+                navController.navigate("tryout_quiz/${activityDetail.userActivity.id}")
             },
             onCancel = {
-                // TODO: Logika untuk membatalkan/menghapus tryout dari daftar
+                // --- FUNGSI BARU: Panggil ViewModel untuk membatalkan ---
+                viewModel.cancelTryout(activityDetail.userActivity.id)
                 showDetailDialogFor = null
             }
         )
     }
-
 }
 
 // InfoRow adalah component

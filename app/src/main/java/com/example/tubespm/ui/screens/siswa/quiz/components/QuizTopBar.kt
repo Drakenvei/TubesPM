@@ -1,10 +1,12 @@
 package com.example.tubespm.ui.screens.siswa.quiz.components
 
+import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.ArrowBack
 import androidx.compose.material3.*
 import androidx.compose.runtime.Composable
+import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.text.font.FontWeight
@@ -16,9 +18,11 @@ import com.example.tubespm.ui.screens.siswa.quiz.QuizMode
 @Composable
 fun QuizTopBar(
     mode: QuizMode,
+    title: String,
     remainingTimeInSeconds: Long,
     onBackClicked: () -> Unit,
-    onSubmitClicked: () -> Unit
+    onSubmitClicked: () -> Unit,
+    isLastSubtest: Boolean
 ) {
     fun formatTime(seconds: Long): String {
         val hours = seconds / 3600
@@ -29,13 +33,20 @@ fun QuizTopBar(
 
     TopAppBar(
         title = {
-            if (mode == QuizMode.TRYOUT) {
+            Column (horizontalAlignment = Alignment.CenterHorizontally) {
+                // Tampilkan Timer
+                if (mode == QuizMode.TRYOUT) {
+                    Text(
+                        text = formatTime(remainingTimeInSeconds),
+                        fontWeight = FontWeight.Bold,
+                        color = if (remainingTimeInSeconds < 300) Color.Red else Color.Black
+                    )
+                }
+                // Tampilkan Nama Subtest
                 Text(
-                    text = formatTime(remainingTimeInSeconds),
-                    fontWeight = FontWeight.Bold,
-                    modifier = Modifier.fillMaxWidth(),
-                    textAlign = TextAlign.Center,
-                    fontSize = 18.sp
+                    text = title,
+                    style = MaterialTheme.typography.labelMedium,
+                    color = Color.Gray
                 )
             }
         },
@@ -48,11 +59,10 @@ fun QuizTopBar(
             Button(
                 onClick = onSubmitClicked,
                 colors = ButtonDefaults.buttonColors(
-                    containerColor = Color.LightGray.copy(alpha = 0.5f),
-                    contentColor = Color.Black
+                    containerColor = if (isLastSubtest) Color(0xFF30D158) else Color(0xFFE61C5D)
                 )
             ) {
-                Text("Submit")
+                Text(if (isLastSubtest) "Selesai" else "Lanjut Subtes")
             }
         },
         colors = TopAppBarDefaults.topAppBarColors(containerColor = Color.White)

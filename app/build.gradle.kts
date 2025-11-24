@@ -48,7 +48,8 @@ android {
 }
 
 dependencies {
-
+    implementation("io.coil-kt:coil-compose:2.5.0")
+    implementation("androidx.activity:activity-compose:1.9.0")
     // Hilt
     implementation("com.google.dagger:hilt-android:2.48") // Versi Hilt terbaru
     kapt("com.google.dagger:hilt-compiler:2.48")

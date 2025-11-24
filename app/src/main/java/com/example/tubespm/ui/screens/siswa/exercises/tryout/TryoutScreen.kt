@@ -25,9 +25,9 @@ import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.compose.ui.window.Dialog
 import androidx.hilt.navigation.compose.hiltViewModel
+import com.example.tubespm.data.model.Section
 import com.example.tubespm.data.model.Tryout
-import com.example.tubespm.data.model.TryoutSection
-import com.example.tubespm.data.model.sampleTryoutList
+import com.example.tubespm.ui.screens.siswa.exercises.tryout.TryoutCatalogItem
 import com.example.tubespm.ui.screens.siswa.exercises.tryout.TryoutViewModel
 import com.google.firebase.firestore.Query
 
@@ -36,7 +36,8 @@ import com.google.firebase.firestore.Query
 // Main Screen
 @Composable
 fun TryoutScreen(
-    viewModel: TryoutViewModel = hiltViewModel() // 1. Dapatkan ViewModel
+    viewModel: TryoutViewModel = hiltViewModel(), // 1. Dapatkan ViewModel
+    initialQuery: String = ""
 ) {
     // 2. Observasi state dari ViewModel
     val uiState by viewModel.uiState.collectAsState()
@@ -45,7 +46,13 @@ fun TryoutScreen(
     val searchQuery by viewModel.searchQuery.collectAsState()
 
     // State lokal untuk dialog bisa tetap di sini
-    var selectedTryout by remember { mutableStateOf<Tryout?>(null) }
+    var selectedTryoutItem by remember { mutableStateOf<TryoutCatalogItem?>(null) }
+
+    LaunchedEffect(initialQuery) {
+        if (initialQuery.isNotBlank()) {
+            viewModel.onSearchQueryChanged(initialQuery)
+        }
+    }
 
     Column (
         modifier = Modifier
@@ -97,9 +104,9 @@ fun TryoutScreen(
                     verticalArrangement = Arrangement.spacedBy(16.dp)
                 ) {
                     // 4. Gunakan data dari uiState.tryouts
-                    items(uiState.tryouts) { tryout ->
-                        TryoutCard(tryout) {
-                            selectedTryout = tryout
+                    items(uiState.tryouts) { item ->
+                        TryoutCard(item.tryout) { //Kirim 'item.tryout' ke Card
+                            selectedTryoutItem = item //Simpan seluruh 'item'
                         }
                     }
                 }
@@ -109,14 +116,18 @@ fun TryoutScreen(
     }
 
     // Modal Detail
-    selectedTryout?.let {
+    selectedTryoutItem?.let { item -> //'item' adalah TryoutCatalogItem
         TryoutDetailDialog(
-            tryout = it,
-            onDismiss = { selectedTryout = null },
+            tryout = item.tryout, //Kirim data tryout-nya
+            isTaken = item.isTaken, //Kirim status 'isTaken'
+            onDismiss = { selectedTryoutItem = null },
             onStart = {
                 // Aksi ketika tombol "Ambil Tryout" ditekan
+                viewModel.takeTryout(item.tryout)
+
+                // Tutup dialog setelah diambil
                 // Misalnya navigasi ke halaman pengerjaan
-                selectedTryout = null
+                selectedTryoutItem = null
             }
         )
     }
@@ -177,7 +188,7 @@ fun TryoutCard(tryout: Tryout, onClick: () -> Unit) {
 }
 
 @Composable
-fun TryoutSectionRow(section: TryoutSection) {
+fun TryoutSectionRow(section: Section) {
     Row (
         modifier = Modifier.fillMaxWidth(),
         verticalAlignment = Alignment.CenterVertically
@@ -190,7 +201,7 @@ fun TryoutSectionRow(section: TryoutSection) {
                 .padding(horizontal = 10.dp, vertical = 4.dp)
         ) {
             Text(
-                text = section.title,
+                text = section.sectionId.uppercase(),
                 color = Color(0xFFE61C5D),
                 fontWeight = FontWeight.Bold,
                 fontSize = 14.sp
@@ -208,7 +219,7 @@ fun TryoutSectionRow(section: TryoutSection) {
         )
         Spacer(Modifier.width(4.dp))
         Text(
-            text = "${section.totalQuestions} soal",
+            text = "${section.sectionQuestionCount} soal",
             style = MaterialTheme.typography.bodyMedium,
             color = Color.White
         )
@@ -221,7 +232,7 @@ fun TryoutSectionRow(section: TryoutSection) {
         )
         Spacer(Modifier.width(4.dp))
         Text(
-            text = "${section.totalDuration} menit",
+            text = "${section.sectionDuration} menit",
             color = Color.White,
             style = MaterialTheme.typography.bodyMedium
         )
@@ -232,6 +243,7 @@ fun TryoutSectionRow(section: TryoutSection) {
 @Composable
 fun TryoutDetailDialog(
     tryout: Tryout,
+    isTaken: Boolean,
     onDismiss: () -> Unit,
     onStart: () -> Unit
 ) {
@@ -282,7 +294,7 @@ fun TryoutDetailDialog(
                 Text("Detail Tryout", fontWeight = FontWeight.Bold, fontSize = 16.sp)
                 Spacer(Modifier.height(4.dp))
                 Text("Kode Paket: ${tryout.code}", style = MaterialTheme.typography.bodyMedium)
-                Text("Jumlah Soal: ${tryout.totalQuestions}", style = MaterialTheme.typography.bodyMedium)
+                Text("Jumlah Soal: ${tryout.totalQuestionCount}", style = MaterialTheme.typography.bodyMedium)
                 Text("Durasi: ${tryout.totalDuration} menit", style = MaterialTheme.typography.bodyMedium)
 
                 Divider(Modifier.padding(vertical = 12.dp))
@@ -290,21 +302,21 @@ fun TryoutDetailDialog(
                 // Sections
                 LazyColumn(modifier = Modifier.heightIn(max = 350.dp)) {
                     items(tryout.sections) { section ->
-                        Text(section.displayName, fontWeight = FontWeight.Bold, fontSize = 16.sp)
+                        Text(section.sectionName, fontWeight = FontWeight.Bold, fontSize = 16.sp)
                         Spacer(Modifier.height(8.dp))
                         Column(modifier = Modifier.padding(start = 8.dp)) {
-                            section.subSections.forEachIndexed { index, subSection ->
+                            section.subtests.forEachIndexed { index, subtest ->
                                 Column (modifier = Modifier.padding(bottom = 8.dp)) {
                                     Text(
-                                        "${index + 1}. ${subSection.name} (${subSection.questionCount} soal, ${subSection.duration} menit)",
+                                        "${index + 1}. ${subtest.subtestName} (${subtest.questionCount} soal, ${subtest.duration} menit)",
                                         style = MaterialTheme.typography.bodyMedium,
                                         fontWeight = FontWeight.SemiBold
                                     )
-                                    if (subSection.kisiKisi.isNotEmpty()) {
+                                    if (subtest.topics.isNotEmpty()) {
                                         Column (modifier = Modifier.padding(start = 16.dp, top = 4.dp)) {
-                                            subSection.kisiKisi.forEach { kisi ->
+                                            subtest.topics.forEach { topic ->
                                                 Text(
-                                                    text = "- $kisi",
+                                                    text = "- ${topic.name}",
                                                     style = MaterialTheme.typography.bodySmall,
                                                     color = Color.DarkGray
                                                 )
@@ -323,15 +335,19 @@ fun TryoutDetailDialog(
 
                 Button(
                     onClick = onStart,
-                    colors = ButtonDefaults.buttonColors(containerColor = Color(0xFF30D158)),
+                    enabled = !isTaken, //Nonaktifkan jika 'isTaken' true
+                    colors = ButtonDefaults.buttonColors(
+                        containerColor = if (isTaken) Color.Gray else Color(0xFF30D158),
+                        disabledContainerColor = Color.Gray.copy(alpha = 0.5f)
+                    ),
                     shape = RoundedCornerShape(12.dp),
                     modifier = Modifier
                         .fillMaxWidth()
                         .height(50.dp)
                 ) {
                     Text(
-                        "Ambil Tryout",
-                        color = Color.Black,
+                        text = if (isTaken) "Sudah Diambil" else "Ambil Tryout",
+                        color = if (isTaken) Color.White else Color.Black,
                         fontWeight = FontWeight.Bold,
                         textAlign = TextAlign.Center,
                         fontSize = 18.sp

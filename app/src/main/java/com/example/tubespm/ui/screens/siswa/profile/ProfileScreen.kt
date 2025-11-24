@@ -1,5 +1,7 @@
 package com.example.tubespm.ui.screens.siswa.profile
 
+import android.graphics.BitmapFactory
+import android.util.Base64
 import androidx.compose.foundation.Image
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border
@@ -18,18 +20,15 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.graphics.asImageBitmap
 import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextAlign
-import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.hilt.navigation.compose.hiltViewModel
-import coil.compose.AsyncImage
 import com.example.tubespm.R
-import com.google.firebase.auth.FirebaseAuth
-import com.google.firebase.firestore.FirebaseFirestore
 
 @Composable
 fun ProfileScreen(
@@ -45,7 +44,7 @@ fun ProfileScreen(
             .background(Color.White)
             .verticalScroll(rememberScrollState())
     ) {
-        // 🔴 Header section
+        // --- Header section ---
         Box(
             modifier = Modifier
                 .fillMaxWidth()
@@ -65,7 +64,7 @@ fun ProfileScreen(
                     tint = Color.White,
                     modifier = Modifier
                         .size(28.dp)
-                        .clickable{ onEditClick()}
+                        .clickable { onEditClick() }
                 )
 
                 Icon(
@@ -74,38 +73,64 @@ fun ProfileScreen(
                     tint = Color.White,
                     modifier = Modifier
                         .size(28.dp)
-                        .clickable{ onSettingsClick()}
+                        .clickable { onSettingsClick() }
                 )
             }
 
-            // Profile image
+            // Profile image & Info
             Column(
                 horizontalAlignment = Alignment.CenterHorizontally,
                 modifier = Modifier
                     .fillMaxWidth()
-                    .padding(top = 48.dp, bottom = 16.dp) // Tambah padding bottom
+                    .padding(top = 48.dp, bottom = 16.dp)
             ) {
 
                 Box(
                     modifier = Modifier.size(100.dp)
                 ) {
-                    // Gunakan AsyncImage untuk memuat URL dari ViewModel
-                    AsyncImage(
-                        model = uiState.profileImageUrl, // Ambil dari state dan Menggunakan URL gambar
-                        contentDescription = "Profile Image",
-                        placeholder = painterResource(id = R.drawable.user_default_profile),
-                        error = painterResource(id = R.drawable.user_default_profile),
-                        contentScale = ContentScale.Crop,
-                        modifier = Modifier
-                            .fillMaxSize()
-                            .clip(CircleShape)
-                            .border(2.dp,Color.White, CircleShape)
-                    )
+                    // LOGIKA DECODE BASE64
+                    // Kita gunakan remember agar decoding tidak dijalankan berulang-ulang saat recompose
+                    val decodedBitmap = remember(uiState.profileImageUrl) {
+                        if (uiState.profileImageUrl.isNotEmpty()) {
+                            try {
+                                val bytes = Base64.decode(uiState.profileImageUrl, Base64.DEFAULT)
+                                BitmapFactory.decodeByteArray(bytes, 0, bytes.size)
+                            } catch (e: Exception) {
+                                null
+                            }
+                        } else {
+                            null
+                        }
+                    }
+
+                    if (decodedBitmap != null) {
+                        // Tampilkan gambar dari Base64
+                        Image(
+                            bitmap = decodedBitmap.asImageBitmap(),
+                            contentDescription = "Profile Image",
+                            contentScale = ContentScale.Crop,
+                            modifier = Modifier
+                                .fillMaxSize()
+                                .clip(CircleShape)
+                                .border(2.dp, Color.White, CircleShape)
+                        )
+                    } else {
+                        // Tampilkan Placeholder Default jika Base64 kosong/gagal decode
+                        Image(
+                            painter = painterResource(id = R.drawable.user_default_profile),
+                            contentDescription = "Default Profile",
+                            contentScale = ContentScale.Crop,
+                            modifier = Modifier
+                                .fillMaxSize()
+                                .clip(CircleShape)
+                                .border(2.dp, Color.White, CircleShape)
+                        )
+                    }
                 }
 
                 Spacer(modifier = Modifier.height(8.dp))
 
-                // 🔹 Dynamic user data
+                // User Data
                 Text(
                     text = uiState.name,
                     color = Color.White,
@@ -128,7 +153,6 @@ fun ProfileScreen(
         // --- Wrapper untuk Loading/Error ---
         when {
             uiState.isLoading -> {
-                // Loading
                 Box(
                     modifier = Modifier
                         .fillMaxWidth()
@@ -139,7 +163,6 @@ fun ProfileScreen(
                 }
             }
             uiState.error != null -> {
-                // Error
                 Text(
                     text = "Error: ${uiState.error}",
                     color = Color.Red,
@@ -148,7 +171,6 @@ fun ProfileScreen(
             }
             else -> {
                 // Konten jika data berhasil dimuat
-                // 🟠 Stats Section
                 Column(
                     modifier = Modifier
                         .fillMaxWidth()
@@ -159,29 +181,28 @@ fun ProfileScreen(
                     Spacer(modifier = Modifier.height(32.dp))
 
                     StatCard(
-                        uiState.tryoutCount.toString(),
-                        "Paket tryout dikerjakan",
+                        value = uiState.tryoutCount.toString(),
+                        label = "Paket tryout dikerjakan",
                         modifier = Modifier.fillMaxWidth()
                     )
 
                     StatCard(
-                        uiState.latihanCount.toString(),
-                        "Soal latihan dikerjakan",
+                        value = uiState.latihanCount.toString(),
+                        label = "Soal latihan dikerjakan",
                         modifier = Modifier.fillMaxWidth()
                     )
 
                     Spacer(modifier = Modifier.height(32.dp))
 
-                    // 📦 Placeholder Section
+                    // Placeholder Section (misal: Chart atau Info lain)
                     Box(
                         modifier = Modifier
                             .fillMaxWidth()
                             .height(150.dp)
-                            .padding(horizontal = 24.dp)
                             .background(Color(0xFFE0E0E0), RoundedCornerShape(8.dp))
                     )
 
-                    Spacer(modifier = Modifier.weight(1f)) // Dorong ke bawah
+                    Spacer(modifier = Modifier.weight(1f))
                 }
             }
         }
@@ -198,7 +219,7 @@ fun StatCard(value: String, label: String, modifier: Modifier = Modifier) {
         Column(
             modifier = Modifier
                 .fillMaxSize()
-                .padding(vertical = 8.dp, horizontal = 4.dp), // Sesuaikan padding
+                .padding(vertical = 8.dp, horizontal = 4.dp),
             verticalArrangement = Arrangement.Center,
             horizontalAlignment = Alignment.CenterHorizontally
         ) {

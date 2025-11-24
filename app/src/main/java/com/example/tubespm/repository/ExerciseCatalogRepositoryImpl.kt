@@ -3,8 +3,8 @@ package com.example.tubespm.repository
 import com.example.tubespm.data.model.LatihanSoal
 import com.example.tubespm.data.model.Tryout
 import com.google.firebase.firestore.FirebaseFirestore
+import com.google.firebase.firestore.Query
 import com.google.firebase.firestore.snapshots
-import com.google.firebase.firestore.toObjects
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.map
 import javax.inject.Inject
@@ -13,22 +13,28 @@ class ExerciseCatalogRepositoryImpl @Inject constructor(
     private val db: FirebaseFirestore
 ) : ExerciseCatalogRepository {
     override fun getTryouts(): Flow<List<Tryout>> {
-        // .snapshots() secara otomatis memberikan data real-time (Flow)
+        // Ambil dari koleksi 'tryouts'
+        // Filter hanya yang statusnya 'active'
         return db.collection("tryouts")
             .whereEqualTo("status", "active")
-            .snapshots()
-            .map { snapshots ->
-                // Mengubah dokumen Firestore menjadi list data class Tryout
-                snapshots.toObjects(Tryout::class.java)
+            .orderBy("createdAt", Query.Direction.DESCENDING)
+            .snapshots() // Ambil data secara real-time
+            .map { snapshot ->
+                // Konversi dokumen Firestore ke List<Tryout>
+                // Ini berfungsi karena data class Tryout.kt
+                // sekarang cocok dengan struktur database
+                snapshot.toObjects(Tryout::class.java)
             }
     }
 
     override fun getLatihanSoal(): Flow<List<LatihanSoal>> {
+        // Implementasi serupa untuk latihan soal
         return db.collection("latihan_soal")
             .whereEqualTo("status", "active")
+            .orderBy("createdAt", Query.Direction.DESCENDING)
             .snapshots()
-            .map { snapshots ->
-                snapshots.toObjects(LatihanSoal::class.java)
+            .map { snapshot ->
+                snapshot.toObjects(LatihanSoal::class.java)
             }
     }
 }

@@ -3,8 +3,6 @@ package com.example.tubespm.ui.screens.siswa.profile
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import com.example.tubespm.repository.UserRepository
-import com.google.firebase.auth.FirebaseAuth
-import com.google.firebase.firestore.FirebaseFirestore
 import dagger.hilt.android.lifecycle.HiltViewModel
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.asStateFlow
@@ -28,14 +26,11 @@ class ProfileViewModel @Inject constructor(
         viewModelScope.launch {
             _uiState.update { it.copy(isLoading = true, error = null)}
 
-            // ViewModel kini hanya memanggil repository
             repository.getMyProfile()
                 .catch { e ->
-                    // Tangani error jika flow gagal
                     _uiState.update { it.copy(isLoading = false, error = e.localizedMessage) }
                 }
                 .collect { userModel ->
-                    // Map data mentah 'UserModel' ke 'ProfileUiState'
                     _uiState.update {
                         it.copy(
                             isLoading = false,
@@ -44,7 +39,10 @@ class ProfileViewModel @Inject constructor(
                             school = userModel.school,
                             tryoutCount = userModel.tryoutCompleted,
                             latihanCount = userModel.latihanCompleted,
-                            profileImageUrl = userModel.profileImageUrl
+
+                            // ✅ PERBAIKAN DI SINI:
+                            // Ubah userModel.profileImageUrl -> userModel.profilePicture
+                            profileImageUrl = userModel.profilePicture
                         )
                     }
                 }
