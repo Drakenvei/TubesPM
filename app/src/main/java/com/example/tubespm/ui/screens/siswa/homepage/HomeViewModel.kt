@@ -9,9 +9,11 @@ import com.example.tubespm.repository.ActivityRepository
 import com.example.tubespm.repository.ExerciseCatalogRepository
 import com.example.tubespm.repository.UserRepository
 import dagger.hilt.android.lifecycle.HiltViewModel
+import kotlinx.coroutines.Job
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.flow.catch
+import kotlinx.coroutines.flow.collectLatest
 import kotlinx.coroutines.flow.combine
 import kotlinx.coroutines.flow.update
 import kotlinx.coroutines.launch
@@ -39,59 +41,67 @@ class HomeViewModel @Inject constructor(
     private val catalogRepository: ExerciseCatalogRepository,
     private val activityRepository: ActivityRepository
 ) : ViewModel() {
-    private val  _uiState = MutableStateFlow(HomeUiState())
+
+    private val _uiState = MutableStateFlow(HomeUiState())
     val uiState = _uiState.asStateFlow()
 
     init {
-        loadHomeData()
+        // 1. Jalan sendiri: Monitor Profil User (Prioritas Utama)
+        observeUserProfile()
+
+        // 2. Jalan sendiri: Monitor Data Dashboard (Tryout, Chart, dll)
+        loadDashboardContent()
     }
 
-    private fun loadHomeData(){
+    private fun observeUserProfile() {
         viewModelScope.launch {
-            // Ambil user profile
-            val userFlow = userRepository.getMyProfile()
+            // Menggunakan collectLatest agar selalu mendapat update terbaru
+            userRepository.getMyProfile()
+                .catch { e ->
+                    // Jika profil error, jangan hancurkan dashboard lain, cukup log atau set error state kecil
+                    _uiState.update { it.copy(error = "Gagal memuat profil: ${e.message}") }
+                }
+                .collectLatest { user ->
+                    _uiState.update { currentState ->
+                        currentState.copy(
+                            // Update hanya bagian user
+                            profilePicture = user.profilePicture,
+                            userName = user.name.ifBlank { "Siswa" }
+                        )
+                    }
+                }
+        }
+    }
 
-            // Ambil Katalog Tryout (untuk rekomendasi)
+    private fun loadDashboardContent() {
+        viewModelScope.launch {
             val tryoutFlow = catalogRepository.getTryouts()
-
-            // Ambil katalog latihan
             val latihanFlow = catalogRepository.getLatihanSoal()
-
-            // Ambil Aktivitas GLOBAL (30 hari terakhir) untuk hitung popularitas
-            // ambil sampel 100 aktivitas terakhir untuk menentukan tren
             val globalActivityFlow = activityRepository.getGlobalRecentActivities(limit = 100)
-
-            // Ambil Aktivitas Pribadi (untuk chart statistik)
             val myActivityFlow = activityRepository.getMyTryoutActivities()
 
-            // Gabungkan semua flow
+            // Combine hanya untuk data konten
             combine(
-                userFlow,
                 tryoutFlow,
                 latihanFlow,
                 globalActivityFlow,
                 myActivityFlow
-            ) { user, tryouts, latihan, globalActivities, myActivities ->
+            ) { tryouts, latihan, globalActivities, myActivities ->
 
-                // --- LOGIKA POPULARITAS ---
-                // Hitung frekuensi setiap tryoutId di globalActivities
-                // Map<TryoutID, JumlahDiambil>
+                // --- LOGIKA POPULARITAS & CHART ---
                 val popularityMap = globalActivities
                     .groupingBy { it.activityRefId }
                     .eachCount()
 
-                // Urutkan Tryout berdasarkan jumlah diambil (Descending)
                 val recommendedTryouts = tryouts.sortedByDescending { tryout ->
-                    popularityMap[tryout.id] ?: 0 // Jika tidak ada di map, anggap 0
-                }.take(5) // Ambil 5 teratas
+                    popularityMap[tryout.id] ?: 0
+                }.take(5)
 
-                // Proses data Chart (hanya ambil yang selesai)
                 val completedActivities = myActivities
                     .filter { it.status == "completed" }
-                    .sortedBy { it.completedAt } // Urutkan berdasarkan tanggal selesai
-                    .takeLast(10) // ambil 10 terakhir
+                    .sortedBy { it.completedAt }
+                    .takeLast(10)
 
-                // Warna untuk chart looping
                 val charColors = listOf(
                     Color(0xFFE91E63), Color(0xFF9C27B0), Color(0xFF2196F3),
                     Color(0xFF4CAF50), Color(0xFFFF9800)
@@ -99,25 +109,27 @@ class HomeViewModel @Inject constructor(
 
                 val chartData = completedActivities.mapIndexed { index, activity ->
                     ChartData(
-                        label = activity.activityTitle.take(10) + "...", // Potong judul jika kepanjangan
+                        label = activity.activityTitle.take(10) + "...",
                         value = activity.score,
                         color = charColors[index % charColors.size]
                     )
                 }
 
-                HomeUiState(
-                    isLoading = false,
-                    profilePicture = user.profilePicture,
-                    userName = user.name.ifBlank { "Siswa" },
-                    tryoutRecommendation = recommendedTryouts,
-                    latestLatihan = latihan.take(5),
-                    scoreHistory = chartData,
-                    error = null
-                )
+                // Return data wrapper
+                Triple(recommendedTryouts, latihan.take(5), chartData)
+
             }.catch { e ->
                 _uiState.update { it.copy(isLoading = false, error = e.message) }
-            }.collect { state ->
-                _uiState.value = state
+            }.collect { (recTryouts, recentLatihan, chartData) ->
+                // Update UI State dengan data dashboard
+                _uiState.update { currentState ->
+                    currentState.copy(
+                        isLoading = false,
+                        tryoutRecommendation = recTryouts,
+                        latestLatihan = recentLatihan,
+                        scoreHistory = chartData
+                    )
+                }
             }
         }
     }

@@ -2,6 +2,7 @@ package com.example.tubespm.ui.screens.siswa.profile
 
 import android.graphics.BitmapFactory
 import android.util.Base64
+import android.widget.Toast // Import Toast
 import androidx.activity.compose.rememberLauncherForActivityResult
 import androidx.activity.result.contract.ActivityResultContracts
 import androidx.compose.foundation.Image
@@ -20,6 +21,7 @@ import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.asImageBitmap
 import androidx.compose.ui.layout.ContentScale
+import androidx.compose.ui.platform.LocalContext // Import Context
 import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
@@ -35,6 +37,22 @@ fun EditProfileScreen(
     viewModel: EditProfileViewModel = hiltViewModel()
 ) {
     val uiState by viewModel.uiState.collectAsState()
+    val context = LocalContext.current // Butuh context untuk Toast
+
+    // --- LOGIKA NAVIGASI & ERROR HANDLING ---
+    LaunchedEffect(uiState.isSaveSuccess, uiState.error) {
+        if (uiState.isSaveSuccess) {
+            Toast.makeText(context, "Profil berhasil disimpan!", Toast.LENGTH_SHORT).show()
+            onBackClick() // Keluar layar
+            viewModel.resetState()
+        }
+
+        if (uiState.error != null) {
+            Toast.makeText(context, "Error: ${uiState.error}", Toast.LENGTH_LONG).show()
+            viewModel.resetState() // Reset error agar tidak muncul terus
+        }
+    }
+    // ----------------------------------------
 
     val imagePickerLauncher = rememberLauncherForActivityResult(
         contract = ActivityResultContracts.GetContent()
@@ -63,12 +81,8 @@ fun EditProfileScreen(
                 horizontalAlignment = Alignment.CenterHorizontally,
                 verticalArrangement = Arrangement.spacedBy(16.dp)
             ) {
+                // ... (Bagian Kode Gambar Profile Sama Seperti Sebelumnya) ...
                 Box(modifier = Modifier.size(100.dp)) {
-
-                    // LOGIKA TAMPILAN GAMBAR:
-                    // 1. Jika ada URI baru (dipilih dari galeri) -> Tampilkan pakai Coil
-                    // 2. Jika tidak ada URI baru -> Coba decode Base64 lama
-
                     if (uiState.newSelectedImageUri != null) {
                         AsyncImage(
                             model = uiState.newSelectedImageUri,
@@ -77,7 +91,6 @@ fun EditProfileScreen(
                             modifier = Modifier.fillMaxSize().clip(CircleShape).border(2.dp, Color(0xFFE61C5D), CircleShape)
                         )
                     } else {
-                        // Decode Base64 string lama
                         val decodedBitmap = remember(uiState.currentProfileImageUrl) {
                             if (uiState.currentProfileImageUrl.isNotEmpty()) {
                                 try {
@@ -86,7 +99,6 @@ fun EditProfileScreen(
                                 } catch (e: Exception) { null }
                             } else null
                         }
-
                         if (decodedBitmap != null) {
                             Image(
                                 bitmap = decodedBitmap.asImageBitmap(),
@@ -95,7 +107,6 @@ fun EditProfileScreen(
                                 modifier = Modifier.fillMaxSize().clip(CircleShape).border(2.dp, Color(0xFFE61C5D), CircleShape)
                             )
                         } else {
-                            // Default Image
                             Image(
                                 painter = painterResource(id = R.drawable.user_default_profile),
                                 contentDescription = "Default",
@@ -104,7 +115,6 @@ fun EditProfileScreen(
                             )
                         }
                     }
-
                     Box(
                         modifier = Modifier
                             .align(Alignment.BottomEnd)
@@ -118,6 +128,7 @@ fun EditProfileScreen(
                         Text("+", color = Color.White, fontWeight = FontWeight.Bold, fontSize = 16.sp)
                     }
                 }
+                // ... (End Bagian Gambar) ...
 
                 OutlinedTextField(
                     value = uiState.name,
@@ -136,7 +147,8 @@ fun EditProfileScreen(
                 Spacer(modifier = Modifier.height(16.dp))
 
                 Button(
-                    onClick = { viewModel.saveProfile(onSuccess = onBackClick) },
+                    // PANGGIL saveProfile TANPA parameter onSuccess (sudah dihandle LaunchedEffect)
+                    onClick = { viewModel.saveProfile() },
                     enabled = !uiState.isSaving,
                     colors = ButtonDefaults.buttonColors(containerColor = Color(0xFFE61C5D)),
                     modifier = Modifier.fillMaxWidth()

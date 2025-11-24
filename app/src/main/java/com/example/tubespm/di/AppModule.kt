@@ -1,5 +1,6 @@
 package com.example.tubespm.di
 
+import android.content.Context // Pastikan import ini ada
 import com.example.tubespm.data.repository.QuizRepositoryImpl
 import com.example.tubespm.repository.ActivityRepository
 import com.example.tubespm.repository.ActivityRepositoryImpl
@@ -14,6 +15,7 @@ import com.google.firebase.storage.FirebaseStorage
 import dagger.Module
 import dagger.Provides
 import dagger.hilt.InstallIn
+import dagger.hilt.android.qualifiers.ApplicationContext // Penting
 import dagger.hilt.components.SingletonComponent
 import javax.inject.Singleton
 
@@ -36,22 +38,22 @@ object AppModule {
     @Provides
     @Singleton
     fun provideExerciseCatalogRepository(db: FirebaseFirestore): ExerciseCatalogRepository {
-        // Saat ViewModel meminta ExerciseCatalogRepository, Hilt akan membuat
-        // dan memberikannya ExerciseCatalogRepositoryImpl
         return ExerciseCatalogRepositoryImpl(db)
     }
 
+    // --- BAGIAN INI YANG DIPERBAIKI ---
     @Provides
     @Singleton
     fun provideUserRepository(
         auth: FirebaseAuth,
         db: FirebaseFirestore,
-        storage: FirebaseStorage
-    ): UserRepository = UserRepositoryImpl(
-        auth = auth,
-        db = db,
-        storage = storage
-    )
+        // Kita hapus 'storage' dari sini karena Impl sudah tidak pakai
+        @ApplicationContext context: Context // Kita tambah Context
+    ): UserRepository {
+        // Urutan parameter harus sama persis dengan constructor UserRepositoryImpl
+        return UserRepositoryImpl(auth, db, context)
+    }
+    // ----------------------------------
 
     @Provides
     @Singleton
@@ -67,5 +69,4 @@ object AppModule {
     fun provideQuizRepository(db: FirebaseFirestore): QuizRepository {
         return QuizRepositoryImpl(db)
     }
-
 }
