@@ -2,6 +2,7 @@ package com.example.tubespm.ui.screens.siswa.notification
 
 import androidx.compose.foundation.Image
 import androidx.compose.foundation.background
+import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
@@ -18,6 +19,7 @@ import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
+import androidx.hilt.navigation.compose.hiltViewModel
 import java.text.SimpleDateFormat
 import java.util.*
 
@@ -93,12 +95,13 @@ fun EmptyNotificationState() {
 @Composable
 fun NotificationItemCard(
     notification: NotificationItem,
-    onMarkAsRead: (String) -> Unit = {}
+    onItemClick: (String) -> Unit // Callback saat diklik
 ) {
     Card(
         modifier = Modifier
             .fillMaxWidth()
-            .padding(horizontal = 16.dp, vertical = 4.dp),
+            .padding(horizontal = 16.dp, vertical = 4.dp)
+            .clickable{ onItemClick(notification.id)},
         colors = CardDefaults.cardColors(
             containerColor = if (notification.isRead) Color.White else Color(0xFFFFF8F0)
         ),
@@ -175,7 +178,7 @@ fun SectionHeader(
             text = title,
             fontSize = 16.sp,
             fontWeight = FontWeight.Bold,
-            color = Color.White
+            color = Color.Black
         )
 
         if (actionText != null) {
@@ -197,135 +200,99 @@ fun SectionHeader(
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun NotificationScreen(
-    onBackClick: () -> Unit = {}
+    onBackClick: () -> Unit = {},
+    viewModel: NotificationViewModel = hiltViewModel() // Inject ViewModel
 ) {
-    MaterialTheme(
-        colorScheme = lightColorScheme()
-    ) {
-        // State management - ini nanti bisa diganti dengan ViewModel
-        var notifications by remember {
-            mutableStateOf(
-                // Untuk testing, uncomment salah satu:
+    // Ambil data dari ViewModel
+    val notifications by viewModel.notifications.collectAsState()
+    val isLoading by viewModel.isLoading.collectAsState()
 
-                // Empty state:
-                emptyList<NotificationItem>()
-
-                // Dengan data:
-//            listOf(
-//                NotificationItem(
-//                    id = "1",
-//                    title = "Tryout terbaru bulan ini sudah ada loh! Jangan lupa dikerjain yah!",
-//                    time = "10:45 AM",
-//                    date = Date(),
-//                    isRead = false,
-//                    category = NotificationCategory.TRYOUT
-//                ),
-//                NotificationItem(
-//                    id = "2",
-//                    title = "Soal latihan Penalaran Umum sudah ada yang baru loh!",
-//                    time = "10:45 AM",
-//                    date = Date(System.currentTimeMillis() - 24 * 60 * 60 * 1000), // Yesterday
-//                    isRead = true,
-//                    category = NotificationCategory.GENERAL
-//                ),
-//                NotificationItem(
-//                    id = "3",
-//                    title = "Soal latihan Penalaran Umum sudah ada yang baru loh!",
-//                    time = "10:45 AM",
-//                    date = Date(System.currentTimeMillis() - 20 * 24 * 60 * 60 * 1000), // 20 days ago
-//                    isRead = true,
-//                    category = NotificationCategory.GENERAL
-//                )
-//            )
+    Scaffold(
+        topBar = {
+            TopAppBar(
+                title = {
+                    Text(
+                        text = "Notifikasi",
+                        fontWeight = FontWeight.Bold
+                    )
+                },
+                navigationIcon = {
+                    IconButton(onClick = onBackClick) {
+                        Icon(
+                            imageVector = Icons.Default.ArrowBack,
+                            contentDescription = "Kembali"
+                        )
+                    }
+                },
             )
         }
+    ) { paddingValues ->
 
-        Scaffold(
-            topBar = {
-                TopAppBar(
-                    title = {
-                        Text(
-                            text = "Notifikasi",
-                            fontWeight = FontWeight.Bold
-                        )
-                    },
-                    navigationIcon = {
-                        IconButton(onClick = onBackClick) {
-                            Icon(
-                                imageVector = Icons.Default.ArrowBack,
-                                contentDescription = "Kembali"
-                            )
-                        }
-                    },
-                )
+        //Handle loading
+        if (isLoading) {
+            Box(modifier = Modifier.fillMaxSize(), contentAlignment = Alignment.Center) {
+                CircularProgressIndicator()
             }
-        ) { paddingValues ->
-            if (notifications.isEmpty()) {
-                // Show empty state
-                Box(
-                    modifier = Modifier
-                        .fillMaxSize()
-                        .padding(paddingValues)
-                ) {
-                    EmptyNotificationState()
-                }
-            } else {
-                // Show notification list
-                LazyColumn(
-                    modifier = Modifier
-                        .fillMaxSize()
-                        .padding(paddingValues)
-                        .background(Color(0xFFFAFAFA))
-                ) {
-                    // Group notifications by date
-                    val groupedNotifications = notifications.groupBy { notification ->
-                        val calendar = Calendar.getInstance()
-                        calendar.time = notification.date
+        } else if (notifications.isEmpty()) {
+            // Show empty state
+            Box(
+                modifier = Modifier
+                    .fillMaxSize()
+                    .padding(paddingValues)
+            ) {
+                EmptyNotificationState()
+            }
+        } else {
+            // Show notification list
+            LazyColumn(
+                modifier = Modifier
+                    .fillMaxSize()
+                    .padding(paddingValues)
+                    .background(Color(0xFFFAFAFA))
+            ) {
+                // Group notifications by date
+                val groupedNotifications = notifications.groupBy { notification ->
+                    val calendar = Calendar.getInstance()
+                    calendar.time = notification.date
 
-                        val today = Calendar.getInstance()
-                        val yesterday = Calendar.getInstance().apply {
-                            add(Calendar.DAY_OF_YEAR, -1)
-                        }
-
-                        when {
-                            isSameDay(calendar, today) -> "Hari ini"
-                            isSameDay(calendar, yesterday) -> "Kemarin"
-                            else -> SimpleDateFormat("MMM dd", Locale("id", "ID")).format(notification.date)
-                        }
+                    val today = Calendar.getInstance()
+                    val yesterday = Calendar.getInstance().apply {
+                        add(Calendar.DAY_OF_YEAR, -1)
                     }
 
-                    groupedNotifications.forEach { (dateLabel, notificationsInGroup) ->
-                        item {
-                            SectionHeader(
-                                title = dateLabel,
-                                actionText = if (dateLabel == "Hari ini") "Tandai telah dibaca" else "Telah dibaca",
-                                onActionClick = {
-                                    // Mark all as read
-                                    notifications = notifications.map {
-                                        if (notificationsInGroup.contains(it)) {
-                                            it.copy(isRead = true)
-                                        } else {
-                                            it
-                                        }
-                                    }
-                                }
-                            )
-                        }
+                    when {
+                        isSameDay(calendar, today) -> "Hari ini"
+                        isSameDay(calendar, yesterday) -> "Kemarin"
+                        else -> SimpleDateFormat("MMM dd", Locale("id", "ID")).format(notification.date)
+                    }
+                }
 
-                        items(notificationsInGroup) { notification ->
-                            NotificationItemCard(
-                                notification = notification,
-                                onMarkAsRead = { id ->
-                                    notifications = notifications.map {
-                                        if (it.id == id) it.copy(isRead = true) else it
-                                    }
-                                }
-                            )
-                        }
+                groupedNotifications.forEach { (dateLabel, notificationsInGroup) ->
+                    item {
+                        SectionHeader(
+                            title = dateLabel,
+                            // Tampilkan tombol "Tandai dibaca" hanya jika ada yang belum dibaca di grup ini
+                            actionText = if (notificationsInGroup.any { !it.isRead }) "Tandai telah dibaca" else null,
+                            onActionClick = {
+                                // Panggil fungsi ViewModel untuk update batch
+                                val unreadIds = notificationsInGroup.filter { !it.isRead }.map { it.id }
+                                viewModel.markAllAsRead(unreadIds)
+                            }
+                        )
+                    }
 
-                        item {
-                            Spacer(modifier = Modifier.height(8.dp))
-                        }
+                    items(notificationsInGroup) { notification ->
+                        NotificationItemCard(
+                            notification = notification,
+                            onItemClick = { id ->
+                                // Panggil fungsi ViewModel untuk update satu item
+                                viewModel.markAsRead(id)
+                            }
+                        )
+                    }
+
+                    item {
+                        Spacer(modifier = Modifier.height(8.dp))
                     }
                 }
             }
