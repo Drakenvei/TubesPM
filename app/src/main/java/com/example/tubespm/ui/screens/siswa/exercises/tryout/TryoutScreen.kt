@@ -36,7 +36,8 @@ import com.google.firebase.firestore.Query
 // Main Screen
 @Composable
 fun TryoutScreen(
-    viewModel: TryoutViewModel = hiltViewModel() // 1. Dapatkan ViewModel
+    viewModel: TryoutViewModel = hiltViewModel(), // 1. Dapatkan ViewModel
+    initialQuery: String = ""
 ) {
     // 2. Observasi state dari ViewModel
     val uiState by viewModel.uiState.collectAsState()
@@ -46,6 +47,12 @@ fun TryoutScreen(
 
     // State lokal untuk dialog bisa tetap di sini
     var selectedTryoutItem by remember { mutableStateOf<TryoutCatalogItem?>(null) }
+
+    LaunchedEffect(initialQuery) {
+        if (initialQuery.isNotBlank()) {
+            viewModel.onSearchQueryChanged(initialQuery)
+        }
+    }
 
     Column (
         modifier = Modifier

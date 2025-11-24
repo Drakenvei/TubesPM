@@ -55,18 +55,22 @@ fun BottomNavBar(navController: NavHostController) {
         tonalElevation = 4.dp
     ) {
         items.forEach { item ->
-            val selected = currentRoute == item.route
+            val selected = currentRoute?.substringBefore("?") == item.route
 
             NavigationBarItem(
                 selected = selected,
                 onClick = {
                     if (!selected) {
                         navController.navigate(item.route) {
+                            // Pop up ke start destination (Home)
                             popUpTo(navController.graph.findStartDestination().id) {
-                                saveState = true
+                                // Jangan simpan state jika kita kembali ke Home.
+                                // Ini memaksa stack direset bersih.
+                                saveState = item.route != "home"
                             }
                             launchSingleTop = true
-                            restoreState = true
+                            // Jangan restore state jika kita kembali ke Home.
+                            restoreState = item.route != "home"
                         }
                     }
                 },

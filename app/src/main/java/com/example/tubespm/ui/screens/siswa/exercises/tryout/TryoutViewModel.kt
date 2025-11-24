@@ -68,8 +68,10 @@ class TryoutViewModel @Inject constructor(
             // 3. Gabungkan (combine) TIGA flow: Katalog, ID yang diambil, dan Query Pencarian
             combine(tryoutsFlow, takenTryoutIdsFlow, _searchQuery) { tryouts, takenIds, query ->
 
+                val sortedTryouts = tryouts.sortedByDescending { it.createdAt }
+
                 // A. Map data mentah Tryout ke TryoutCatalogItem
-                val catalogItems = tryouts.map { tryout ->
+                val catalogItems = sortedTryouts.map { tryout ->
                     TryoutCatalogItem(
                         tryout = tryout,
                         isTaken = takenIds.contains(tryout.id) // Cek apakah ID-nya ada di Set

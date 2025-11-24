@@ -58,7 +58,28 @@ fun StudentNavGraph(
     ) {
         // --- Bottom bar screens ---
         composable("home") { HomeScreen(navController = navController) }
-        composable("exercises") { ExerciseScreen() }
+        composable(
+            "exercises?type={type}&query={query}",
+            arguments = listOf(
+                navArgument("type"){
+                    type = NavType.StringType
+                    defaultValue = "tryout" // Default buka Tryout
+                },
+                navArgument("query"){
+                    type = NavType.StringType
+                    defaultValue = "" // Default tidak ada pencaria
+                }
+            )
+        ) { backStackEntry ->
+            val type = backStackEntry.arguments?.getString("type") ?: "tryout"
+            val query = backStackEntry.arguments?.getString("query") ?: ""
+
+            ExerciseScreen(
+                initialTab = if (type == "latihan") 1 else 0, // 0=Tryout, 1=Latihan
+                initialSearchQuery = query
+            )
+        }
+
         composable("activity") { ActivityScreen(navController = navController) }
         composable("profile") {
             ProfileScreen(

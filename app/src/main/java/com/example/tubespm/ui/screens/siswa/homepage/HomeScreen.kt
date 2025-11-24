@@ -1,5 +1,7 @@
 package com.example.tubespm.ui.screens.siswa.homepage
 
+import android.graphics.BitmapFactory
+import android.util.Base64
 import androidx.compose.animation.AnimatedContent
 import androidx.compose.animation.ExperimentalAnimationApi
 import androidx.compose.animation.core.Spring
@@ -10,14 +12,18 @@ import androidx.compose.animation.fadeOut
 import androidx.compose.animation.with
 import androidx.compose.foundation.Image
 import androidx.compose.foundation.background
+import androidx.compose.foundation.border
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.horizontalScroll
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.lazy.LazyRow
 import androidx.compose.foundation.lazy.items
+import androidx.compose.foundation.lazy.itemsIndexed
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
+import androidx.compose.foundation.text.KeyboardActions
+import androidx.compose.foundation.text.KeyboardOptions
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.*
@@ -31,31 +37,39 @@ import androidx.compose.ui.draw.shadow
 import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.SolidColor
+import androidx.compose.ui.graphics.asImageBitmap
 import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.text.font.FontWeight
+import androidx.compose.ui.text.input.ImeAction
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.Dp
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
+import androidx.hilt.navigation.compose.hiltViewModel
 import androidx.navigation.NavController
 import androidx.navigation.NavHostController
 import com.example.tubespm.R
+import com.example.tubespm.data.model.LatihanSoal
+import com.example.tubespm.data.model.Tryout
 import com.example.tubespm.ui.theme.TubesPMTheme
 import com.google.firebase.auth.FirebaseAuth
 import com.google.firebase.firestore.FirebaseFirestore
 
 @OptIn(ExperimentalMaterial3Api::class, ExperimentalAnimationApi::class)
 @Composable
-fun HomeScreen(navController : NavController) {
-    val auth = FirebaseAuth.getInstance()
-    val db = FirebaseFirestore.getInstance()
+fun HomeScreen(
+    navController : NavController,
+    viewModel: HomeViewModel = hiltViewModel() // inject viewmodel
+) {
+    val uiState by viewModel.uiState.collectAsState()
+
+    var searchQuery by remember { mutableStateOf("") }
 
     var userName by remember { mutableStateOf("User") }
-    var searchQuery by remember { mutableStateOf("") }
 
     // DAFTAR KATEGORI (7 subtes UTBK)
     val categories = listOf(
@@ -71,36 +85,22 @@ fun HomeScreen(navController : NavController) {
     // Selected: selalu ada satu (default = pertama). User tidak bisa membatalkan (hanya ganti ke yang lain).
     var selectedCategory by remember { mutableStateOf<String?>(null) }
 
-    // Simulasi data soal latihan (biasanya ambil dari Firestore)
-    val allQuestions = remember {
-        listOf(
-            QuestionModel("Penalaran Umum", "Melatih kemampuan berpikir logis dan kritis.", 30),
-            QuestionModel("Literasi Bahasa Indonesia", "Menguji kemampuan membaca dan memahami teks.", 40),
-            QuestionModel("Pengetahuan Kuantitatif", "Soal numerik dan logika kuantitatif.", 50),
-            QuestionModel("Pengetahuan Umum", "Tes wawasan sains dan sosial.", 35),
-            QuestionModel("Literasi Bahasa Inggris", "Kemampuan membaca dan grammar bahasa Inggris.", 45),
-            QuestionModel("Penalaran Matematika", "Uji logika matematika tingkat lanjut.", 30),
-            QuestionModel("Pemahaman Konsep", "Tes penerapan konsep logis dan teoritis.", 40),
-            // contoh duplicate untuk menampilkan beberapa kartu
-            QuestionModel("Penalaran Umum", "Soal pola dan argumen singkat.", 25),
-            QuestionModel("Pengetahuan Kuantitatif", "Latihan soal aljabar cepat.", 20)
-        )
+    // Filter Latihan Soal berdasarkan Kategori
+    val filteredLatihan = remember(selectedCategory, uiState.latestLatihan) {
+        if (selectedCategory == null) uiState.latestLatihan
+        else uiState.latestLatihan.filter { it.subtest.contains(selectedCategory!!, ignoreCase = true)}
     }
 
-    // Filtered berdasarkan kategori yang dipilih
-    val filteredQuestions = remember(selectedCategory, allQuestions) {
-        if (selectedCategory == null) allQuestions
-        else allQuestions.filter { it.category == selectedCategory }
-    }
-
-    // Ambil data user dari Firestore (once)
-    LaunchedEffect(Unit) {
-        val user = auth.currentUser
-        if (user != null) {
-            db.collection("users").document(user.uid).get()
-                .addOnSuccessListener { doc ->
-                    doc.getString("name")?.let { userName = it }
-                }
+    val decodedBitmap = remember(uiState.profilePicture) {
+        if (uiState.profilePicture.isNotEmpty()) {
+            try {
+                val bytes = Base64.decode(uiState.profilePicture, Base64.DEFAULT)
+                BitmapFactory.decodeByteArray(bytes, 0, bytes.size)
+            } catch (e: Exception) {
+                null
+            }
+        } else {
+            null
         }
     }
 
@@ -127,15 +127,29 @@ fun HomeScreen(navController : NavController) {
                     modifier = Modifier.fillMaxWidth()
                 ) {
                     // Profile Picture
-                    Image(
-                        painter = painterResource(id = R.drawable.ic_launcher_foreground),
-                        contentDescription = "Profile Picture",
-                        modifier = Modifier
-                            .size(56.dp)
-                            .clip(CircleShape)
-                            .background(Color.White.copy(alpha = 0.2f)),
-                        contentScale = ContentScale.Crop
-                    )
+                    if (decodedBitmap != null) {
+                        // Tampilkan gambar dari Base64
+                        Image(
+                            bitmap = decodedBitmap.asImageBitmap(),
+                            contentDescription = "Profile Picture",
+                            modifier = Modifier
+                                .size(56.dp)
+                                .clip(CircleShape)
+                                .background(Color.White.copy(alpha = 0.2f)),
+                            contentScale = ContentScale.Crop
+                        )
+                    } else {
+                        // Tampilkan Placeholder Default jika Base64 kosong/gagal decode
+                        Image(
+                            painter = painterResource(id = R.drawable.user_default_profile),
+                            contentDescription = "Profile Picture",
+                            modifier = Modifier
+                                .size(56.dp)
+                                .clip(CircleShape)
+                                .background(Color.White.copy(alpha = 0.2f)),
+                            contentScale = ContentScale.Crop
+                        )
+                    }
 
                     Spacer(modifier = Modifier.width(12.dp))
 
@@ -146,7 +160,7 @@ fun HomeScreen(navController : NavController) {
                             fontSize = 14.sp
                         )
                         Text(
-                            text = "$userName!",
+                            text = uiState.userName,
                             color = Color.White,
                             fontWeight = FontWeight.Bold,
                             fontSize = 24.sp
@@ -156,7 +170,7 @@ fun HomeScreen(navController : NavController) {
                     // Notification Bell with Badge
                     Box {
                         IconButton(
-                            onClick = { /* TODO: Open notifications */
+                            onClick = {
                                 navController.navigate("notification")
                             },
                             modifier = Modifier
@@ -193,11 +207,24 @@ fun HomeScreen(navController : NavController) {
                             fontSize = 14.sp
                         )
                     },
+                    keyboardOptions = KeyboardOptions(imeAction = ImeAction.Search), //Tambahkan Tombol Search di Keyboard
+                    keyboardActions = KeyboardActions(
+                        onSearch = {
+                            if(searchQuery.isNotBlank()) {
+                                navController.navigate("exercises?type=tryout&query=$searchQuery")
+                            }
+                        }
+                    ),
                     leadingIcon = {
                         Icon(
                             imageVector = Icons.Default.Search,
                             contentDescription = "Search",
-                            tint = Color.Gray
+                            tint = Color.Gray,
+                            modifier = Modifier.clickable {
+                                if(searchQuery.isNotBlank()) {
+                                    navController.navigate("exercises?type=tryout&query=$searchQuery")
+                                }
+                            }
                         )
                     },
                     trailingIcon = {
@@ -240,22 +267,36 @@ fun HomeScreen(navController : NavController) {
 
         Spacer(modifier = Modifier.height(12.dp))
 
-        LazyRow(
-            contentPadding = PaddingValues(horizontal = 20.dp),
-            horizontalArrangement = Arrangement.spacedBy(16.dp)
-        ) {
-            items(3) { index ->
-                RecommendedTryoutCard(
-                    title = "Tryout TIF-${2200 + index}",
-                    description = "Paket tryout terbaru bulan november dengan materi dan soal - soal terbaru",
-                    soal = "${80 + index * 10} soal",
-                    waktu = "${90 + index * 30} menit",
-                    color = when (index) {
-                        0 -> Color(0xFFE91E63)
-                        1 -> Color(0xFF9C27B0)
-                        else -> Color(0xFF673AB7)
-                    }
-                )
+        if(uiState.isLoading){
+            Box(
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .height(150.dp),
+                contentAlignment = Alignment.Center
+            ) {
+                CircularProgressIndicator()
+            }
+        } else if(uiState.tryoutRecommendation.isEmpty()){
+            Text("Belum ada tryout tersedia.", modifier = Modifier.padding(horizontal = 20.dp), color = Color.Gray)
+        } else{
+            LazyRow(
+                contentPadding = PaddingValues(horizontal = 20.dp),
+                horizontalArrangement = Arrangement.spacedBy(16.dp)
+            ) {
+                itemsIndexed(uiState.tryoutRecommendation) {index, tryout ->
+                    // Warna card looping
+                    val colors = listOf(Color(0xFFE91E63), Color(0xFF9C27B0), Color(0xFF673AB7))
+                    val cardColor = colors[index % colors.size]
+
+                    RecommendedTryoutCard(
+                        tryout = tryout,
+                        color = cardColor,
+                        onClick = {
+                            // Navigasi ke Exercise Screen atau Detail Tryout
+                            navController.navigate("exercises")
+                        }
+                    )
+                }
             }
         }
 
@@ -322,10 +363,11 @@ fun HomeScreen(navController : NavController) {
 
         // Animated Content: saat selectedCategory berubah, konten soal berubah dengan fade
         AnimatedContent(
-            targetState = filteredQuestions,
-            transitionSpec = { fadeIn() with fadeOut() }
-        ) { questions ->
-            if (questions.isEmpty()) {
+            targetState = filteredLatihan,
+            transitionSpec = { fadeIn() with fadeOut() },
+            label = "LatihanList"
+        ) { latihanList ->
+            if (latihanList.isEmpty()) {
                 Box(
                     modifier = Modifier
                         .fillMaxWidth()
@@ -333,20 +375,29 @@ fun HomeScreen(navController : NavController) {
                         .padding(horizontal = 20.dp),
                     contentAlignment = Alignment.Center
                 ) {
-                    Text(text = "Tidak ada soal untuk kategori ini", color = Color.Gray)
+                    Text(text = if(uiState.isLoading) "Memuat..." else "Tidak ada soal untuk kategori ini", color = Color.Gray)
                 }
             } else {
                 LazyRow(
                     contentPadding = PaddingValues(horizontal = 20.dp),
                     horizontalArrangement = Arrangement.spacedBy(16.dp)
                 ) {
-                    items(questions) { q ->
+
+                    items(latihanList) { latihan ->
+
+                        // Jika subtest latihan sama dengan judul kategori, ambil warnanya.
+                        // Jika tidak ketemu, pakai warna default.
+                        val categoryColor = categories.find { category ->
+                            latihan.subtest.contains(category.title, ignoreCase = true)
+                        }?.color ?: Color(0xFFE91E63)
+
                         LatestQuestionCard(
-                            title = q.category,
-                            description = q.description,
-                            soal = "${q.count} Soal",
-                            color = categories.firstOrNull { it.title == q.category }?.color
-                                ?: Color(0xFFE91E63)
+                            latihan = latihan, // Passing LatihanSoal Object
+                            color = categoryColor,
+                            onClick = {
+                                // Navigasi ke Exercise Screen bagian latihan
+                                navController.navigate("exercises?type=latihan")
+                            }
                         )
                     }
                 }
@@ -354,28 +405,42 @@ fun HomeScreen(navController : NavController) {
         }
 
         Spacer(modifier = Modifier.height(32.dp))
-    //yg ngerjain backend tolong ini dibuat warna nya looping yah, tiap 5 tryout warna nya looping
-        val tryoutScores = remember {
-            listOf(
-                ChartData("Tryout 1", 567, Color(0xFFE91E63)),
-                ChartData("Tryout 2", 682, Color(0xFF9C27B0)),
-                ChartData("Tryout 3", 468, Color(0xFF2196F3)),
-                ChartData("Tryout 4", 560, Color(0xFF4CAF50)),
-                ChartData("Tryout 5", 655, Color(0xFFFF9800)),
-                ChartData("Tryout 6", 473, Color(0xFFE91E63))
-            )
-        }
 
-        CustomBarChart(
-            data = tryoutScores,
-            title = "Statistik Skor Tryout Kamu",
-            maxValue = 1000,
-            barColor = Color(0xFF3F51B5)
-        )
+    //yg ngerjain backend tolong ini dibuat warna nya looping yah, tiap 5 tryout warna nya looping
+
+        if (uiState.scoreHistory.isNotEmpty()) {
+            CustomBarChart(
+                data = uiState.scoreHistory,
+                title = "Statistik Skor Tryout Kamu",
+                maxValue = 1000,
+                barColor = Color(0xFF3F51B5)
+            )
+        } else if (!uiState.isLoading){
+            // Placeholder jika belum ada data
+            Card (
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .padding(20.dp)
+            ) {
+                Text(
+                    "Belum ada riwayat skor. Ayo kerjakan tryout!",
+                    modifier = Modifier.padding(16.dp),
+                    textAlign = TextAlign.Center,
+                    color = Color.Gray
+                )
+            }
+        }
+        Spacer(modifier = Modifier.height(32.dp))
     }
 }
 
-private fun Nothing?.navigate(string: String) {}
+data class CategoryModel(
+    val title: String,
+    val icon: ImageVector,
+    val color: Color
+)
+
+
 
 @Composable
 fun CustomBarChart(
@@ -383,7 +448,7 @@ fun CustomBarChart(
     title: String = "Statistik Skor Tryout",
     modifier: Modifier = Modifier,
     maxValue: Int = 1000,
-    barWidth: Dp = 40.dp,
+    barWidth: Dp = 24.dp,
     barColor: Color = Color(0xFF2196F3),
     labelColor: Color = Color.DarkGray,
     showValues: Boolean = true
@@ -461,9 +526,8 @@ fun CustomBarChart(
                 modifier = Modifier
                     .fillMaxWidth()
                     .height(240.dp)
-                    .horizontalScroll(scrollState)
-                    .padding(vertical = 8.dp),
-                horizontalArrangement = Arrangement.spacedBy(20.dp),
+                    .horizontalScroll(scrollState),
+                horizontalArrangement = Arrangement.spacedBy(16.dp),
                 verticalAlignment = Alignment.Bottom
             ) {
                 // Spacer untuk padding awal
@@ -472,7 +536,8 @@ fun CustomBarChart(
                 data.forEach { item ->
                     val barHeightRatio = item.value / maxScore.toFloat()
                     val animatedHeight by animateFloatAsState(
-                        targetValue = barHeightRatio.coerceAtLeast(0.12f),
+                        //coerceAtLeast lebih kecil (0.02f) agar nilai 0 terlihat tipis/di bawah
+                        targetValue = barHeightRatio.coerceAtLeast(0.02f),
                         animationSpec = spring(
                             dampingRatio = Spring.DampingRatioMediumBouncy,
                             stiffness = Spring.StiffnessLow
@@ -483,58 +548,61 @@ fun CustomBarChart(
                     Column(
                         horizontalAlignment = Alignment.CenterHorizontally,
                         verticalArrangement = Arrangement.Bottom,
-                        modifier = Modifier.width(barWidth * 1.8f)
+//                        modifier = Modifier.width(barWidth * 1.8f)
+//                        Lebar kolom fix agar teks panjang bisa wrap dengan rapi
+                        modifier = Modifier.width(60.dp)
                     ) {
                         // Value di atas bar
                         if (showValues) {
                             Text(
                                 text = "${item.value}",
-                                fontSize = 14.sp,
-                                color = item.color ?: barColor,
-                                fontWeight = FontWeight.Bold
+                                fontSize = 12.sp,
+                                color = if(item.value == 0) Color.Gray else (item.color ?: barColor),
+                                fontWeight = FontWeight.Bold,
+                                textAlign = TextAlign.Center
                             )
-                            Spacer(Modifier.height(4.dp))
+                            Spacer(Modifier.height(6.dp))
                         }
 
                         // Bar dengan shadow dan gradient
                         Box(
                             modifier = Modifier
                                 .width(barWidth)
-                                .fillMaxHeight(animatedHeight.coerceIn(0.05f, 1f))
+                                .fillMaxHeight(animatedHeight.coerceIn(0.02f, 1f))
                                 .shadow(
-                                    elevation = 4.dp,
-                                    shape = RoundedCornerShape(topStart = 12.dp, topEnd = 12.dp)
+                                    elevation = 2.dp,
+                                    shape = RoundedCornerShape(topStart = 50.dp, topEnd = 50.dp)
                                 )
-                                .clip(RoundedCornerShape(topStart = 12.dp, topEnd = 12.dp))
+                                .clip(RoundedCornerShape(topStart = 50.dp, topEnd = 50.dp))
                                 .background(
                                     Brush.verticalGradient(
                                         colors = listOf(
                                             item.color ?: barColor,
-                                            (item.color ?: barColor).copy(alpha = 0.7f)
+                                            (item.color ?: barColor).copy(alpha = 0.6f)
                                         )
                                     )
-                                ),
-                            contentAlignment = Alignment.Center
-                        ) {}
+                                )
+                        )
 
-                        Spacer(Modifier.height(8.dp))
+                        Spacer(Modifier.height(12.dp))
 
                         // Label di bawah bar
                         Text(
                             text = item.label,
-                            fontSize = 12.sp,
+                            fontSize = 11.sp,
                             color = labelColor,
                             textAlign = TextAlign.Center,
                             fontWeight = FontWeight.Medium,
+                            lineHeight = 14.sp, // Jarak antar baris teks
                             maxLines = 2,
                             overflow = TextOverflow.Ellipsis,
-                            modifier = Modifier.width(barWidth * 1.8f)
+                            modifier = Modifier.fillMaxWidth() // Isi lebar kolom 60dp
                         )
                     }
                 }
 
                 // Spacer untuk padding akhir
-                Spacer(modifier = Modifier.width(4.dp))
+                Spacer(modifier = Modifier.width(8.dp))
             }
 
             Spacer(modifier = Modifier.height(16.dp))
@@ -599,41 +667,29 @@ fun InfoLabel(
     }
 }
 
-data class ChartData(
-    val label: String,
-    val value: Int,
-    val color: Color? = null
-)
-
-
-// ----------------------------
-// Models
-// ----------------------------
-data class CategoryModel(val title: String, val icon: ImageVector, val color: Color)
-data class QuestionModel(val category: String, val description: String, val count: Int)
-
 // ----------------------------
 // Reusable components (dipertahankan / disesuaikan)
 // ----------------------------
 @Composable
 fun RecommendedTryoutCard(
-    title: String,
-    description: String,
-    soal: String,
-    waktu: String,
-    color: Color
+    tryout: Tryout, // Menerima Data Asli
+    color: Color,
+    onClick: () -> Unit
 ) {
     var isPressed by remember { mutableStateOf(false) }
     val scale by animateFloatAsState(
         targetValue = if (isPressed) 0.95f else 1f,
-        animationSpec = spring(dampingRatio = Spring.DampingRatioMediumBouncy)
+        animationSpec = spring(dampingRatio = Spring.DampingRatioMediumBouncy),
+        label = "Scale"
     )
-
     Card(
         modifier = Modifier
             .width(280.dp)
             .scale(scale)
-            .clickable { isPressed = !isPressed },
+            .clickable {
+                isPressed = !isPressed
+                onClick()
+            },
         shape = RoundedCornerShape(20.dp),
         elevation = CardDefaults.cardElevation(defaultElevation = 4.dp),
         colors = CardDefaults.cardColors(containerColor = color)
@@ -644,10 +700,12 @@ fun RecommendedTryoutCard(
                 modifier = Modifier.fillMaxWidth()
             ) {
                 Text(
-                    text = title,
+                    text = tryout.title,
                     color = Color.White,
                     fontWeight = FontWeight.Bold,
                     fontSize = 18.sp,
+                    maxLines = 1,
+                    overflow = TextOverflow.Ellipsis,
                     modifier = Modifier.weight(1f)
                 )
                 Surface(
@@ -666,14 +724,14 @@ fun RecommendedTryoutCard(
 
             Spacer(modifier = Modifier.height(8.dp))
 
-            Text(
-                text = description,
-                color = Color.White.copy(alpha = 0.95f),
-                fontSize = 13.sp,
-                lineHeight = 18.sp,
-                maxLines = 3,
-                overflow = TextOverflow.Ellipsis
-            )
+//            Text(
+//                text = tryout.description.ifBlank { "Latihan simulasi UTBK lengkap." },
+//                color = Color.White.copy(alpha = 0.95f),
+//                fontSize = 13.sp,
+//                lineHeight = 18.sp,
+//                maxLines = 2,
+//                overflow = TextOverflow.Ellipsis
+//            )
 
             Spacer(modifier = Modifier.height(16.dp))
 
@@ -681,14 +739,14 @@ fun RecommendedTryoutCard(
                 modifier = Modifier.fillMaxWidth(),
                 horizontalArrangement = Arrangement.spacedBy(16.dp)
             ) {
-                InfoChip(icon = Icons.Default.Description, text = soal)
-                InfoChip(icon = Icons.Default.Schedule, text = waktu)
+                InfoChip(icon = Icons.Default.Description, text = "${tryout.totalQuestionCount} Soal")
+                InfoChip(icon = Icons.Default.Schedule, text = "${tryout.totalDuration} Menit")
             }
 
             Spacer(modifier = Modifier.height(16.dp))
 
             Button(
-                onClick = { /* TODO */ },
+                onClick = onClick,
                 colors = ButtonDefaults.buttonColors(containerColor = Color.White),
                 shape = RoundedCornerShape(12.dp),
                 modifier = Modifier.fillMaxWidth()
@@ -759,15 +817,15 @@ fun CategoryCardHorizontal(
 
 @Composable
 fun LatestQuestionCard(
-    title: String,
-    description: String,
-    soal: String,
-    color: Color
+    latihan: LatihanSoal, // Menerima Data Asli
+    color: Color,
+    onClick: () -> Unit
 ) {
     var isPressed by remember { mutableStateOf(false) }
     val scale by animateFloatAsState(
         targetValue = if (isPressed) 0.95f else 1f,
-        animationSpec = spring(dampingRatio = Spring.DampingRatioMediumBouncy)
+        animationSpec = spring(dampingRatio = Spring.DampingRatioMediumBouncy),
+        label = "Scale"
     )
 
     Card(
@@ -787,17 +845,22 @@ fun LatestQuestionCard(
             verticalArrangement = Arrangement.SpaceBetween
         ) {
             Column {
-                Text(text = title, color = Color.White, fontWeight = FontWeight.Bold, fontSize = 18.sp)
+                Text(
+                    text = latihan.title,
+                    color = Color.White,
+                    fontWeight = FontWeight.Bold,
+                    fontSize = 18.sp,
+                    maxLines = 2,
+                    overflow = TextOverflow.Ellipsis
+                )
 
                 Spacer(modifier = Modifier.height(8.dp))
 
                 Text(
-                    text = description,
+                    text = latihan.subtest,
                     color = Color.White.copy(alpha = 0.95f),
                     fontSize = 12.sp,
-                    lineHeight = 16.sp,
-                    maxLines = 4,
-                    overflow = TextOverflow.Ellipsis
+                    lineHeight = 16.sp
                 )
             }
 
@@ -807,13 +870,13 @@ fun LatestQuestionCard(
                     horizontalArrangement = Arrangement.spacedBy(6.dp)
                 ) {
                     Icon(imageVector = Icons.Default.Description, contentDescription = null, tint = Color.White, modifier = Modifier.size(18.dp))
-                    Text(text = soal, color = Color.White, fontSize = 13.sp, fontWeight = FontWeight.Medium)
+                    Text(text = "${latihan.questionCount} Soal", color = Color.White, fontSize = 13.sp, fontWeight = FontWeight.Medium)
                 }
 
                 Spacer(modifier = Modifier.height(12.dp))
 
                 Button(
-                    onClick = { /* TODO: mulai latihan */ },
+                    onClick = onClick,
                     colors = ButtonDefaults.buttonColors(containerColor = Color.White),
                     shape = RoundedCornerShape(12.dp),
                     modifier = Modifier.fillMaxWidth()
@@ -824,11 +887,3 @@ fun LatestQuestionCard(
         }
     }
 }
-
-//@Preview(showBackground = true)
-//@Composable
-//fun HomeScreenPreview() {
-//    TubesPMTheme {
-//        HomeScreen()
-//    }
-//}

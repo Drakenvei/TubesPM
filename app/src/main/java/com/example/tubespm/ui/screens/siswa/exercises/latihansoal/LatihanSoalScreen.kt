@@ -31,12 +31,19 @@ import com.example.tubespm.ui.screens.siswa.exercises.latihansoal.LatihanSoalVie
 // Main Screen
 @Composable
 fun LatihanSoalScreen(
-    viewModel: LatihanSoalViewModel = hiltViewModel() // 1. Dapatkan ViewModel
+    viewModel: LatihanSoalViewModel = hiltViewModel(), // 1. Dapatkan ViewModel
+    initialQuery: String = ""
 ){
     val uiState by viewModel.uiState.collectAsState() // 2. Observasi state
 
     // ambil state query pencarian dari ViewModel
     val searchQuery by viewModel.searchQuery.collectAsState()
+
+    LaunchedEffect(initialQuery) {
+        if (initialQuery.isNotBlank()) {
+            viewModel.onSearchQueryChanged(initialQuery)
+        }
+    }
 
     var selectedLatihanItem by remember { mutableStateOf<LatihanSoalCatalogItem?>(null) }
 

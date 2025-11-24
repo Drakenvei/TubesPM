@@ -6,11 +6,13 @@ import com.example.tubespm.data.model.UserActivity
 import com.google.firebase.auth.FirebaseAuth
 import com.google.firebase.firestore.FieldValue
 import com.google.firebase.firestore.FirebaseFirestore
+import com.google.firebase.firestore.Query
 import com.google.firebase.firestore.snapshots
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.flowOf
 import kotlinx.coroutines.flow.map
 import kotlinx.coroutines.tasks.await
+import java.util.Calendar
 import javax.inject.Inject
 
 class ActivityRepositoryImpl @Inject constructor(
@@ -48,6 +50,24 @@ class ActivityRepositoryImpl @Inject constructor(
             .snapshots()
             .map { snapshot ->
                 snapshot.toObjects(UserActivity::class.java)
+            }
+    }
+
+    override fun getGlobalRecentActivities(limit: Long): Flow<List<UserActivity>> {
+        // Hitung tanggal 30 hari yang lalu
+        val cal = Calendar.getInstance()
+        cal.add(Calendar.DAY_OF_YEAR, -30)
+        val oneMonthAgo = cal.time
+
+        // Query Global (Tanpa filter userId)
+        return db.collection("user_activities")
+            .whereEqualTo("type", "tryout")
+            .whereGreaterThan("startedAt", oneMonthAgo)
+            .orderBy("startedAt", Query.Direction.DESCENDING)
+            .limit(limit) // Batasi jumlah agar tidak boros kuota (misal ambil 100 sampel terakhir)
+            .snapshots()
+            .map { snapshots ->
+                snapshots.toObjects(UserActivity::class.java)
             }
     }
 

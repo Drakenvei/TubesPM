@@ -18,6 +18,11 @@ interface ActivityRepository {
      */
     fun getMyLatihanActivities(): Flow<List<UserActivity>>
 
+//
+//    Mengambil aktivitas global 30 hari terakhir
+//
+    fun getGlobalRecentActivities(limit: Long = 100): Flow<List<UserActivity>>
+
     /**
      * Menambahkan tryout baru ke koleksi user_activities.
      * Ini adalah fungsi "Ambil Tryout".

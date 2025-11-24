@@ -28,13 +28,23 @@ import com.example.tubespm.ui.screens.latihansoal.LatihanSoalScreen
 import com.example.tubespm.ui.screens.tryout.TryoutScreen
 import androidx.compose.runtime.*
 import androidx.compose.ui.tooling.preview.Preview
+import androidx.navigation.NavController
+import androidx.navigation.compose.rememberNavController
 
 @Preview
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
-fun ExerciseScreen(){
-    var selectedTab by remember { mutableStateOf(0) }
+fun ExerciseScreen(
+    initialTab: Int = 0, // Tab mana yang dibuka awal
+    initialSearchQuery: String = "" // Kata kunci pencarian awal
+){
+    var selectedTab by remember { mutableStateOf(initialTab) }
     val tabTitles = listOf("Tryout", "Latihan Soal")
+
+    // Jika initialTab berubah (misal navigasi ulang dari Home), update tab
+    LaunchedEffect(initialTab) {
+        selectedTab = initialTab
+    }
 
     Column (
         modifier = Modifier
@@ -96,8 +106,14 @@ fun ExerciseScreen(){
                 .padding(horizontal = 8.dp, vertical = 8.dp)
         ) {
             when (selectedTab) {
-                0 -> TryoutScreen()
-                1 -> LatihanSoalScreen()
+                0 -> {
+                    val queryToSend = if (initialTab == 0) initialSearchQuery else ""
+                    TryoutScreen(initialQuery = queryToSend)
+                }
+                1 -> {
+                    val queryToSend = if (initialTab == 1) initialSearchQuery else ""
+                    LatihanSoalScreen(initialQuery = queryToSend)
+                }
             }
         }
     }

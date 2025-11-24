@@ -20,11 +20,11 @@ fun SiswaMainScreen() {
     val currentRoute = navBackStackEntry?.destination?.route
 
     // TAMPILKAN BOTTOM BAR HANYA DI 4 ROUTE UTAMA
-    val showBottomBar = when (currentRoute) {
-        "home",
-        "exercises",
-        "activity",
-        "profile" -> true
+    val showBottomBar = when {
+        currentRoute == "home" -> true
+        currentRoute?.startsWith("exercises") == true -> true
+        currentRoute == "activity" -> true
+        currentRoute == "profile" -> true
         else -> false
     }
 

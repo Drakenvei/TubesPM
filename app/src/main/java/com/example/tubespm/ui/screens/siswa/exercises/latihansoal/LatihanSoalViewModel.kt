@@ -65,8 +65,11 @@ class LatihanSoalViewModel @Inject constructor(
 
                 // Gabungkan (combine) TIGA flow
             combine(latihanSoalFlow, takenLatihanSoalIdsFlow, _searchQuery) { latihanSoalList, takenIds, query ->
+
+                val sortedList = latihanSoalList.sortedByDescending { it.createdAt }
+
                 //Map data mentah ke LatihanSoalCatalogItem
-                val catalogItems = latihanSoalList.map { latihan ->
+                val catalogItems = sortedList.map { latihan ->
                     LatihanSoalCatalogItem(
                         latihanSoal = latihan,
                         isTaken = takenIds.contains(latihan.id) // Cek duplikat
