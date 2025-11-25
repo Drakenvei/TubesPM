@@ -40,7 +40,7 @@ class MainActivity : ComponentActivity() {
 
         // Jadwalkan WorkManager (Contoh: Jam 09:00 Pagi)
         scheduleDailyNotification(9, 0, 101, "Notif Pagi", "Selamat Pagi!", "Ayo mulai hari dengan mengerjakan latihan")
-        scheduleDailyNotification(13, 0, 101, "Notif Siang", "Selamat Siang!", "Ayo gas kerjakan tryoutnya")
+        scheduleDailyNotification(14, 5, 102, "Notif Siang", "Selamat Siang!", "Ayo gas kerjakan tryoutnya")
 
         // INI UNTUK TESTING WORKMANAGER
 //        val testRequest = OneTimeWorkRequestBuilder<ReminderWorker>()
@@ -89,7 +89,7 @@ class MainActivity : ComponentActivity() {
         val timeDiff = dueDate.timeInMillis - currentDate.timeInMillis
 
         val data = Data.Builder()
-            .putString("Title", title)
+            .putString("TITLE", title)
             .putString("MESSAGE", message)
             .putInt("ID", id)
             .build()
@@ -101,9 +101,12 @@ class MainActivity : ComponentActivity() {
 
         WorkManager.getInstance(this).enqueueUniquePeriodicWork(
             workName,
-            ExistingPeriodicWorkPolicy.UPDATE,
+            ExistingPeriodicWorkPolicy.REPLACE,
             request
         )
+
+        // Log untuk memastikan jadwal terpasang (Cek di Logcat)
+        Log.d("WorkManager", "Jadwal $workName dipasang untuk $timeDiff ms lagi (ID: $id)")
     }
 }
 
@@ -153,7 +156,7 @@ fun AppNavigation() {
         // Root / main screen untuk SISWA
         // SiswaMainScreen biasanya berisi Scaffold + BottomNavBar + NavHost siswa
         composable("siswa_main") {
-            SiswaMainScreen()
+            SiswaMainScreen(rootNavController = navController)
         }
 
         // Root / main screen untuk ADMIN

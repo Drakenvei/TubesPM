@@ -16,6 +16,7 @@ import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextAlign
+import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
@@ -30,6 +31,7 @@ import java.util.*
 data class NotificationItem(
     val id: String,
     val title: String,
+    val message: String = "",
     val time: String,
     val date: Date = Date(),
     val isRead: Boolean = false,
@@ -133,7 +135,7 @@ fun NotificationItemCard(
                 }
             }
 
-            Spacer(modifier = Modifier.width(32.dp))
+            Spacer(modifier = Modifier.width(16.dp))
 
             // Notification content
             Column(modifier = Modifier.weight(1f)) {
@@ -148,8 +150,19 @@ fun NotificationItemCard(
                 Spacer(modifier = Modifier.height(4.dp))
 
                 Text(
+                    text = notification.message,
+                    fontSize = 13.sp,
+                    color = Color.Black.copy(alpha = 0.7f),
+                    lineHeight = 18.sp,
+                    maxLines = 3,
+                    overflow = TextOverflow.Ellipsis // Tambahkan "..." jika teks terlalu panjang
+                )
+
+                Spacer(modifier = Modifier.height(8.dp)) // Beri jarak ke waktu
+
+                Text(
                     text = notification.time,
-                    fontSize = 12.sp,
+                    fontSize = 11.sp,
                     color = Color.Gray
                 )
             }

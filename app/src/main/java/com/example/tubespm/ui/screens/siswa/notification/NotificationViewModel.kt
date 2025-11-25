@@ -48,6 +48,7 @@ class NotificationViewModel @Inject constructor(
                         NotificationItem(
                             id = doc.id,
                             title = doc.getString("title") ?: "",
+                            message = doc.getString("message") ?: "",
                             time = doc.getString("time") ?: "", // atau format dari timestamp
                             date = timestamp?.toDate() ?: Date(),
                             isRead = doc.getBoolean("isRead") ?: false,

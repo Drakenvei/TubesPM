@@ -12,6 +12,7 @@ import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.automirrored.filled.ArrowBack
 import androidx.compose.material.icons.filled.ArrowBack
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
@@ -27,12 +28,14 @@ import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.hilt.navigation.compose.hiltViewModel
+import androidx.navigation.NavController
 import coil.compose.AsyncImage
 import com.example.tubespm.R
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun EditProfileScreen(
+    navController: NavController,
     onBackClick: () -> Unit,
     viewModel: EditProfileViewModel = hiltViewModel()
 ) {
@@ -60,7 +63,11 @@ fun EditProfileScreen(
         uri?.let { viewModel.onImageSelected(it) }
     }
 
-    Column(modifier = Modifier.fillMaxSize().background(Color(0xFFF0F0F0))) {
+    Column(
+        modifier = Modifier
+            .fillMaxSize()
+            .background(Color(0xFFF0F0F0))
+    ) {
         TopAppBar(
             title = { Text("Edit Profile", color = Color.White, fontWeight = FontWeight.Bold) },
             navigationIcon = {

@@ -6,6 +6,7 @@ import androidx.compose.runtime.Composable
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.unit.dp
+import androidx.navigation.NavController
 import androidx.navigation.NavHostController
 import androidx.navigation.NavType
 import androidx.navigation.compose.NavHost
@@ -29,17 +30,19 @@ import com.example.tubespm.ui.screens.siswa.notification.NotificationScreen
 import com.example.tubespm.ui.screens.siswa.profile.EditProfileScreen
 import com.example.tubespm.ui.screens.siswa.profile.ProfileScreen
 import com.example.tubespm.ui.screens.siswa.quiz.QuizScreen
+import com.example.tubespm.ui.screens.siswa.settings.EditPasswordScreen
+import com.example.tubespm.ui.screens.siswa.settings.SettingScreen
 
 // =======================================================
 // 0. LEGACY
 // =======================================================
-@Composable
-fun NavGraph(navController: NavHostController) {
-    StudentNavGraph(
-        navController = navController,
-        paddingValues = PaddingValues(0.dp)
-    )
-}
+//@Composable
+//fun NavGraph(navController: NavHostController) {
+//    StudentNavGraph(
+//        navController = navController,
+//        paddingValues = PaddingValues(0.dp)
+//    )
+//}
 
 // =======================================================
 // 1. NAVIGATION GRAPH SISWA
@@ -47,7 +50,8 @@ fun NavGraph(navController: NavHostController) {
 @Composable
 fun StudentNavGraph(
     navController: NavHostController,
-    paddingValues: PaddingValues
+    paddingValues: PaddingValues,
+    rootNavController: NavController
 ) {
     NavHost(
         navController = navController,
@@ -84,7 +88,7 @@ fun StudentNavGraph(
         composable("profile") {
             ProfileScreen(
                 onEditClick = { navController.navigate("edit_profile") },
-                onSettingsClick = {}
+                onSettingsClick = { navController.navigate("settings")}
             )
         }
 
@@ -95,6 +99,7 @@ fun StudentNavGraph(
         // --- Profile / Edit ---
         composable("edit_profile") {
             EditProfileScreen(
+                navController = navController,
                 onBackClick = { navController.popBackStack() }
             )
         }
@@ -141,6 +146,22 @@ fun StudentNavGraph(
             arguments = listOf(navArgument("activityId") { type = NavType.StringType })
         ) {
             PembahasanScreen(navController = navController)
+        }
+
+        // --- Setting ---
+        composable("settings") {
+            SettingScreen(
+                navController = navController,
+                onLogout = {
+                    rootNavController.navigate("auth") {
+                        popUpTo("siswa_main") {inclusive = true}
+                        launchSingleTop = true
+                    }
+                }
+            )
+        }
+        composable ("change_password") {
+            EditPasswordScreen(navController = navController)
         }
     }
 }
@@ -235,7 +256,7 @@ fun AdminNavGraph(
 fun StudentRoot() {
     val navController = rememberNavController()
     Scaffold(bottomBar = { BottomNavBar(navController = navController) }) { paddingValues ->
-        StudentNavGraph(navController = navController, paddingValues = paddingValues)
+        StudentNavGraph(navController = navController, paddingValues = paddingValues, rootNavController = navController)
     }
 }
 
