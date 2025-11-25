@@ -195,14 +195,14 @@ fun ProfileScreen(
                     Spacer(modifier = Modifier.height(32.dp))
 
                     // Placeholder Section (misal: Chart atau Info lain)
-                    Box(
-                        modifier = Modifier
-                            .fillMaxWidth()
-                            .height(150.dp)
-                            .background(Color(0xFFE0E0E0), RoundedCornerShape(8.dp))
-                    )
+//                    Box(
+//                        modifier = Modifier
+//                            .fillMaxWidth()
+//                            .height(150.dp)
+//                            .background(Color(0xFFE0E0E0), RoundedCornerShape(8.dp))
+//                    )
 
-                    Spacer(modifier = Modifier.weight(1f))
+//                    Spacer(modifier = Modifier.weight(1f))
                 }
             }
         }

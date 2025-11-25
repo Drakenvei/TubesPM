@@ -9,11 +9,13 @@ import com.example.tubespm.repository.QuizRepository
 import dagger.hilt.android.lifecycle.HiltViewModel
 import kotlinx.coroutines.Job
 import kotlinx.coroutines.NonCancellable
+import kotlinx.coroutines.channels.Channel
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.flow.collect
 import kotlinx.coroutines.flow.distinctUntilChanged
+import kotlinx.coroutines.flow.receiveAsFlow
 import kotlinx.coroutines.flow.update
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
@@ -37,7 +39,11 @@ data class QuizUiState(
     val currentQuestionIndex: Int = 0, // Index relatif terhadap activeQuestions (0..20)
     val remainingTimeInSeconds: Long = 0L,
     val quizMode: QuizMode = QuizMode.TRYOUT,
-    val deadline: Date? = null
+    val deadline: Date? = null,
+
+    // State untuk dialog
+    val showSubtestConfirmation: Boolean = false,
+    val showSubmitConfirmation: Boolean = false
 )
 
 // Helper class untuk meratakan struktur
@@ -48,6 +54,12 @@ data class FlattenedSubtest(
     val duration: Int,
     val questionCount: Int
 )
+
+// Definisikan Event
+sealed class QuizEvent {
+    object SubmitSuccess : QuizEvent() // Sinyal sukses
+    data class ShowError(val message: String) : QuizEvent() // Sinyal error
+}
 
 @HiltViewModel
 class QuizViewModel @Inject constructor(
@@ -65,6 +77,10 @@ class QuizViewModel @Inject constructor(
     private var allQuestionRaw: List<QuizQuestion> = emptyList()
     private var allSubtestsFlat: List<FlattenedSubtest> = emptyList()
 
+    // Channel Event
+    private val _quizEvent = Channel<QuizEvent>()
+    val quizEvent = _quizEvent.receiveAsFlow()
+
     init {
         loadQuizSession()
     }
@@ -81,7 +97,11 @@ class QuizViewModel @Inject constructor(
                 val activity = repository.getActivity(activityId) ?: throw Exception("Aktivitas null")
 
                 // Tentukan Mode berdasarkan 'type' dari database
-                val mode = if (activity.type == "tryout") QuizMode.TRYOUT else QuizMode.LATIHAN
+                val mode = if (activity.type.equals("tryout", ignoreCase = true)) {
+                    QuizMode.TRYOUT
+                } else {
+                    QuizMode.LATIHAN
+                }
 
                 // Ambil Metadata Tryout & Ratakan Struktur Subtest
                 val tryoutMetadata = repository.getQuizMetadata(activity.activityRefId, activity.type)
@@ -151,6 +171,10 @@ class QuizViewModel @Inject constructor(
             // Latihan: Ambil SEMUA soal (karena cuma 1 sesi)
             allQuestionRaw
         }
+
+        // Untuk debug
+        Log.d("QuizDebug", "Index: $index, LastIndex: ${allSubtestsFlat.lastIndex}, Mode: $mode")
+        Log.d("QuizDebug", "IsLastSubtest: ${index == allSubtestsFlat.lastIndex}")
 
         viewModelScope.launch {
             var deadline = existingDeadline
@@ -305,10 +329,39 @@ class QuizViewModel @Inject constructor(
         _uiState.update { it.copy(currentQuestionIndex = prevIndex) }
     }
 
-    fun submitQuiz() {
+    // --- Fungsi untuk Tombol "Lanjut / Selesai" di TopBar ---
+    fun onRequestNextStep() {
+        if (_uiState.value.isLastSubtest) {
+            // Jika ini subtest terakhir, tampilkan dialog submit
+            _uiState.update { it.copy(showSubmitConfirmation = true) }
+        } else {
+            // Jika masih ada subtest, tampilkan dialog lanjut subtest
+            _uiState.update { it.copy(showSubtestConfirmation = true) }
+        }
+    }
+
+    // --- Fungsi Konfirmasi ---
+    fun confirmNextSubtest() {
+        _uiState.update { it.copy(showSubtestConfirmation = false) }
+        finishCurrentSubtest()
+    }
+    fun confirmSubmit() {
+        _uiState.update { it.copy(showSubmitConfirmation = false) }
+        submitQuiz()
+    }
+
+    // --- Fungsi Batal ---
+    fun dismissDialogs() {
+        _uiState.update { it.copy(showSubtestConfirmation = false, showSubmitConfirmation = false) }
+    }
+
+    private fun submitQuiz() {
         timerJob?.cancel()
 
         viewModelScope.launch {
+            // 1. Update State Loading (Opsional, agar UI tidak freeze)
+            _uiState.update { it.copy(isLoading = true) }
+
             val questions = allQuestionRaw
             val answers = _uiState.value.userAnswers
 
@@ -345,13 +398,27 @@ class QuizViewModel @Inject constructor(
                 0
             }
 
-            repository.submitQuiz(
-                activityId = activityId,
-                score = finalScore,
-                correctCount = totalCorrect,
-                answeredCount = answers.size,
-                subtestScores = subtestScores
-            )
+            try {
+                // 2. Simpan ke Database
+                // Gunakan withContext(NonCancellable) agar tidak terputus
+                withContext(NonCancellable) {
+                    repository.submitQuiz(
+                        activityId = activityId,
+                        score = finalScore,
+                        correctCount = totalCorrect,
+                        answeredCount = answers.size,
+                        subtestScores = subtestScores
+                    )
+                }
+
+                // 3. KIRIM SINYAL SUKSES
+                _quizEvent.send(QuizEvent.SubmitSuccess)
+
+            } catch (e: Exception) {
+                // Kirim sinyal error
+                _quizEvent.send(QuizEvent.ShowError(e.localizedMessage ?: "Gagal menyimpan"))
+                _uiState.update { it.copy(isLoading = false) }
+            }
 
             // Navigasi kembali akan ditangani oleh Screen
         }

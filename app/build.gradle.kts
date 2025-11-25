@@ -89,6 +89,9 @@ dependencies {
     // Firebase Cloud Messaging (Untuk Notifikasi dari Admin)
     implementation("com.google.firebase:firebase-messaging:23.4.0")
 
+    // Untuk menampilkan dialog
+    implementation("androidx.compose.runtime:runtime-livedata:1.6.0") // Sesuaikan versi compose Anda
+
     // Other libraries
     implementation(libs.androidx.core.ktx)
     implementation(libs.androidx.lifecycle.runtime.ktx)

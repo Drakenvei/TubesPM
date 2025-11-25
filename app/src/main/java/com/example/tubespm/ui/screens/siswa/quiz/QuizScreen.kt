@@ -1,8 +1,11 @@
 package com.example.tubespm.ui.screens.siswa.quiz
 
+import android.widget.Toast
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.*
+import androidx.compose.foundation.rememberScrollState
+import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Flag
 import androidx.compose.material3.*
@@ -10,6 +13,7 @@ import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
@@ -21,6 +25,7 @@ import com.example.tubespm.ui.screens.siswa.quiz.components.QuizBottomNavigation
 import com.example.tubespm.ui.screens.siswa.quiz.components.QuizTopBar
 import com.example.tubespm.ui.screens.siswa.quiz.components.AnswerOption
 import kotlinx.coroutines.delay
+import kotlinx.coroutines.flow.collectLatest
 
 enum class QuizMode {
     TRYOUT,
@@ -35,12 +40,33 @@ fun QuizScreen(
     viewModel: QuizViewModel = hiltViewModel()
 ) {
     val uiState by viewModel.uiState.collectAsState()
+    val context = LocalContext.current // 1. Ambil Context
 
     // DITAMBAHKAN: State untuk mengontrol visibilitas dialog konfirmasi
     var showExitDialog by remember { mutableStateOf(false) }
 
     // Ambil soal dari activeQuestions (bukan questions global)
     val currentQuestion = uiState.activeQuestions.getOrNull(uiState.currentQuestionIndex)
+
+    // --- 2. DENGARKAN EVENT (TOAST & NAVIGASI) ---
+    LaunchedEffect(key1 = true) {
+        viewModel.quizEvent.collectLatest { event ->
+            when (event) {
+                is QuizEvent.SubmitSuccess -> {
+                    // A. Titipkan pesan ke halaman sebelumnya (Activity List)
+                    navController.previousBackStackEntry
+                        ?.savedStateHandle
+                        ?.set("submit_message", "Pengerjaan selesai! Nilai telah disimpan.")
+
+                    // B. Keluar dari Halaman
+                    navController.popBackStack()
+                }
+                is QuizEvent.ShowError -> {
+                    Toast.makeText(context, event.message, Toast.LENGTH_SHORT).show()
+                }
+            }
+        }
+    }
 
     Scaffold(
         topBar = {
@@ -50,17 +76,10 @@ fun QuizScreen(
                     title = uiState.subtestName, // Tampilkan nama subtest
                     remainingTimeInSeconds = uiState.remainingTimeInSeconds,
                     onBackClicked = { showExitDialog = true },
+                    isLastSubtest = uiState.isLastSubtest, // Kirim status ini ke TopBar
                     onSubmitClicked = {
-                        if (uiState.isLastSubtest) {
-                            // KONDISI 1: Selesai (Latihan atau Subtest Terakhir)
-                            viewModel.submitQuiz()
-                            navController.popBackStack()
-                        } else {
-                            // KONDISI 2: Masih ada Subtest berikutnya (Mode Tryout)
-                            viewModel.finishCurrentSubtest() // Reset waktu & muat soal baru
-                        }
-                    },
-                    isLastSubtest = uiState.isLastSubtest // Kirim status ini ke TopBar
+                        viewModel.onRequestNextStep()
+                    }
                 )
             } else {
                 // Tampilkan TopBar kosong atau judul "Memuat..." saat loading
@@ -114,13 +133,22 @@ fun QuizScreen(
                 Column(
                     modifier = Modifier
                         .weight(1f)
+                        .verticalScroll(rememberScrollState())
                         .padding(16.dp),
                     horizontalAlignment = Alignment.CenterHorizontally
                 ) {
-                    Text(currentQuestion.subtestId, style = MaterialTheme.typography.titleMedium, color = Color.Gray)
+                    Text(uiState.subtestName, style = MaterialTheme.typography.titleMedium, color = Color.Gray)
+                    Spacer(Modifier.height(24.dp))
+                    // Teks Soal
+                    Text(
+                        text = currentQuestion.questionText,
+                        style = MaterialTheme.typography.bodyLarge.copy(
+                            fontWeight = FontWeight.SemiBold,
+                            lineHeight = 24.sp
+                        ),
+                        textAlign = TextAlign.Center
+                    )
                     Spacer(Modifier.height(32.dp))
-                    Text(currentQuestion.questionText, style = MaterialTheme.typography.headlineMedium, fontWeight = FontWeight.Bold, textAlign = TextAlign.Center)
-                    Spacer(Modifier.weight(1f))
 
                     currentQuestion.options.forEachIndexed { index, optionText ->
                         val optionLabel = ('A' + index).toString()
@@ -136,14 +164,15 @@ fun QuizScreen(
                         )
                         Spacer(Modifier.height(12.dp))
                     }
-                    Spacer(Modifier.weight(1f))
+                    Spacer(Modifier.height(32.dp))
 
                     Row(
                         modifier = Modifier
                             .align(Alignment.End)
                             .clickable {
                                 viewModel.toggleFlag(currentQuestion.id)
-                            },
+                            }
+                            .padding(8.dp),
                         verticalAlignment = Alignment.CenterVertically
                     ) {
                         Text("Flag this question ?", fontSize = 12.sp, color = Color.Gray)
@@ -162,6 +191,78 @@ fun QuizScreen(
 
         }
     }
+
+    // --- DIALOG KONFIRMASI PINDAH SUBTEST ---
+    if (uiState.showSubtestConfirmation) {
+        AlertDialog(
+            onDismissRequest = { viewModel.dismissDialogs()},
+            title = {Text("Lanjut ke Subtest Berikutnya?")},
+            text = {Text("Anda tidak akan bisa kembali ke subtest ini setelah melanjutkan. Waktu akan direset untuk subtest baru.")},
+            confirmButton = {
+                Button(
+                    onClick = {viewModel.confirmNextSubtest()},
+                    colors = ButtonDefaults.buttonColors(containerColor = Color(0xFFE61C5D))
+                ) {
+                    Text("Ya, Lanjut")
+                }
+            },
+            dismissButton = {
+                OutlinedButton(
+                    onClick = {viewModel.dismissDialogs()}
+                ) {
+                    Text("Batal")
+                }
+            }
+        )
+    }
+
+    // --- DIALOG KONFIRMASI SELESAI TRYOUT ---
+    if (uiState.showSubmitConfirmation) {
+        val dialogTitle = if (uiState.quizMode == QuizMode.TRYOUT) {
+            "Selesaikan Tryout?"
+        } else {
+            "Selesaikan Latihan?"
+        }
+
+        val dialogText = if (uiState.quizMode == QuizMode.TRYOUT) {
+            "Pastikan semua jawaban sudah terisi. Anda tidak dapat mengubah jawaban setelah ini."
+        } else {
+            "Apakah Anda yakin ingin mengakhiri latihan dan melihat skor serta pembahasan?"
+        }
+
+        AlertDialog(
+            onDismissRequest = { viewModel.dismissDialogs()},
+            title = { Text(dialogTitle)},
+            text = { Text(dialogText)},
+            confirmButton = {
+                Button(
+                    onClick = {
+                        viewModel.confirmSubmit()
+                    },
+                    colors = ButtonDefaults.buttonColors(containerColor = Color(0xFF30D158)) // Hijau untuk submit
+                ) {
+                    // Tampilkan loading kecil di tombol jika sedang proses simpan
+                    if (uiState.isLoading) {
+                        CircularProgressIndicator(
+                            modifier = Modifier.size(20.dp),
+                            color = Color.White,
+                            strokeWidth = 2.dp
+                        )
+                    } else {
+                        Text("Selesai")
+                    }
+                }
+            },
+            dismissButton = {
+                OutlinedButton(
+                    onClick = {viewModel.dismissDialogs()}
+                ) {
+                    Text("Batal")
+                }
+            }
+        )
+    }
+
     if (showExitDialog) {
         ExitConfirmationDialog(
             onConfirm = {

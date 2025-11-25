@@ -94,67 +94,72 @@ fun SettingScreen(
             },
             colors = TopAppBarDefaults.topAppBarColors(containerColor = Color(0xFFE61C5D))
         )
-
-        // --- CARD MENU ---
-        Card(
-            modifier = Modifier.fillMaxWidth(),
-            shape = RoundedCornerShape(24.dp),
-            colors = CardDefaults.cardColors(containerColor = Color.White),
-            elevation = CardDefaults.cardElevation(defaultElevation = 0.dp)
+        Column (
+            modifier = Modifier
+                .fillMaxSize()
+                .background(backgroundColor)
+                .padding(40.dp),
+            horizontalAlignment = Alignment.CenterHorizontally
         ) {
-            Column(
-                modifier = Modifier.padding(vertical = 16.dp, horizontal = 8.dp)
+            // --- CARD MENU ---
+            Card(
+                modifier = Modifier.fillMaxWidth(),
+                shape = RoundedCornerShape(24.dp),
+                colors = CardDefaults.cardColors(containerColor = Color.White),
+                elevation = CardDefaults.cardElevation(defaultElevation = 0.dp)
             ) {
-                // 1. Detail Akun (Edit Profile)
-                SettingItem(
-                    icon = Icons.Default.Person,
-                    title = "Detail akun",
-                    onClick = { navController.navigate("edit_profile") }
-                )
+                Column(
+                    modifier = Modifier.padding(vertical = 16.dp, horizontal = 8.dp)
+                ) {
+                    // 1. Detail Akun (Edit Profile)
+                    SettingItem(
+                        icon = Icons.Default.Person,
+                        title = "Detail akun",
+                        onClick = { navController.navigate("edit_profile") }
+                    )
 
-                Spacer(modifier = Modifier.height(8.dp))
+                    Spacer(modifier = Modifier.height(8.dp))
 
-                // 2. Password (Placeholder route)
-                SettingItem(
-                    icon = Icons.Default.Lock,
-                    title = "Password",
-                    onClick = {
-                         navController.navigate("change_password")
+                    // 2. Password (Placeholder route)
+                    SettingItem(
+                        icon = Icons.Default.Lock,
+                        title = "Password",
+                        onClick = {
+                            navController.navigate("change_password")
+                        }
+                    )
+                }
+            }
+            Spacer(modifier = Modifier.weight(1f))
+
+            // --- LOGOUT BUTTON ---
+            Row(
+                modifier = Modifier
+                    .clickable {
+                        // Logika Logout
+                        auth.signOut()
+
+                        onLogout()
                     }
+                    .padding(16.dp),
+                verticalAlignment = Alignment.CenterVertically,
+                horizontalArrangement = Arrangement.Center
+            ) {
+                Text(
+                    text = "Logout",
+                    color = primaryPink,
+                    fontSize = 18.sp,
+                    fontWeight = FontWeight.Bold
+                )
+                Spacer(modifier = Modifier.width(8.dp))
+                Icon(
+                    imageVector = Icons.AutoMirrored.Filled.ExitToApp,
+                    contentDescription = "Logout",
+                    tint = primaryPink,
+                    modifier = Modifier.size(24.dp)
                 )
             }
         }
-
-        Spacer(modifier = Modifier.weight(1f))
-
-        // --- LOGOUT BUTTON ---
-        Row(
-            modifier = Modifier
-                .clickable {
-                    // Logika Logout
-                    auth.signOut()
-
-                    onLogout()
-                }
-                .padding(16.dp),
-            verticalAlignment = Alignment.CenterVertically,
-            horizontalArrangement = Arrangement.Center
-        ) {
-            Text(
-                text = "Logout",
-                color = primaryPink,
-                fontSize = 18.sp,
-                fontWeight = FontWeight.Bold
-            )
-            Spacer(modifier = Modifier.width(8.dp))
-            Icon(
-                imageVector = Icons.AutoMirrored.Filled.ExitToApp,
-                contentDescription = "Logout",
-                tint = primaryPink,
-                modifier = Modifier.size(24.dp)
-            )
-        }
-
         Spacer(modifier = Modifier.height(24.dp))
     }
 }
