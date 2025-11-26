@@ -41,8 +41,8 @@ fun AdminMainScreen(
             when (event) {
                 is AdminMainEvent.NavigateToLogin -> {
                     // Hapus semua backstack admin dan kembali ke login
-                    rootNavController.navigate("login") { // Pastikan rute login Anda bernama "login"
-                        popUpTo(0) { inclusive = true }
+                    rootNavController.navigate("auth") { // Pastikan rute login Anda bernama "login"
+                        popUpTo("admin_main") { inclusive = true }
                         launchSingleTop = true
                     }
                 }
@@ -93,7 +93,6 @@ fun AdminMainScreen(
                 AdminProfileScreen(
                     paddingValues = paddingValues,
                     onLogoutClick = {
-                        // PANGGIL FUNGSI LOGOUT DI VIEWMODEL
                         viewModel.logout()
                     }
                 )

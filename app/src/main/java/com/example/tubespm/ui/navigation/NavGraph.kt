@@ -172,7 +172,8 @@ fun StudentNavGraph(
 @Composable
 fun AdminNavGraph(
     navController: NavHostController,
-    paddingValues: PaddingValues
+    paddingValues: PaddingValues,
+    rootNavController: NavController
 ) {
     NavHost(
         navController = navController,
@@ -243,7 +244,16 @@ fun AdminNavGraph(
         composable("admin_profile") {
             AdminProfileScreen(
                 paddingValues = paddingValues,
-                onLogoutClick = { navController.popBackStack() }
+                onLogoutClick = {
+                    // Panggil fungsi logout ViewModel di dalam Screen,
+                    // lalu navigasi menggunakan rootNavController
+
+                    // Navigasi paksa ke Auth/Login
+                    rootNavController.navigate("auth") {
+                        popUpTo("admin_main") { inclusive = true }
+                        launchSingleTop = true
+                    }
+                }
             )
         }
     }
@@ -267,7 +277,7 @@ fun StudentRoot() {
 fun AdminRoot() {
     val navController = rememberNavController()
     Scaffold(bottomBar = { BottomNavbarAdmin(navController = navController) }) { paddingValues ->
-        AdminNavGraph(navController = navController, paddingValues = paddingValues)
+        AdminNavGraph(navController = navController, paddingValues = paddingValues, rootNavController = navController)
     }
 }
 
@@ -282,3 +292,10 @@ fun RoleRouter(userRole: String) {
         else -> Box(modifier = Modifier.fillMaxSize(), contentAlignment = Alignment.Center) { Text("Silakan Login") }
     }
 }
+//fun RoleRouter(userRole: String, rootNavController: NavController) { // Butuh rootNavController
+//    when (userRole) {
+//        "student" -> StudentRoot() // StudentRoot biasanya buat controller sendiri, tapi cek StudentNavGraph butuh root tidak? Ya butuh.
+//        "admin" -> AdminRoot(rootNavController = rootNavController) // Oper di sini
+//        else -> Box(modifier = Modifier.fillMaxSize(), contentAlignment = Alignment.Center) { Text("Silakan Login") }
+//    }
+//}
