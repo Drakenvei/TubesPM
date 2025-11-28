@@ -1,5 +1,6 @@
 package com.example.tubespm.ui.screens.latihansoal
 
+import android.widget.Toast
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.*
@@ -18,6 +19,7 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
@@ -26,7 +28,9 @@ import androidx.compose.ui.window.Dialog
 import androidx.hilt.navigation.compose.hiltViewModel
 import com.example.tubespm.data.model.LatihanSoal
 import com.example.tubespm.ui.screens.siswa.exercises.latihansoal.LatihanSoalCatalogItem
+import com.example.tubespm.ui.screens.siswa.exercises.latihansoal.LatihanSoalEvent
 import com.example.tubespm.ui.screens.siswa.exercises.latihansoal.LatihanSoalViewModel
+import kotlinx.coroutines.flow.collectLatest
 
 // Main Screen
 @Composable
@@ -39,13 +43,30 @@ fun LatihanSoalScreen(
     // ambil state query pencarian dari ViewModel
     val searchQuery by viewModel.searchQuery.collectAsState()
 
+    val context = LocalContext.current
+
+    // --- AMBIL STATE DIALOG KONFIRMASI DARI VIEWMODEL ---
+    val latihanToConfirm by viewModel.showConfirmationDialog.collectAsState()
+
+    // State lokal untuk dialog DETAIL (Info Latihan)
+    var selectedLatihanItem by remember { mutableStateOf<LatihanSoalCatalogItem?>(null) }
+
+    // --- LISTEN EVENT TOAST ---
+    LaunchedEffect(Unit) {
+        viewModel.events.collectLatest { event ->
+            when (event) {
+                is LatihanSoalEvent.ShowToast -> {
+                    Toast.makeText(context, event.message, Toast.LENGTH_SHORT).show()
+                }
+            }
+        }
+    }
+
     LaunchedEffect(initialQuery) {
         if (initialQuery.isNotBlank()) {
             viewModel.onSearchQueryChanged(initialQuery)
         }
     }
-
-    var selectedLatihanItem by remember { mutableStateOf<LatihanSoalCatalogItem?>(null) }
 
     Column (
         modifier = Modifier
@@ -115,8 +136,30 @@ fun LatihanSoalScreen(
             isTaken = item.isTaken, // <-- Kirim status 'isTaken'
             onDismiss = { selectedLatihanItem = null },
             onStart = {
-                viewModel.takeLatihan(item.latihanSoal) // Panggil fungsi viewModel
-                selectedLatihanItem = null
+                viewModel.onTakeLatihanSoalClicked(item.latihanSoal)
+                selectedLatihanItem = null // Tutup detail dialog
+            },
+        )
+    }
+
+    // --- 2. DIALOG KONFIRMASI (YAKIN AMBIL?) ---
+    if (latihanToConfirm != null) {
+        AlertDialog(
+            onDismissRequest = { viewModel.onDismissDialog() },
+            title = { Text("Ambil Latihan Soal?") },
+            text = { Text("Apakah Anda yakin ingin menambahkan '${latihanToConfirm?.title}' ke daftar aktivitas Anda?") },
+            confirmButton = {
+                Button(
+                    onClick = { viewModel.confirmTakeLatihan() },
+                    colors = ButtonDefaults.buttonColors(containerColor = Color(0xFF30D158))
+                ) {
+                    Text("Ya, Ambil")
+                }
+            },
+            dismissButton = {
+                OutlinedButton(onClick = { viewModel.onDismissDialog() }) {
+                    Text("Batal")
+                }
             }
         )
     }

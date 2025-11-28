@@ -8,12 +8,14 @@ import com.example.tubespm.repository.ActivityRepository
 import com.example.tubespm.repository.ExerciseCatalogRepository
 import com.google.firebase.firestore.Query
 import dagger.hilt.android.lifecycle.HiltViewModel
+import kotlinx.coroutines.channels.Channel
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.flow.catch
 import kotlinx.coroutines.flow.combine
 import kotlinx.coroutines.flow.map
+import kotlinx.coroutines.flow.receiveAsFlow
 import kotlinx.coroutines.flow.update
 import kotlinx.coroutines.launch
 import javax.inject.Inject
@@ -29,6 +31,10 @@ data class LatihanSoalUiState(
     val error: String? = null
 )
 
+sealed class LatihanSoalEvent {
+    data class ShowToast(val message: String) : LatihanSoalEvent()
+}
+
 @HiltViewModel
 class LatihanSoalViewModel @Inject constructor(
     private val repository: ExerciseCatalogRepository,
@@ -40,6 +46,14 @@ class LatihanSoalViewModel @Inject constructor(
     // 1. StateFlow untuk menyimpan query pencarian
     private val _searchQuery = MutableStateFlow("")
     val searchQuery: StateFlow<String> = _searchQuery.asStateFlow()
+
+    // --- CHANNEL EVENT ---
+    private val _events = Channel<LatihanSoalEvent>()
+    val events = _events.receiveAsFlow()
+
+    // --- STATE UNTUK DIALOG KONFIRMASI ---
+    private val _showConfirmationDialog = MutableStateFlow<LatihanSoal?>(null)
+    val showConfirmationDialog = _showConfirmationDialog.asStateFlow()
 
     init {
         observeFilteredLatihanSoal()
@@ -63,7 +77,7 @@ class LatihanSoalViewModel @Inject constructor(
                     activities.map { it.activityRefId }.toSet()
                 }
 
-                // Gabungkan (combine) TIGA flow
+            // Gabungkan (combine) TIGA flow
             combine(latihanSoalFlow, takenLatihanSoalIdsFlow, _searchQuery) { latihanSoalList, takenIds, query ->
 
                 val sortedList = latihanSoalList.sortedByDescending { it.createdAt }
@@ -101,12 +115,27 @@ class LatihanSoalViewModel @Inject constructor(
         }
     }
 
-    fun takeLatihan(latihan: LatihanSoal){
+    // --- FUNGSI UNTUK MEMICU DIALOG ---
+    fun onTakeLatihanSoalClicked(latihan: LatihanSoal) {
+        _showConfirmationDialog.value = latihan
+    }
+
+    fun onDismissDialog() {
+        _showConfirmationDialog.value = null
+    }
+
+    fun confirmTakeLatihan() {
+        val latihan = _showConfirmationDialog.value ?: return
+        _showConfirmationDialog.value = null // Tutup dialog segera
+
         viewModelScope.launch {
             try {
                 activityRepository.addLatihanActivity(latihan)
+                // Kirim Sinyal Toast Sukses
+                _events.send(LatihanSoalEvent.ShowToast("Latihan Soal berhasil diambil! Cek menu Activity."))
             } catch (e: Exception) {
                 Log.e("LatihanSoalViewModel", "Gagal mengambil latihan: ${e.message}")
+                _events.send(LatihanSoalEvent.ShowToast("Gagal mengambil Latihan Soal."))
             }
         }
     }
