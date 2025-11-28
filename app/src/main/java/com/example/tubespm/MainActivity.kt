@@ -40,7 +40,8 @@ class MainActivity : ComponentActivity() {
 
         // Jadwalkan WorkManager (Contoh: Jam 09:00 Pagi)
         scheduleDailyNotification(9, 0, 101, "Notif Pagi", "Selamat Pagi!", "Ayo mulai hari dengan mengerjakan latihan")
-        scheduleDailyNotification(14, 5, 102, "Notif Siang", "Selamat Siang!", "Ayo gas kerjakan tryoutnya")
+        scheduleDailyNotification(13, 0, 102, "Notif Siang", "Selamat Siang!", "Ayo gas kerjakan tryout!")
+        scheduleDailyNotification(18, 30, 103, "Notif Malam", "Selamat Malam!", "Udah mau istirahat ya? Yuk review tryout dan latihannya!")
 
         // INI UNTUK TESTING WORKMANAGER
 //        val testRequest = OneTimeWorkRequestBuilder<ReminderWorker>()
