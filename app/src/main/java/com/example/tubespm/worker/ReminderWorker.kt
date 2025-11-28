@@ -5,6 +5,7 @@ import android.app.NotificationManager
 import android.app.PendingIntent
 import android.content.Context
 import android.content.Intent
+import android.graphics.BitmapFactory
 import android.os.Build
 import androidx.core.app.NotificationCompat
 import androidx.work.Worker
@@ -55,12 +56,18 @@ class ReminderWorker (
             notificationManager.createNotificationChannel(channel)
         }
 
+        val largeIconBitmap = BitmapFactory.decodeResource(context.resources, R.drawable.logobelut)
+
         val builder = NotificationCompat.Builder(context, channelId)
-            .setSmallIcon(R.drawable.logobelut)
+            .setSmallIcon(R.drawable.logobelut3)
+            .setLargeIcon(largeIconBitmap)
+            .setColor(0xFFE61C5D.toInt())
             .setContentTitle(title)
             .setContentText(message)
             .setContentIntent(pendingIntent)
             .setAutoCancel(true) // Otomatis hilang setelah diklik
+            // Style BigText agar teks panjang tidak terpotong
+            .setStyle(NotificationCompat.BigTextStyle().bigText(message))
 
         notificationManager.notify(notifId, builder.build())
 

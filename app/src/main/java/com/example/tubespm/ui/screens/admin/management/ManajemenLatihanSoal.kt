@@ -13,67 +13,49 @@ import androidx.compose.material3.*
 import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
-import androidx.lifecycle.viewmodel.compose.viewModel // Pastikan import ini ada
+import androidx.lifecycle.viewmodel.compose.viewModel
 
 // ======================================================
-// DATA MODEL (UI Helper)
+// SCREEN UTAMA — TAB "Latihan Soal"
 // ======================================================
-data class PaketSoal(
-    val id: String,
-    val nama: String,
-    val tpsCount: Int,
-    val literasiCount: Int,
-    val tpsMenit: Int = 0,
-    val literasiMenit: Int = 0
-)
-
-// ======================================================
-// SCREEN UTAMA — DIGUNAKAN DI TAB "Latihan Soal"
-// ======================================================
-@OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun LatihanSoalTabContent(
     contentPadding: PaddingValues,
-    // Inject ViewModel
     viewModel: ManajemenLatihanSoalViewModel = viewModel()
 ) {
-    // Observasi State dari ViewModel
     val uiState by viewModel.uiState.collectAsState()
     val searchQuery by viewModel.searchQuery.collectAsState()
 
     Column(
         modifier = Modifier
             .fillMaxSize()
-            .background(Color(0xFFF5F5F5))
+            .background(Color(0xFFF9F9F9)) // Background sedikit lebih terang/bersih
             .padding(contentPadding)
     ) {
 
         // ===============================
-        // Search Bar
+        // Search Bar (Style diperbarui sedikit agar rounded)
         // ===============================
         OutlinedTextField(
             value = searchQuery,
-            onValueChange = { viewModel.onSearchQueryChanged(it) }, // Kirim event ke VM
+            onValueChange = { viewModel.onSearchQueryChanged(it) },
             modifier = Modifier
                 .fillMaxWidth()
-                .padding(horizontal = 16.dp, vertical = 12.dp),
-            placeholder = { Text("Search Latihan Soal", color = Color.Gray) },
+                .padding(16.dp),
+            placeholder = { Text("Cari Latihan Soal...", color = Color.Gray) },
             leadingIcon = {
-                Icon(
-                    imageVector = Icons.Filled.Search,
-                    contentDescription = "Search",
-                    tint = Color.Gray
-                )
+                Icon(Icons.Filled.Search, contentDescription = "Search", tint = Color.Gray)
             },
-            shape = RoundedCornerShape(8.dp),
+            shape = RoundedCornerShape(12.dp), // Lebih rounded seperti siswa
             colors = OutlinedTextFieldDefaults.colors(
-                focusedContainerColor = Color(0xFFE0E0E0),
-                unfocusedContainerColor = Color(0xFFE0E0E0),
-                focusedBorderColor = Color.Transparent,
+                focusedContainerColor = Color.White,
+                unfocusedContainerColor = Color.White,
+                focusedBorderColor = Color(0xFFE0E0E0),
                 unfocusedBorderColor = Color.Transparent
             ),
             singleLine = true
@@ -84,23 +66,28 @@ fun LatihanSoalTabContent(
         // ===============================
         if (uiState.isLoading) {
             Box(modifier = Modifier.fillMaxSize(), contentAlignment = Alignment.Center) {
-                CircularProgressIndicator(color = Color(0xFFE91E63))
+                CircularProgressIndicator(color = Color(0xFFE61C5D))
             }
         } else {
             LazyColumn(
                 modifier = Modifier.fillMaxSize(),
-                contentPadding = PaddingValues(16.dp),
+                contentPadding = PaddingValues(horizontal = 16.dp, vertical = 8.dp),
                 verticalArrangement = Arrangement.spacedBy(16.dp)
             ) {
                 if (uiState.paketSoalList.isEmpty()) {
                     item {
-                        Box(modifier = Modifier.fillMaxWidth().padding(16.dp), contentAlignment = Alignment.Center) {
+                        Box(
+                            modifier = Modifier
+                                .fillMaxWidth()
+                                .padding(32.dp),
+                            contentAlignment = Alignment.Center
+                        ) {
                             Text("Data tidak ditemukan", color = Color.Gray)
                         }
                     }
                 } else {
                     items(uiState.paketSoalList) { paket ->
-                        PaketSoalCard(paket)
+                        PaketSoalAdminCard(paket)
                     }
                 }
             }
@@ -109,110 +96,88 @@ fun LatihanSoalTabContent(
 }
 
 // ======================================================
-// CARD ITEM (Tidak berubah, tetap UI murni)
+// CARD ITEM BARU (Style User + Tombol Edit Admin)
 // ======================================================
 @Composable
-fun PaketSoalCard(paket: PaketSoal) {
+fun PaketSoalAdminCard(paket: PaketSoal) {
     Card(
-        modifier = Modifier.fillMaxWidth(),
-        shape = RoundedCornerShape(16.dp),
-        colors = CardDefaults.cardColors(
-            containerColor = Color(0xFFE91E63)
-        ),
+        modifier = Modifier
+            .fillMaxWidth(),
+        shape = RoundedCornerShape(12.dp),
+        // Warna Pink persis seperti tampilan Siswa (0xFFE61C5D)
+        colors = CardDefaults.cardColors(containerColor = Color(0xFFE61C5D)),
         elevation = CardDefaults.cardElevation(4.dp)
     ) {
         Column(
             modifier = Modifier.padding(16.dp)
         ) {
 
-            // ===============================
-            // Header: Nama + Edit Icon
-            // ===============================
+            // --- Row Atas: Judul & Tombol Edit ---
             Row(
                 modifier = Modifier.fillMaxWidth(),
-                horizontalArrangement = Arrangement.SpaceBetween,
-                verticalAlignment = Alignment.CenterVertically
+                verticalAlignment = Alignment.Top, // Align top jika teks panjang
+                horizontalArrangement = Arrangement.SpaceBetween
             ) {
                 Text(
                     text = paket.nama,
-                    color = Color.White,
-                    fontSize = 18.sp,
+                    style = MaterialTheme.typography.titleMedium.copy(
+                        color = Color.White,
+                        fontSize = 18.sp
+                    ),
                     fontWeight = FontWeight.Bold,
-                    modifier = Modifier.weight(1f)
+                    modifier = Modifier.weight(1f) // Text ambil sisa ruang
                 )
 
+                // Tombol Edit (Khas Admin)
+                // Dibuat semi-transparan putih agar menyatu
                 IconButton(
-                    onClick = { /* TODO: nanti edit paket soal */ }
+                    onClick = { /* TODO: Navigasi ke Edit */ },
+                    modifier = Modifier
+                        .size(32.dp)
+                        .offset(x = 8.dp, y = (-8).dp) // Sedikit geser ke pojok
                 ) {
                     Icon(
                         imageVector = Icons.Filled.Edit,
-                        tint = Color.White,
-                        contentDescription = "Edit Paket"
+                        contentDescription = "Edit",
+                        tint = Color.White
                     )
                 }
             }
 
-            Spacer(modifier = Modifier.height(16.dp))
+            Spacer(modifier = Modifier.height(8.dp))
 
-            // ===============================
-            // TPS SECTION
-            // ===============================
-            PaketSoalSection(title = "TPS", soalCount = paket.tpsCount)
+            // --- Subtest Tag (Khas Tampilan Siswa) ---
+            Box(
+                modifier = Modifier
+                    .clip(RoundedCornerShape(8.dp))
+                    .background(Color.White.copy(alpha = 0.9f))
+                    .padding(horizontal = 10.dp, vertical = 4.dp)
+            ) {
+                Text(
+                    text = paket.subtest, // Menggunakan data subtest dari VM
+                    color = Color(0xFFE61C5D),
+                    fontWeight = FontWeight.Bold,
+                    fontSize = 14.sp
+                )
+            }
 
             Spacer(modifier = Modifier.height(12.dp))
 
-            // ===============================
-            // LITERASI SECTION
-            // ===============================
-            PaketSoalSection(title = "Literasi", soalCount = paket.literasiCount)
-        }
-    }
-}
-
-// ======================================================
-// SECTION REUSABLE (Tidak berubah)
-// ======================================================
-@Composable
-fun PaketSoalSection(
-    title: String,
-    soalCount: Int
-) {
-    Row(
-        modifier = Modifier.fillMaxWidth(),
-        verticalAlignment = Alignment.CenterVertically
-    ) {
-        // Label TPS / Literasi
-        Surface(
-            color = Color.White,
-            shape = RoundedCornerShape(4.dp)
-        ) {
-            Text(
-                text = title,
-                color = Color(0xFFE91E63),
-                fontWeight = FontWeight.Bold,
-                fontSize = 14.sp,
-                modifier = Modifier.padding(horizontal = 12.dp, vertical = 6.dp)
-            )
-        }
-
-        Spacer(modifier = Modifier.width(16.dp))
-
-        // Ikon jumlah soal
-        Row(
-            verticalAlignment = Alignment.CenterVertically
-        ) {
-            Icon(
-                imageVector = Icons.Filled.Description,
-                tint = Color.White,
-                contentDescription = null,
-                modifier = Modifier.size(18.dp)
-            )
-            Spacer(modifier = Modifier.width(4.dp))
-            Text(
-                text = if (soalCount > 0) "$soalCount soal" else "- soal",
-                color = Color.White,
-                fontSize = 14.sp
-            )
+            // --- Footer: Jumlah Soal ---
+            Row(verticalAlignment = Alignment.CenterVertically) {
+                Icon(
+                    imageVector = Icons.Filled.Description,
+                    contentDescription = "Jumlah Soal",
+                    tint = Color.White,
+                    modifier = Modifier.size(20.dp)
+                )
+                Spacer(modifier = Modifier.width(6.dp))
+                Text(
+                    text = "${paket.totalSoal} soal",
+                    color = Color.White,
+                    style = MaterialTheme.typography.bodyMedium
+                )
+            }
         }
     }
 }

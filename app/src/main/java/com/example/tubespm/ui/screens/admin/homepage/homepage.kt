@@ -1,6 +1,10 @@
 package com.example.tubespm.ui.screens.admin.homepage
 
+import android.graphics.BitmapFactory
+import android.util.Base64
+import androidx.compose.foundation.Image
 import androidx.compose.foundation.background
+import androidx.compose.foundation.border
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.shape.CircleShape
@@ -15,17 +19,17 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.graphics.asImageBitmap
+import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.text.font.FontWeight
-import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.lifecycle.viewmodel.compose.viewModel
-import com.example.tubespm.ui.theme.TubesPMTheme
 
 @Composable
 fun AdminHomeScreen(
     paddingValues: PaddingValues,
-    viewModel: AdminHomeViewModel = viewModel() // Inject ViewModel
+    viewModel: AdminHomeViewModel = viewModel()
 ) {
     val uiState by viewModel.uiState.collectAsState()
 
@@ -67,19 +71,10 @@ fun AdminHomeScreen(
                             )
                         }
                         Spacer(modifier = Modifier.weight(1f))
-                        Box(
-                            modifier = Modifier
-                                .size(48.dp)
-                                .clip(CircleShape)
-                                .background(Color(0x33FFFFFF)),
-                            contentAlignment = Alignment.Center
-                        ) {
-                            Icon(
-                                Icons.Default.Person,
-                                tint = Color.White,
-                                contentDescription = "Admin Profile"
-                            )
-                        }
+
+                        // --- BAGIAN INI YANG DIGANTI ---
+                        // Memanggil fungsi helper di bawah untuk memunculkan gambar
+                        HomeProfilePicture(base64String = uiState.adminPhotoBase64)
                     }
                 }
 
@@ -143,8 +138,51 @@ fun AdminHomeScreen(
     }
 }
 
-// ... (Sisa komponen AdminStatCard dan ActivityChartCard TETAP SAMA seperti kode Anda sebelumnya) ...
-// Paste ulang helper function di sini jika file terpisah, atau biarkan jika dalam satu file.
+// ==========================================================
+// 1. HELPER BARU: FUNGSI UNTUK MUNCULIN GAMBAR
+// ==========================================================
+@Composable
+fun HomeProfilePicture(base64String: String) {
+    // Logika mengubah text aneh (base64) menjadi Gambar (Bitmap)
+    val decodedBitmap = remember(base64String) {
+        if (base64String.isNotEmpty()) {
+            try {
+                val imageBytes = Base64.decode(base64String, Base64.DEFAULT)
+                BitmapFactory.decodeByteArray(imageBytes, 0, imageBytes.size)?.asImageBitmap()
+            } catch (e: Exception) { null }
+        } else { null }
+    }
+
+    Box(
+        modifier = Modifier
+            .size(56.dp)
+            .clip(CircleShape)
+            .background(Color(0x33FFFFFF))
+            .border(2.dp, Color.White.copy(alpha = 0.5f), CircleShape),
+        contentAlignment = Alignment.Center
+    ) {
+        if (decodedBitmap != null) {
+            // Kalau ada gambar, tampilkan gambar
+            Image(
+                bitmap = decodedBitmap,
+                contentDescription = "Admin Profile",
+                contentScale = ContentScale.Crop,
+                modifier = Modifier.fillMaxSize()
+            )
+        } else {
+            // Kalau tidak ada, tampilkan Icon Orang
+            Icon(
+                Icons.Default.Person,
+                tint = Color.White,
+                contentDescription = "Default Profile",
+                modifier = Modifier.size(32.dp)
+            )
+        }
+    }
+}
+
+// ... Bagian bawah ini (Card & Chart) SAMA PERSIS, tidak ada yang diubah ...
+
 @Composable
 private fun AdminStatCard(
     title: String,
@@ -209,11 +247,11 @@ private fun ActivityChartCard() {
                     DropdownMenu(
                         expanded = expanded,
                         onDismissRequest = { expanded = false },
-                        containerColor = Color(0xFF1A1A1A)
+                        containerColor = Color.White
                     ) {
                         filterOptions.forEach { option ->
                             DropdownMenuItem(
-                                text = { Text(text = option, color = Color.White, fontWeight = FontWeight.Medium) },
+                                text = { Text(text = option, color = Color.Black, fontWeight = FontWeight.Medium) },
                                 onClick = { selectedFilter = option; expanded = false }
                             )
                         }
