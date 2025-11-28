@@ -25,10 +25,15 @@ import androidx.compose.ui.unit.dp
 import androidx.navigation.NavHostController
 import androidx.navigation.compose.rememberNavController
 import com.example.tubespm.ui.theme.TubesPMTheme
+import com.google.firebase.auth.FirebaseAuth
+import com.google.firebase.firestore.FirebaseFirestore
 import kotlinx.coroutines.delay
 
 @Composable
 fun SplashScreen(navController: NavHostController) {
+    val auth = FirebaseAuth.getInstance()
+    val db = FirebaseFirestore.getInstance()
+
     var startAnimation by remember { mutableStateOf(false) }
 
     val offsetY by animateDpAsState(
@@ -41,19 +46,31 @@ fun SplashScreen(navController: NavHostController) {
         animationSpec = tween(durationMillis = 800)
     )
 
-    LaunchedEffect(true) {
-        startAnimation = true
-        delay(2000)
-        navController.navigate("get_started") {
-            popUpTo("splash") { inclusive = true }
-        }
-    }
-
     LaunchedEffect(Unit) {
         startAnimation = true
         delay(2000)
-        navController.navigate("get_started") {
-            popUpTo("splash") { inclusive = true}
+
+        val currentUser = auth.currentUser
+
+        if (currentUser != null) {
+            // --- SKENARIO 1: SUDAH LOGIN ---
+            // Cek Role di Firestore untuk menentukan arah (Siswa atau Admin)
+            db.collection("users").document(currentUser.uid).get()
+                .addOnSuccessListener { document ->
+                    val role = document.getString("role")
+
+                    // Tentukan tujuan berdasarkan role
+                    val destination = if (role == "admin") "admin_main" else "siswa_main"
+
+                    navController.navigate(destination) {
+                        popUpTo("splash") {inclusive = true}
+                    }
+                }
+        } else {
+            // --- SKENARIO 2: BELUM LOGIN ---
+            navController.navigate("get_started") {
+                popUpTo("splash") { inclusive = true }
+            }
         }
     }
 

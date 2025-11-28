@@ -1,5 +1,6 @@
 package com.example.tubespm.ui.screens.siswa.activity
 
+import android.widget.Toast
 import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.*
 import androidx.compose.material.icons.Icons
@@ -7,10 +8,12 @@ import androidx.compose.material.icons.automirrored.filled.ArrowBack
 import androidx.compose.material3.*
 import androidx.compose.material3.TabRowDefaults.tabIndicatorOffset
 import androidx.compose.runtime.*
+import androidx.compose.runtime.livedata.observeAsState
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.vector.ImageVector
+import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
@@ -31,6 +34,30 @@ fun ActivityTryoutScreen(
 
     // State untuk mengontrol dialog detail
     var showDetailDialogFor by remember { mutableStateOf<ActivityTryoutDetail?>(null) }
+
+    val context = LocalContext.current
+
+    // --- LOGIKA MENERIMA PESAN (TOAST) DARI QUIZ ---
+    // 1. Ambil LiveData dari SavedStateHandle navigasi saat ini
+    val resultMessageState = navController.currentBackStackEntry
+        ?.savedStateHandle
+        ?.getLiveData<String>("submit_message") // Key harus sama
+        ?.observeAsState()
+
+    // 2. Ambil nilainya (.value) secara aman
+    val resultMessage = resultMessageState?.value
+
+    // 3. Jika ada pesan masuk, Tampilkan Toast
+    LaunchedEffect(resultMessage) {
+        resultMessage?.let { message ->
+            Toast.makeText(context, message, Toast.LENGTH_LONG).show()
+
+            // 3. PENTING: Hapus pesan agar tidak muncul lagi saat rotasi layar
+            navController.currentBackStackEntry
+                ?.savedStateHandle
+                ?.remove<String>("submit_message")
+        }
+    }
 
     Column (
         modifier = Modifier

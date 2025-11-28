@@ -83,6 +83,15 @@ dependencies {
     implementation("androidx.compose.material:material-icons-extended")
     implementation("androidx.core:core-splashscreen:1.0.1")
 
+    // WorkManager (Untuk Pengingat Harian Lokal)
+    implementation("androidx.work:work-runtime-ktx:2.9.0")
+
+    // Firebase Cloud Messaging (Untuk Notifikasi dari Admin)
+    implementation("com.google.firebase:firebase-messaging:23.4.0")
+
+    // Untuk menampilkan dialog
+    implementation("androidx.compose.runtime:runtime-livedata:1.6.0") // Sesuaikan versi compose Anda
+
     // Other libraries
     implementation(libs.androidx.core.ktx)
     implementation(libs.androidx.lifecycle.runtime.ktx)

@@ -1,38 +1,32 @@
 package com.example.tubespm.ui.screens.siswa.profile
 
-import android.content.Context
 import android.net.Uri
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import com.example.tubespm.repository.UserRepository
-import com.example.tubespm.utils.ImageUtils
-import com.google.firebase.auth.auth
-import com.google.firebase.firestore.firestore
-import com.google.firebase.Firebase
 import dagger.hilt.android.lifecycle.HiltViewModel
-import dagger.hilt.android.qualifiers.ApplicationContext
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.flow.update
 import kotlinx.coroutines.launch
-import kotlinx.coroutines.tasks.await
 import javax.inject.Inject
 
 data class EditProfileUiState(
     val isLoading: Boolean = false,
     val error: String? = null,
     val isSaving: Boolean = false,
+    val isSaveSuccess: Boolean = false, // Tambahan flag sukses
     val name: String = "",
     val school: String = "",
-    val currentProfileImageUrl: String = "", // Berisi Base64 atau URL lama
+    val currentProfileImageUrl: String = "",
     val newSelectedImageUri: Uri? = null
 )
 
 @HiltViewModel
 class EditProfileViewModel @Inject constructor(
-    private val repository: UserRepository,
-    @ApplicationContext private val context: Context // Inject Context untuk ImageUtils
+    private val repository: UserRepository
+    // Context tidak perlu di-inject di sini lagi karena Repository yang butuh context
 ) : ViewModel() {
 
     private val _uiState = MutableStateFlow(EditProfileUiState(isLoading = true))
@@ -51,8 +45,6 @@ class EditProfileViewModel @Inject constructor(
                         isLoading = false,
                         name = userModel.name,
                         school = userModel.school,
-                        // Ambil dari field 'profilePicture' yang baru diupdate di UserModel
-                        // (Pastikan UserModel.kt Anda sudah menggunakan profilePicture bukan profileImageUrl)
                         currentProfileImageUrl = userModel.profilePicture
                     )
                 }
@@ -66,36 +58,32 @@ class EditProfileViewModel @Inject constructor(
     fun onSchoolChanged(school: String) = _uiState.update { it.copy(school = school) }
     fun onImageSelected(uri: Uri) = _uiState.update { it.copy(newSelectedImageUri = uri) }
 
-    fun saveProfile(onSuccess: () -> Unit) {
-        _uiState.update { it.copy(isSaving = true) }
+    // Reset status setelah navigasi/error
+    fun resetState() {
+        _uiState.update { it.copy(error = null, isSaveSuccess = false) }
+    }
+
+    fun saveProfile() {
+        _uiState.update { it.copy(isSaving = true, error = null) }
 
         val currentState = _uiState.value
-        val userId = Firebase.auth.currentUser?.uid ?: return
 
         viewModelScope.launch {
             try {
-                val updates = mutableMapOf<String, Any>(
-                    "name" to currentState.name,
-                    "school" to currentState.school
+                // PANGGIL REPOSITORY!
+                // Di sinilah logika "Ultra Compression" dijalankan.
+                repository.saveProfile(
+                    name = currentState.name,
+                    school = currentState.school,
+                    newImageUri = currentState.newSelectedImageUri,
+                    currentImageUrl = currentState.currentProfileImageUrl
                 )
 
-                // Jika ada gambar baru dipilih, konversi ke Base64
-                if (currentState.newSelectedImageUri != null) {
-                    val base64Image = ImageUtils.uriToBase64(context, currentState.newSelectedImageUri)
-                    if (base64Image != null) {
-                        updates["profile_picture"] = base64Image // Simpan ke field 'profile_picture'
-                    }
-                }
-
-                // Update Firestore langsung (atau panggil repository jika sudah diupdate)
-                Firebase.firestore.collection("users").document(userId)
-                    .update(updates)
-                    .await()
-
-                _uiState.update { it.copy(isSaving = false) }
-                onSuccess()
+                // Jika berhasil:
+                _uiState.update { it.copy(isSaving = false, isSaveSuccess = true) }
             } catch (e: Exception) {
-                _uiState.update { it.copy(isSaving = false, error = e.localizedMessage) }
+                // Jika gagal (misal file tetap terlalu besar atau koneksi putus)
+                _uiState.update { it.copy(isSaving = false, error = e.message ?: "Gagal menyimpan") }
             }
         }
     }

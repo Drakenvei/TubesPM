@@ -6,13 +6,16 @@ import androidx.compose.material3.*
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
 import androidx.compose.ui.Modifier
+import androidx.navigation.NavController
 import androidx.navigation.compose.currentBackStackEntryAsState
 import androidx.navigation.compose.rememberNavController
 import com.example.tubespm.ui.navigation.BottomNavBar
 import com.example.tubespm.ui.navigation.StudentNavGraph
 
 @Composable
-fun SiswaMainScreen() {
+fun SiswaMainScreen(
+    rootNavController: NavController
+) {
     val navController = rememberNavController()
 
     // Dapatkan rute yang sedang aktif
@@ -38,7 +41,8 @@ fun SiswaMainScreen() {
     ) { innerPadding ->
         StudentNavGraph(
             navController = navController,
-            paddingValues = innerPadding
+            paddingValues = innerPadding,
+            rootNavController = rootNavController
         )
     }
 }
