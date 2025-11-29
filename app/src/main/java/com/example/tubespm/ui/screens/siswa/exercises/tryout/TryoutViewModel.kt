@@ -8,12 +8,14 @@ import com.example.tubespm.repository.ActivityRepository
 import com.example.tubespm.repository.ExerciseCatalogRepository
 import com.google.firebase.firestore.core.Query
 import dagger.hilt.android.lifecycle.HiltViewModel
+import kotlinx.coroutines.channels.Channel
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.flow.catch
 import kotlinx.coroutines.flow.combine
 import kotlinx.coroutines.flow.map
+import kotlinx.coroutines.flow.receiveAsFlow
 import kotlinx.coroutines.flow.update
 import kotlinx.coroutines.launch
 import javax.inject.Inject
@@ -30,6 +32,10 @@ data class TryoutUiState(
     val error: String? = null
 )
 
+sealed class TryoutEvent {
+    data class ShowToast(val message: String) : TryoutEvent()
+}
+
 @HiltViewModel
 class TryoutViewModel @Inject constructor(
     private val repository: ExerciseCatalogRepository, // Hilt akan menyuntikkan ExerciseCatalogRepositoryImpl
@@ -42,6 +48,14 @@ class TryoutViewModel @Inject constructor(
     // 1. StateFlow untuk menyimpan query pencarian
     private val _searchQuery = MutableStateFlow("")
     val searchQuery: StateFlow<String> = _searchQuery.asStateFlow()
+
+    // --- CHANNEL EVENT ---
+    private val _events = Channel<TryoutEvent>()
+    val events = _events.receiveAsFlow()
+
+    // --- STATE UNTUK DIALOG KONFIRMASI ---
+    private val _showConfirmationDialog = MutableStateFlow<Tryout?>(null)
+    val showConfirmationDialog = _showConfirmationDialog.asStateFlow()
 
     init {
         observeFilteredTryouts()
@@ -99,22 +113,30 @@ class TryoutViewModel @Inject constructor(
         }
     }
 
+    // --- FUNGSI UNTUK MEMICU DIALOG ---
+    fun onTakeTryoutClicked(tryout: Tryout) {
+        _showConfirmationDialog.value = tryout
+    }
+
+    fun onDismissDialog() {
+        _showConfirmationDialog.value = null
+    }
+
     /**
      * Dipanggil saat user menekan tombol "Ambil Tryout" di dialog.
      */
-    fun takeTryout(tryout: Tryout) {
+    fun onConfirmTakeTryout() {
+        val tryout = _showConfirmationDialog.value ?: return
+        _showConfirmationDialog.value = null // Tutup dialog
+
         viewModelScope.launch {
-            // TAMBAHKAN BLOK TRY-CATCH
             try {
                 activityRepository.addTryoutActivity(tryout)
-                // Jika berhasil, Halaman 'Activity' akan otomatis update
-
+                // Kirim Event Toast Sukses
+                _events.send(TryoutEvent.ShowToast("Tryout berhasil diambil! Cek menu Activity."))
             } catch (e: Exception) {
-                // Jika GAGAL, tangkap errornya
-                Log.e("TryoutViewModel", "Gagal mengambil tryout: ${e.message}")
-
-                // TODO: Tampilkan pesan error ke user (misalnya via event/state)
-                // Untuk saat ini, kita hanya akan mencatatnya di Logcat
+                Log.e("TryoutViewModel", "Gagal: ${e.message}")
+                _events.send(TryoutEvent.ShowToast("Gagal mengambil tryout."))
             }
         }
     }

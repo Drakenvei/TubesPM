@@ -1,5 +1,6 @@
 package com.example.tubespm.ui.screens.tryout
 
+import android.widget.Toast
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.*
@@ -19,6 +20,7 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
@@ -28,8 +30,10 @@ import androidx.hilt.navigation.compose.hiltViewModel
 import com.example.tubespm.data.model.Section
 import com.example.tubespm.data.model.Tryout
 import com.example.tubespm.ui.screens.siswa.exercises.tryout.TryoutCatalogItem
+import com.example.tubespm.ui.screens.siswa.exercises.tryout.TryoutEvent
 import com.example.tubespm.ui.screens.siswa.exercises.tryout.TryoutViewModel
 import com.google.firebase.firestore.Query
+import kotlinx.coroutines.flow.collectLatest
 
 //import com.example.tubespm.data.model.* // bisa juga import semua
 
@@ -45,8 +49,24 @@ fun TryoutScreen(
     // Ambil state query pencarian dari ViewModel
     val searchQuery by viewModel.searchQuery.collectAsState()
 
+    // Ambil state dialog dari ViewModel
+    val tryoutToConfirm by viewModel.showConfirmationDialog.collectAsState()
+
+    val context = LocalContext.current
+
     // State lokal untuk dialog bisa tetap di sini
     var selectedTryoutItem by remember { mutableStateOf<TryoutCatalogItem?>(null) }
+
+    // --- LISTEN EVENT TOAST ---
+    LaunchedEffect(Unit) {
+        viewModel.events.collectLatest { event ->
+            when (event) {
+                is TryoutEvent.ShowToast -> {
+                    Toast.makeText(context, event.message, Toast.LENGTH_SHORT).show()
+                }
+            }
+        }
+    }
 
     LaunchedEffect(initialQuery) {
         if (initialQuery.isNotBlank()) {
@@ -123,11 +143,33 @@ fun TryoutScreen(
             onDismiss = { selectedTryoutItem = null },
             onStart = {
                 // Aksi ketika tombol "Ambil Tryout" ditekan
-                viewModel.takeTryout(item.tryout)
+                viewModel.onTakeTryoutClicked(item.tryout)
 
                 // Tutup dialog setelah diambil
                 // Misalnya navigasi ke halaman pengerjaan
                 selectedTryoutItem = null
+            }
+        )
+    }
+
+    // --- 2. DIALOG KONFIRMASI (YAKIN AMBIL?) ---
+    if (tryoutToConfirm != null) {
+        AlertDialog(
+            onDismissRequest = { viewModel.onDismissDialog() },
+            title = { Text("Ambil Tryout?") },
+            text = { Text("Apakah Anda yakin ingin menambahkan '${tryoutToConfirm?.title}' ke daftar aktivitas Anda?") },
+            confirmButton = {
+                Button(
+                    onClick = { viewModel.onConfirmTakeTryout() },
+                    colors = ButtonDefaults.buttonColors(containerColor = Color(0xFF30D158))
+                ) {
+                    Text("Ya, Ambil")
+                }
+            },
+            dismissButton = {
+                OutlinedButton(onClick = { viewModel.onDismissDialog() }) {
+                    Text("Batal")
+                }
             }
         )
     }
