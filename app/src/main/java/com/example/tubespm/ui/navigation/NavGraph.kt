@@ -19,6 +19,9 @@ import com.example.tubespm.ui.screens.admin.homepage.AdminHomeScreen
 import com.example.tubespm.ui.screens.admin.profile.AdminProfileScreen
 import com.example.tubespm.ui.screens.admin.management.ManajemenTryoutScreen
 import com.example.tubespm.ui.screens.admin.management.EditQuestionScreen
+import com.example.tubespm.ui.screens.admin.management.CreateQuestionScreen
+import com.example.tubespm.ui.screens.admin.management.CreateLatihanSoalScreen
+import com.example.tubespm.ui.screens.admin.management.CreateTryoutScreen
 import com.example.tubespm.ui.screens.pembahasan.PembahasanScreen
 import com.example.tubespm.ui.screens.siswa.activity.ActivityLatihanScreen
 import com.example.tubespm.ui.screens.siswa.activity.ActivityScreen
@@ -190,12 +193,14 @@ fun AdminNavGraph(
         composable("admin_management") {
             ManajemenTryoutScreen(
                 paddingValuesFromNavHost = paddingValues,
-                // PERBAIKAN DI SINI:
-                // Tangkap 4 parameter yang dikirim dari ManajemenTryoutScreen
                 onGoToEditQuestion = { tryoutId, questionId, paketName, questionNumber ->
-
-                    // Gunakan parameter tersebut untuk navigasi
                     navController.navigate("admin_edit_question/$tryoutId/$questionId/$paketName/$questionNumber")
+                },
+                onNavigateToCreateTryout = {
+                    navController.navigate("admin_create_tryout")
+                },
+                onNavigateToCreateLatihan = {
+                    navController.navigate("admin_create_latihan")
                 }
             )
         }
@@ -225,6 +230,65 @@ fun AdminNavGraph(
                 questionNumber = questionNumber,
                 paddingValuesFromNavHost = paddingValues,
                 onBackClick = { navController.popBackStack() }
+            )
+        }
+
+        // ------------ Create Question ------------
+        composable(
+            route = "admin_create_question/{type}/{parentId}/{paketName}/{questionNumber}",
+            arguments = listOf(
+                navArgument("type") { type = NavType.StringType },
+                navArgument("parentId") { type = NavType.StringType },
+                navArgument("paketName") { type = NavType.StringType },
+                navArgument("questionNumber") { type = NavType.IntType }
+            )
+        ) { backStackEntry ->
+            val type = backStackEntry.arguments?.getString("type") ?: ""
+            val parentId = backStackEntry.arguments?.getString("parentId") ?: ""
+            val paketName = backStackEntry.arguments?.getString("paketName") ?: ""
+            val questionNumber = backStackEntry.arguments?.getInt("questionNumber") ?: 1
+
+            CreateQuestionScreen(
+                parentId = parentId,
+                type = type,
+                paketName = paketName,
+                questionNumber = questionNumber,
+                paddingValuesFromNavHost = paddingValues,
+                onBackClick = { navController.popBackStack() },
+                onQuestionCreated = {
+                    // Kembali ke halaman sebelumnya setelah berhasil
+                    navController.popBackStack()
+                }
+            )
+        }
+
+        // ------------ Create Latihan Soal ------------
+        composable("admin_create_latihan") {
+            CreateLatihanSoalScreen(
+                paddingValuesFromNavHost = paddingValues,
+                onBackClick = { navController.popBackStack() },
+                onLatihanCreated = { latihanId ->
+                    // Navigasi ke Create Question Screen
+                    navController.navigate("admin_create_question/latihan_soal/$latihanId/Latihan Soal Baru/1") {
+                        popUpTo("admin_management") { inclusive = false }
+                    }
+                }
+            )
+        }
+
+        // ------------ Create Tryout ------------
+        composable("admin_create_tryout") {
+            CreateTryoutScreen(
+                paddingValuesFromNavHost = paddingValues,
+                onBackClick = { navController.popBackStack() },
+                onTryoutCreated = { tryoutId ->
+                    // Navigasi ke Edit Management untuk menambah section
+                    // Atau bisa langsung ke Create Section Screen
+                    navController.navigate("admin_management") {
+                        popUpTo("admin_management") { inclusive = false }
+                        // Setelah tryout dibuat, admin bisa klik settings untuk tambah section
+                    }
+                }
             )
         }
 

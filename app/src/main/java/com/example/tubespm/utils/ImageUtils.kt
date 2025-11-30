@@ -7,6 +7,9 @@ import android.net.Uri
 import android.util.Base64
 import java.io.ByteArrayOutputStream
 import java.io.InputStream
+import com.google.firebase.storage.FirebaseStorage
+import kotlinx.coroutines.tasks.await
+import java.util.UUID
 
 object ImageUtils {
     // Ubah Uri -> Base64
@@ -30,5 +33,37 @@ object ImageUtils {
         bitmap.compress(Bitmap.CompressFormat.JPEG, 50, outputStream)
         val byteArray = outputStream.toByteArray()
         return Base64.encodeToString(byteArray, Base64.DEFAULT)
+    }
+
+    private val storage = FirebaseStorage.getInstance()
+    private val storageRef = storage.reference
+
+    /**
+     * Upload gambar ke Firebase Storage dan return download URL
+     * @param uri URI gambar dari device
+     * @param folderPath Path folder di storage (default: "soal_images")
+     * @return Download URL string
+     */
+    suspend fun uploadImageToFirebaseStorage(
+        uri: Uri,
+        folderPath: String = "soal_images"
+    ): String {
+        val fileName = "${UUID.randomUUID()}.jpg"
+        val imageRef = storageRef.child("$folderPath/$fileName")
+
+        val uploadTask = imageRef.putFile(uri).await()
+        return uploadTask.storage.downloadUrl.await().toString()
+    }
+
+    /**
+     * Delete gambar dari Firebase Storage
+     */
+    suspend fun deleteImageFromFirebaseStorage(imageUrl: String) {
+        try {
+            val imageRef = storage.getReferenceFromUrl(imageUrl)
+            imageRef.delete().await()
+        } catch (e: Exception) {
+            // Ignore error jika file tidak ditemukan
+        }
     }
 }

@@ -1,5 +1,7 @@
 package com.example.tubespm.repository
 
+import com.example.tubespm.data.model.QuizQuestion
+import kotlinx.coroutines.tasks.await
 import com.example.tubespm.data.model.LatihanSoal
 import com.example.tubespm.data.model.Tryout
 import com.google.firebase.firestore.FirebaseFirestore
@@ -36,5 +38,47 @@ class ExerciseCatalogRepositoryImpl @Inject constructor(
             .map { snapshot ->
                 snapshot.toObjects(LatihanSoal::class.java)
             }
+    }
+
+    override suspend fun createQuestion(
+        parentId: String,
+        type: String,
+        question: QuizQuestion
+    ): String {
+        val collectionName = if (type == "tryout") "tryouts" else "latihan_soal"
+
+        // Buat dokumen baru di subcollection questions
+        val questionRef = db.collection(collectionName)
+            .document(parentId)
+            .collection("questions")
+            .document()
+
+        // Set data dengan ID yang sudah di-generate
+        val questionWithId = question.copy(id = questionRef.id)
+        questionRef.set(questionWithId).await()
+
+        return questionRef.id
+    }
+
+    override suspend fun updateQuestionCount(parentId: String, type: String, count: Int) {
+        val collectionName = if (type == "tryout") "tryouts" else "latihan_soal"
+        db.collection(collectionName)
+            .document(parentId)
+            .update("questionCount", count)
+            .await()
+    }
+
+    override suspend fun createLatihanSoal(latihan: LatihanSoal): String {
+        val docRef = db.collection("latihan_soal").document()
+        val latihanWithId = latihan.copy(id = docRef.id)
+        docRef.set(latihanWithId).await()
+        return docRef.id
+    }
+
+    override suspend fun createTryout(tryout: Tryout): String {
+        val docRef = db.collection("tryouts").document()
+        val tryoutWithId = tryout.copy(id = docRef.id)
+        docRef.set(tryoutWithId).await()
+        return docRef.id
     }
 }

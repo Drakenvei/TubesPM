@@ -46,6 +46,8 @@ fun ManajemenTryoutScreen(
     paddingValuesFromNavHost: PaddingValues,
     // Update signature callback sesuai NavGraph: (tryoutId, questionId, paketName, questionNumber)
     onGoToEditQuestion: (String, String, String, Int) -> Unit,
+    onNavigateToCreateTryout: () -> Unit, // Tambahkan ini
+    onNavigateToCreateLatihan: () -> Unit, // Tambahkan ini
     viewModel: ManajemenTryoutViewModel = viewModel()
 ) {
     // 1. Observasi State dari ViewModel
@@ -91,7 +93,13 @@ fun ManajemenTryoutScreen(
         },
         floatingActionButton = {
             FloatingActionButton(
-                onClick = { /* TODO: Tambah Data */ },
+                onClick = {
+                    if (selectedTab == 0) {
+                        onNavigateToCreateTryout()
+                    } else {
+                        onNavigateToCreateLatihan()
+                    }
+                },
                 containerColor = Color(0xFF00C853),
                 contentColor = Color.White,
                 shape = CircleShape
@@ -144,7 +152,10 @@ fun ManajemenTryoutScreen(
                         )
                     }
                     1 -> {
-                        LatihanSoalTabContent(contentPadding = PaddingValues(0.dp))
+                        LatihanSoalTabContent(
+                            contentPadding = PaddingValues(0.dp),
+                            onAddClick = onNavigateToCreateLatihan
+                        )
                     }
                 }
             }
@@ -305,8 +316,9 @@ fun ManajemenTryoutScreenPreview() {
     TubesPMTheme {
         ManajemenTryoutScreen(
             paddingValuesFromNavHost = PaddingValues(0.dp),
-            // Mock lambda dengan 4 parameter agar preview tidak error
-            onGoToEditQuestion = { _, _, _, _ -> }
+            onGoToEditQuestion = { _, _, _, _ -> },
+            onNavigateToCreateTryout = { },
+            onNavigateToCreateLatihan = { }
         )
     }
 }

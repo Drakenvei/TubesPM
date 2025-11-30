@@ -6,6 +6,7 @@ import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.filled.Add
 import androidx.compose.material.icons.filled.Description
 import androidx.compose.material.icons.filled.Edit
 import androidx.compose.material.icons.filled.Search
@@ -26,68 +27,87 @@ import androidx.lifecycle.viewmodel.compose.viewModel
 @Composable
 fun LatihanSoalTabContent(
     contentPadding: PaddingValues,
+    onAddClick: () -> Unit, // Tambahkan parameter ini
     viewModel: ManajemenLatihanSoalViewModel = viewModel()
 ) {
     val uiState by viewModel.uiState.collectAsState()
     val searchQuery by viewModel.searchQuery.collectAsState()
 
-    Column(
-        modifier = Modifier
-            .fillMaxSize()
-            .background(Color(0xFFF9F9F9)) // Background sedikit lebih terang/bersih
-            .padding(contentPadding)
-    ) {
-
-        // ===============================
-        // Search Bar (Style diperbarui sedikit agar rounded)
-        // ===============================
-        OutlinedTextField(
-            value = searchQuery,
-            onValueChange = { viewModel.onSearchQueryChanged(it) },
-            modifier = Modifier
-                .fillMaxWidth()
-                .padding(16.dp),
-            placeholder = { Text("Cari Latihan Soal...", color = Color.Gray) },
-            leadingIcon = {
-                Icon(Icons.Filled.Search, contentDescription = "Search", tint = Color.Gray)
-            },
-            shape = RoundedCornerShape(12.dp), // Lebih rounded seperti siswa
-            colors = OutlinedTextFieldDefaults.colors(
-                focusedContainerColor = Color.White,
-                unfocusedContainerColor = Color.White,
-                focusedBorderColor = Color(0xFFE0E0E0),
-                unfocusedBorderColor = Color.Transparent
-            ),
-            singleLine = true
-        )
-
-        // ===============================
-        // LIST PAKET SOAL
-        // ===============================
-        if (uiState.isLoading) {
-            Box(modifier = Modifier.fillMaxSize(), contentAlignment = Alignment.Center) {
-                CircularProgressIndicator(color = Color(0xFFE61C5D))
-            }
-        } else {
-            LazyColumn(
-                modifier = Modifier.fillMaxSize(),
-                contentPadding = PaddingValues(horizontal = 16.dp, vertical = 8.dp),
-                verticalArrangement = Arrangement.spacedBy(16.dp)
+    Scaffold(
+        floatingActionButton = {
+            FloatingActionButton(
+                onClick = onAddClick,
+                containerColor = Color(0xFF00C853),
+                contentColor = Color.White,
+                shape = androidx.compose.foundation.shape.CircleShape
             ) {
-                if (uiState.paketSoalList.isEmpty()) {
-                    item {
-                        Box(
-                            modifier = Modifier
-                                .fillMaxWidth()
-                                .padding(32.dp),
-                            contentAlignment = Alignment.Center
-                        ) {
-                            Text("Data tidak ditemukan", color = Color.Gray)
+                Icon(
+                    imageVector = Icons.Filled.Add,
+                    contentDescription = "Add",
+                    modifier = Modifier.size(32.dp)
+                )
+            }
+        }
+    ) { innerPadding ->
+        Column(
+            modifier = Modifier
+                .fillMaxSize()
+                .background(Color(0xFFF9F9F9))
+                .padding(innerPadding)
+                .padding(contentPadding)
+        ) {
+
+            // ===============================
+            // Search Bar (Style diperbarui sedikit agar rounded)
+            // ===============================
+            OutlinedTextField(
+                value = searchQuery,
+                onValueChange = { viewModel.onSearchQueryChanged(it) },
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .padding(16.dp),
+                placeholder = { Text("Cari Latihan Soal...", color = Color.Gray) },
+                leadingIcon = {
+                    Icon(Icons.Filled.Search, contentDescription = "Search", tint = Color.Gray)
+                },
+                shape = RoundedCornerShape(12.dp), // Lebih rounded seperti siswa
+                colors = OutlinedTextFieldDefaults.colors(
+                    focusedContainerColor = Color.White,
+                    unfocusedContainerColor = Color.White,
+                    focusedBorderColor = Color(0xFFE0E0E0),
+                    unfocusedBorderColor = Color.Transparent
+                ),
+                singleLine = true
+            )
+
+            // ===============================
+            // LIST PAKET SOAL
+            // ===============================
+            if (uiState.isLoading) {
+                Box(modifier = Modifier.fillMaxSize(), contentAlignment = Alignment.Center) {
+                    CircularProgressIndicator(color = Color(0xFFE61C5D))
+                }
+            } else {
+                LazyColumn(
+                    modifier = Modifier.fillMaxSize(),
+                    contentPadding = PaddingValues(horizontal = 16.dp, vertical = 8.dp),
+                    verticalArrangement = Arrangement.spacedBy(16.dp)
+                ) {
+                    if (uiState.paketSoalList.isEmpty()) {
+                        item {
+                            Box(
+                                modifier = Modifier
+                                    .fillMaxWidth()
+                                    .padding(32.dp),
+                                contentAlignment = Alignment.Center
+                            ) {
+                                Text("Data tidak ditemukan", color = Color.Gray)
+                            }
                         }
-                    }
-                } else {
-                    items(uiState.paketSoalList) { paket ->
-                        PaketSoalAdminCard(paket)
+                    } else {
+                        items(uiState.paketSoalList) { paket ->
+                            PaketSoalAdminCard(paket)
+                        }
                     }
                 }
             }
