@@ -13,5 +13,7 @@ data class QuizQuestion(
     val questionImage: String? = null,
     val options: List<String> = emptyList(),
     val correctAnswer: String = "",
-    val discussion: String = ""
+    val discussion: String = "",
+    val optionImages: List<String?> = emptyList(),
+    val explanationImage: String? = null
 )
