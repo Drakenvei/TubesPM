@@ -27,7 +27,8 @@ import androidx.lifecycle.viewmodel.compose.viewModel
 @Composable
 fun LatihanSoalTabContent(
     contentPadding: PaddingValues,
-    onAddClick: () -> Unit, // Tambahkan parameter ini
+    onAddClick: () -> Unit,
+    onEditClick: (String, String, String, String, Int) -> Unit, // (type, latihanId, questionId, paketName, questionNumber)
     viewModel: ManajemenLatihanSoalViewModel = viewModel()
 ) {
     val uiState by viewModel.uiState.collectAsState()
@@ -106,7 +107,19 @@ fun LatihanSoalTabContent(
                         }
                     } else {
                         items(uiState.paketSoalList) { paket ->
-                            PaketSoalAdminCard(paket)
+                            PaketSoalAdminCard(
+                                paket = paket,
+                                onEditClick = {
+                                    // Navigate to edit latihan soal (nama dulu)
+                                    onEditClick(
+                                        "latihan_soal",  // Type: latihan_soal
+                                        paket.id,
+                                        "edit_nama", // Special ID untuk edit nama
+                                        paket.nama,
+                                        0
+                                    )
+                                }
+                            )
                         }
                     }
                 }
@@ -119,7 +132,10 @@ fun LatihanSoalTabContent(
 // CARD ITEM BARU (Style User + Tombol Edit Admin)
 // ======================================================
 @Composable
-fun PaketSoalAdminCard(paket: PaketSoal) {
+fun PaketSoalAdminCard(
+    paket: PaketSoal,
+    onEditClick: () -> Unit = {}
+) {
     Card(
         modifier = Modifier
             .fillMaxWidth(),
@@ -151,7 +167,7 @@ fun PaketSoalAdminCard(paket: PaketSoal) {
                 // Tombol Edit (Khas Admin)
                 // Dibuat semi-transparan putih agar menyatu
                 IconButton(
-                    onClick = { /* TODO: Navigasi ke Edit */ },
+                    onClick = onEditClick,
                     modifier = Modifier
                         .size(32.dp)
                         .offset(x = 8.dp, y = (-8).dp) // Sedikit geser ke pojok

@@ -95,4 +95,20 @@ class EditManagementViewModel : ViewModel() {
                 }
         }
     }
+
+    /**
+     * Mengubah status tryout menjadi active
+     */
+    fun activatePackage(tryoutId: String, onSuccess: () -> Unit) {
+        viewModelScope.launch {
+            db.collection("tryouts").document(tryoutId)
+                .update("status", "active")
+                .addOnSuccessListener {
+                    onSuccess()
+                }
+                .addOnFailureListener { e ->
+                    Log.e("EditManagementVM", "Gagal activate status", e)
+                }
+        }
+    }
 }

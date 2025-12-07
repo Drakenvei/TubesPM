@@ -1,5 +1,8 @@
 package com.example.tubespm.ui.screens.admin.management
 
+import android.net.Uri
+import androidx.activity.compose.rememberLauncherForActivityResult
+import androidx.activity.result.contract.ActivityResultContracts
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border
 import androidx.compose.foundation.clickable
@@ -20,12 +23,14 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.composed
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.text.TextStyle
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.lifecycle.viewmodel.compose.viewModel
 import androidx.compose.foundation.layout.PaddingValues
+import coil.compose.AsyncImage
 
 data class AnswerOption(
     val label: Char,
@@ -35,18 +40,19 @@ data class AnswerOption(
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun EditQuestionScreen(
-    tryoutId: String,           // <-- Perlu ID Tryout untuk database
+    tryoutId: String,           // <-- Perlu ID Tryout/Latihan untuk database
     questionId: String,         // <-- Perlu ID Soal untuk database
     paketName: String,
     questionNumber: Int,
     paddingValuesFromNavHost: PaddingValues,
     onBackClick: () -> Unit,
+    type: String = "tryout",    // <-- "tryout" atau "latihan_soal"
     // Inject ViewModel
     viewModel: EditQuestionViewModel = viewModel()
 ) {
     // Load data saat pertama kali dibuka
     LaunchedEffect(Unit) {
-        viewModel.loadQuestion(tryoutId, questionId)
+        viewModel.loadQuestion(tryoutId, questionId, type)
     }
 
     val uiState by viewModel.uiState.collectAsState()
@@ -78,7 +84,7 @@ fun EditQuestionScreen(
                 },
                 actions = {
                     // Tombol Save
-                    IconButton(onClick = { viewModel.saveQuestion(tryoutId, questionId) }) {
+                    IconButton(onClick = { viewModel.saveQuestion(tryoutId, questionId, type) }) {
                         if (uiState.isSaving) {
                             CircularProgressIndicator(color = Color.White, modifier = Modifier.size(24.dp))
                         } else {
@@ -112,43 +118,74 @@ fun EditQuestionScreen(
                     Text(text = "Question $questionNumber", fontSize = 22.sp, fontWeight = FontWeight.Bold, color = Color(0xFF212121))
                     Spacer(modifier = Modifier.height(16.dp))
 
-                    // ------------------ INPUT QUESTION ------------------
-                    Text(text = "Input Question", fontSize = 14.sp, fontWeight = FontWeight.SemiBold, color = Color(0xFF757575))
+                    // ------------------ TULIS SOAL ------------------
+                    Text(text = "Tulis Soal", fontSize = 14.sp, fontWeight = FontWeight.SemiBold, color = Color(0xFF757575))
                     Spacer(modifier = Modifier.height(4.dp))
 
                     OutlinedTextField(
                         value = uiState.questionData.questionText,
                         onValueChange = { viewModel.updateQuestionText(it) },
                         modifier = Modifier.fillMaxWidth(),
-                        placeholder = { Text("Add Here", color = Color(0xFF9E9E9E)) },
+                        placeholder = { Text("Tulis Soal Di Sini", color = Color(0xFF9E9E9E)) },
                         shape = RoundedCornerShape(6.dp),
                         colors = OutlinedTextFieldDefaults.colors(
                             focusedContainerColor = Color(0xFFE0E0E0),
                             unfocusedContainerColor = Color(0xFFE0E0E0),
                             focusedBorderColor = Color.Transparent,
-                            unfocusedBorderColor = Color.Transparent
+                            unfocusedBorderColor = Color.Transparent,
+                            focusedTextColor = Color(0xFF212121),
+                            unfocusedTextColor = Color(0xFF212121),
+                            cursorColor = Color(0xFF212121)
                         )
                     )
 
                     Spacer(modifier = Modifier.height(16.dp))
 
-                    // ------------------ ADD PICTURE ------------------
-                    Text(text = "Add Picture", fontSize = 14.sp, fontWeight = FontWeight.SemiBold, color = Color(0xFF757575))
+                    // ------------------ TAMBAH GAMBAR ------------------
+                    Text(text = "Tambah Gambar", fontSize = 14.sp, fontWeight = FontWeight.SemiBold, color = Color(0xFF757575))
                     Spacer(modifier = Modifier.height(4.dp))
+                    
+                    val imagePickerLauncher = rememberLauncherForActivityResult(
+                        contract = ActivityResultContracts.GetContent()
+                    ) { uri ->
+                        uri?.let { viewModel.updateQuestionImageUri(it) }
+                    }
+                    
                     Box(
                         modifier = Modifier
                             .size(120.dp)
                             .background(Color(0xFFE0E0E0), RoundedCornerShape(6.dp))
-                            .border(1.dp, Color(0xFFBDBDBD), RoundedCornerShape(6.dp)),
+                            .border(1.dp, Color(0xFFBDBDBD), RoundedCornerShape(6.dp))
+                            .clickable { imagePickerLauncher.launch("image/*") },
                         contentAlignment = Alignment.Center
                     ) {
-                        Icon(Icons.Default.Add, contentDescription = "Add Picture", tint = Color(0xFF9E9E9E), modifier = Modifier.size(32.dp))
+                        when {
+                            uiState.questionImageUri != null -> {
+                                AsyncImage(
+                                    model = uiState.questionImageUri,
+                                    contentDescription = "Gambar Soal",
+                                    modifier = Modifier.fillMaxSize(),
+                                    contentScale = ContentScale.Crop
+                                )
+                            }
+                            uiState.questionData.questionImage != null -> {
+                                AsyncImage(
+                                    model = uiState.questionData.questionImage,
+                                    contentDescription = "Gambar Soal",
+                                    modifier = Modifier.fillMaxSize(),
+                                    contentScale = ContentScale.Crop
+                                )
+                            }
+                            else -> {
+                                Icon(Icons.Default.Add, contentDescription = "Tambah Gambar", tint = Color(0xFF9E9E9E), modifier = Modifier.size(32.dp))
+                            }
+                        }
                     }
 
                     Spacer(modifier = Modifier.height(20.dp))
 
-                    // ------------------ INPUT ANSWER ------------------
-                    Text(text = "Input Answer", fontSize = 14.sp, fontWeight = FontWeight.SemiBold, color = Color(0xFF757575))
+                    // ------------------ PILIHAN JAWABAN ------------------
+                    Text(text = "Pilihan Jawaban", fontSize = 14.sp, fontWeight = FontWeight.SemiBold, color = Color(0xFF757575))
                     Spacer(modifier = Modifier.height(4.dp))
 
                     Column(modifier = Modifier.fillMaxWidth().background(Color(0xFFE0E0E0), RoundedCornerShape(6.dp))) {
@@ -168,12 +205,18 @@ fun EditQuestionScreen(
                                     modifier = Modifier.weight(1f).height(32.dp),
                                     placeholder = { Text(option.placeholder, color = Color(0xFFB0B0B0), fontSize = 13.sp) },
                                     singleLine = true,
-                                    textStyle = TextStyle(fontSize = 13.sp, color = Color.Black),
+                                    textStyle = TextStyle(
+                                        fontSize = 13.sp,
+                                        color = Color.Black
+                                    ),
                                     colors = OutlinedTextFieldDefaults.colors(
                                         focusedContainerColor = Color(0xFFE0E0E0),
                                         unfocusedContainerColor = Color(0xFFE0E0E0),
                                         focusedBorderColor = Color.Transparent,
-                                        unfocusedBorderColor = Color.Transparent
+                                        unfocusedBorderColor = Color.Transparent,
+                                        focusedTextColor = Color.Black,
+                                        unfocusedTextColor = Color.Black,
+                                        cursorColor = Color.Black
                                     )
                                 )
 
@@ -201,19 +244,22 @@ fun EditQuestionScreen(
 
                     Spacer(modifier = Modifier.height(20.dp))
 
-                    // ------------------ INPUT DISCUSSION ------------------
-                    Text(text = "Input Discussion", fontSize = 14.sp, fontWeight = FontWeight.SemiBold, color = Color(0xFF757575))
+                    // ------------------ PEMBAHASAN ------------------
+                    Text(text = "Pembahasan", fontSize = 14.sp, fontWeight = FontWeight.SemiBold, color = Color(0xFF757575))
                     Spacer(modifier = Modifier.height(4.dp))
                     OutlinedTextField(
                         value = uiState.questionData.discussion,
                         onValueChange = { viewModel.updateDiscussionText(it) },
                         modifier = Modifier.fillMaxWidth().height(120.dp),
-                        placeholder = { Text("Add Here", color = Color(0xFF9E9E9E)) },
+                        placeholder = { Text("Tulis Pembahasan Di Sini", color = Color(0xFF9E9E9E)) },
                         colors = OutlinedTextFieldDefaults.colors(
                             focusedContainerColor = Color(0xFFE0E0E0),
                             unfocusedContainerColor = Color(0xFFE0E0E0),
                             focusedBorderColor = Color.Transparent,
-                            unfocusedBorderColor = Color.Transparent
+                            unfocusedBorderColor = Color.Transparent,
+                            focusedTextColor = Color(0xFF212121),
+                            unfocusedTextColor = Color(0xFF212121),
+                            cursorColor = Color(0xFF212121)
                         )
                     )
                 }

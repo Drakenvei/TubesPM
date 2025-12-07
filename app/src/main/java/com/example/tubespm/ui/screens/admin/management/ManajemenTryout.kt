@@ -44,8 +44,8 @@ data class TryoutPackage(
 @Composable
 fun ManajemenTryoutScreen(
     paddingValuesFromNavHost: PaddingValues,
-    // Update signature callback sesuai NavGraph: (tryoutId, questionId, paketName, questionNumber)
-    onGoToEditQuestion: (String, String, String, Int) -> Unit,
+    // Update signature callback: (type, parentId, questionId, paketName, questionNumber)
+    onGoToEditQuestion: (String, String, String, String, Int) -> Unit,
     onNavigateToCreateTryout: () -> Unit, // Tambahkan ini
     onNavigateToCreateLatihan: () -> Unit, // Tambahkan ini
     viewModel: ManajemenTryoutViewModel = viewModel()
@@ -154,7 +154,8 @@ fun ManajemenTryoutScreen(
                     1 -> {
                         LatihanSoalTabContent(
                             contentPadding = PaddingValues(0.dp),
-                            onAddClick = onNavigateToCreateLatihan
+                            onAddClick = onNavigateToCreateLatihan,
+                            onEditClick = onGoToEditQuestion
                         )
                     }
                 }
@@ -174,15 +175,9 @@ fun ManajemenTryoutScreen(
                         selectedPackageForEdit = null
                     },
                     onAddMoreSection = { },
-                    // Adapter: Karena EditManagementDialog memanggil callback tanpa parameter (atau dummy),
-                    // kita isi parameter yang dibutuhkan NavGraph di sini.
-                    onGoToEditQuestion = {
-                        onGoToEditQuestion(
-                            selectedPackageForEdit!!.id, // Tryout ID
-                            "q_default",                 // Default Question ID (atau nanti dari list)
-                            selectedPackageForEdit!!.name, // Nama Paket
-                            1                            // Nomor Soal default
-                        )
+                    // Callback untuk navigate ke edit question
+                    onGoToEditQuestion = { type, parentId, questionId, paketName, questionNumber ->
+                        onGoToEditQuestion(type, parentId, questionId, paketName, questionNumber)
                     }
                 )
             }
@@ -204,7 +199,7 @@ fun TryoutTabContent(
             modifier = Modifier
                 .fillMaxWidth()
                 .padding(horizontal = 16.dp, vertical = 12.dp),
-            placeholder = { Text("Search Tryout", color = Color.Gray) },
+            placeholder = { Text("Cari Tryout...", color = Color.Gray) },
             leadingIcon = { Icon(Icons.Default.Search, contentDescription = "Search", tint = Color.Gray) },
             colors = OutlinedTextFieldDefaults.colors(
                 focusedContainerColor = Color(0xFFE0E0E0),
@@ -316,7 +311,7 @@ fun ManajemenTryoutScreenPreview() {
     TubesPMTheme {
         ManajemenTryoutScreen(
             paddingValuesFromNavHost = PaddingValues(0.dp),
-            onGoToEditQuestion = { _, _, _, _ -> },
+            onGoToEditQuestion = { _, _, _, _, _ -> },
             onNavigateToCreateTryout = { },
             onNavigateToCreateLatihan = { }
         )

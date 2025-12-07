@@ -108,7 +108,10 @@ fun CreateLatihanSoalScreen(
                         focusedContainerColor = Color(0xFFE0E0E0),
                         unfocusedContainerColor = Color(0xFFE0E0E0),
                         focusedBorderColor = Color.Transparent,
-                        unfocusedBorderColor = Color.Transparent
+                        unfocusedBorderColor = Color.Transparent,
+                        focusedTextColor = Color(0xFF212121),
+                        unfocusedTextColor = Color(0xFF212121),
+                        cursorColor = Color(0xFF212121)
                     )
                 )
 
@@ -132,7 +135,10 @@ fun CreateLatihanSoalScreen(
                         focusedContainerColor = Color(0xFFE0E0E0),
                         unfocusedContainerColor = Color(0xFFE0E0E0),
                         focusedBorderColor = Color.Transparent,
-                        unfocusedBorderColor = Color.Transparent
+                        unfocusedBorderColor = Color.Transparent,
+                        focusedTextColor = Color(0xFF212121),
+                        unfocusedTextColor = Color(0xFF212121),
+                        cursorColor = Color(0xFF212121)
                     )
                 )
 
@@ -156,7 +162,10 @@ fun CreateLatihanSoalScreen(
                         focusedContainerColor = Color(0xFFE0E0E0),
                         unfocusedContainerColor = Color(0xFFE0E0E0),
                         focusedBorderColor = Color.Transparent,
-                        unfocusedBorderColor = Color.Transparent
+                        unfocusedBorderColor = Color.Transparent,
+                        focusedTextColor = Color(0xFF212121),
+                        unfocusedTextColor = Color(0xFF212121),
+                        cursorColor = Color(0xFF212121)
                     )
                 )
 

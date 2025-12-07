@@ -1,5 +1,7 @@
 package com.example.tubespm.ui.screens.admin.management
 
+import androidx.activity.compose.rememberLauncherForActivityResult
+import androidx.activity.result.contract.ActivityResultContracts
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border
 import androidx.compose.foundation.clickable
@@ -56,10 +58,14 @@ fun CreateQuestionScreen(
     val uiState by viewModel.uiState.collectAsState()
     val context = LocalContext.current
 
+    // State untuk dialog "Add Another Question"
+    var showAddAnotherDialog by remember { mutableStateOf(false) }
+    var currentQuestionNum by remember { mutableStateOf(questionNumber) }
+
     // Handle success
     LaunchedEffect(uiState.isSavedSuccess) {
-        if (uiState.isSavedSuccess) {
-            onQuestionCreated()
+        if (uiState.isSavedSuccess && !showAddAnotherDialog) {
+            showAddAnotherDialog = true
         }
     }
 
@@ -74,8 +80,8 @@ fun CreateQuestionScreen(
     }
 
     // Set initial question number
-    LaunchedEffect(Unit) {
-        viewModel.updateQuestionNumber(questionNumber)
+    LaunchedEffect(currentQuestionNum) {
+        viewModel.updateQuestionNumber(currentQuestionNum)
     }
 
     Scaffold(
@@ -127,7 +133,8 @@ fun CreateQuestionScreen(
                                     ).show()
                                 }
                             )
-                        }
+                        },
+                        enabled = !uiState.isSaving
                     ) {
                         if (uiState.isSaving) {
                             CircularProgressIndicator(
@@ -172,7 +179,7 @@ fun CreateQuestionScreen(
                         .padding(horizontal = 16.dp, vertical = 12.dp)
                 ) {
                     Text(
-                        text = "Soal $questionNumber",
+                        text = "Soal ${currentQuestionNum}",
                         fontSize = 22.sp,
                         fontWeight = FontWeight.Bold,
                         color = Color(0xFF212121)
@@ -181,7 +188,7 @@ fun CreateQuestionScreen(
 
                     // ------------------ INPUT QUESTION ------------------
                     Text(
-                        text = "Input Question",
+                        text = "Tulis Soal",
                         fontSize = 14.sp,
                         fontWeight = FontWeight.SemiBold,
                         color = Color(0xFF757575)
@@ -192,27 +199,36 @@ fun CreateQuestionScreen(
                         value = uiState.questionText,
                         onValueChange = { viewModel.updateQuestionText(it) },
                         modifier = Modifier.fillMaxWidth(),
-                        placeholder = { Text("Add Here", color = Color(0xFF9E9E9E)) },
+                        placeholder = { Text("Tulis Soal Di Sini", color = Color(0xFF9E9E9E)) },
                         shape = RoundedCornerShape(6.dp),
                         colors = OutlinedTextFieldDefaults.colors(
                             focusedContainerColor = Color(0xFFE0E0E0),
                             unfocusedContainerColor = Color(0xFFE0E0E0),
                             focusedBorderColor = Color.Transparent,
-                            unfocusedBorderColor = Color.Transparent
+                            unfocusedBorderColor = Color.Transparent,
+                            focusedTextColor = Color(0xFF212121),
+                            unfocusedTextColor = Color(0xFF212121),
+                            cursorColor = Color(0xFF212121)
                         ),
                         minLines = 3
                     )
 
                     Spacer(modifier = Modifier.height(16.dp))
 
-                    // ------------------ ADD PICTURE ------------------
+                    // ------------------ TAMBAH GAMBAR ------------------
                     Text(
-                        text = "Add Picture",
+                        text = "Tambah Gambar",
                         fontSize = 14.sp,
                         fontWeight = FontWeight.SemiBold,
                         color = Color(0xFF757575)
                     )
                     Spacer(modifier = Modifier.height(4.dp))
+
+                    val imagePickerLauncher = rememberLauncherForActivityResult(
+                        contract = ActivityResultContracts.GetContent()
+                    ) { uri ->
+                        uri?.let { viewModel.updateQuestionImageUri(it) }
+                    }
 
                     Box(
                         modifier = Modifier
@@ -227,8 +243,7 @@ fun CreateQuestionScreen(
                                 RoundedCornerShape(6.dp)
                             )
                             .clickable {
-                                // TODO: Implement image picker
-                                // Bisa pakai Accompanist Image Picker atau library lain
+                                imagePickerLauncher.launch("image/*")
                             },
                         contentAlignment = Alignment.Center
                     ) {
@@ -258,9 +273,9 @@ fun CreateQuestionScreen(
 
                     Spacer(modifier = Modifier.height(20.dp))
 
-                    // ------------------ INPUT ANSWER ------------------
+                    // ------------------ PILIHAN JAWABAN ------------------
                     Text(
-                        text = "Input Answer",
+                        text = "Pilihan Jawaban",
                         fontSize = 14.sp,
                         fontWeight = FontWeight.SemiBold,
                         color = Color(0xFF757575)
@@ -307,12 +322,18 @@ fun CreateQuestionScreen(
                                         )
                                     },
                                     singleLine = true,
-                                    textStyle = TextStyle(fontSize = 13.sp, color = Color.Black),
+                                    textStyle = TextStyle(
+                                        fontSize = 13.sp,
+                                        color = Color.Black
+                                    ),
                                     colors = OutlinedTextFieldDefaults.colors(
                                         focusedContainerColor = Color(0xFFE0E0E0),
                                         unfocusedContainerColor = Color(0xFFE0E0E0),
                                         focusedBorderColor = Color.Transparent,
-                                        unfocusedBorderColor = Color.Transparent
+                                        unfocusedBorderColor = Color.Transparent,
+                                        focusedTextColor = Color.Black,
+                                        unfocusedTextColor = Color.Black,
+                                        cursorColor = Color.Black
                                     )
                                 )
 
@@ -354,9 +375,9 @@ fun CreateQuestionScreen(
 
                     Spacer(modifier = Modifier.height(20.dp))
 
-                    // ------------------ INPUT DISCUSSION ------------------
+                    // ------------------ PEMBAHASAN ------------------
                     Text(
-                        text = "Input Discussion",
+                        text = "Pembahasan",
                         fontSize = 14.sp,
                         fontWeight = FontWeight.SemiBold,
                         color = Color(0xFF757575)
@@ -368,12 +389,15 @@ fun CreateQuestionScreen(
                         modifier = Modifier
                             .fillMaxWidth()
                             .height(120.dp),
-                        placeholder = { Text("Add Here", color = Color(0xFF9E9E9E)) },
+                        placeholder = { Text("Tulis Pembahasan Di Sini", color = Color(0xFF9E9E9E)) },
                         colors = OutlinedTextFieldDefaults.colors(
                             focusedContainerColor = Color(0xFFE0E0E0),
                             unfocusedContainerColor = Color(0xFFE0E0E0),
                             focusedBorderColor = Color.Transparent,
-                            unfocusedBorderColor = Color.Transparent
+                            unfocusedBorderColor = Color.Transparent,
+                            focusedTextColor = Color(0xFF212121),
+                            unfocusedTextColor = Color(0xFF212121),
+                            cursorColor = Color(0xFF212121)
                         ),
                         minLines = 4
                     )
@@ -389,6 +413,41 @@ fun CreateQuestionScreen(
                     }
                 }
             }
+        }
+
+        // Dialog untuk menambah soal lagi
+        if (showAddAnotherDialog) {
+            AlertDialog(
+                onDismissRequest = {
+                    showAddAnotherDialog = false
+                    onQuestionCreated()
+                },
+                title = { Text("Soal Berhasil Ditambahkan", fontWeight = FontWeight.Bold) },
+                text = { Text("Apakah Anda ingin menambahkan soal lagi?") },
+                confirmButton = {
+                    Button(
+                        onClick = {
+                            showAddAnotherDialog = false
+                            viewModel.resetState()
+                            currentQuestionNum++
+                            viewModel.updateQuestionNumber(currentQuestionNum)
+                        },
+                        colors = ButtonDefaults.buttonColors(containerColor = Color(0xFF4CAF50))
+                    ) {
+                        Text("Tambah Soal Lagi")
+                    }
+                },
+                dismissButton = {
+                    TextButton(
+                        onClick = {
+                            showAddAnotherDialog = false
+                            onQuestionCreated()
+                        }
+                    ) {
+                        Text("Selesai")
+                    }
+                }
+            )
         }
     }
 }

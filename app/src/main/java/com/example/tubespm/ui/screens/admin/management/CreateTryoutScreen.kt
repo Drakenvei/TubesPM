@@ -108,7 +108,10 @@ fun CreateTryoutScreen(
                         focusedContainerColor = Color(0xFFE0E0E0),
                         unfocusedContainerColor = Color(0xFFE0E0E0),
                         focusedBorderColor = Color.Transparent,
-                        unfocusedBorderColor = Color.Transparent
+                        unfocusedBorderColor = Color.Transparent,
+                        focusedTextColor = Color(0xFF212121),
+                        unfocusedTextColor = Color(0xFF212121),
+                        cursorColor = Color(0xFF212121)
                     )
                 )
 
@@ -132,7 +135,10 @@ fun CreateTryoutScreen(
                         focusedContainerColor = Color(0xFFE0E0E0),
                         unfocusedContainerColor = Color(0xFFE0E0E0),
                         focusedBorderColor = Color.Transparent,
-                        unfocusedBorderColor = Color.Transparent
+                        unfocusedBorderColor = Color.Transparent,
+                        focusedTextColor = Color(0xFF212121),
+                        unfocusedTextColor = Color(0xFF212121),
+                        cursorColor = Color(0xFF212121)
                     )
                 )
 
@@ -152,7 +158,7 @@ fun CreateTryoutScreen(
                     onExpandedChange = { expanded = !expanded }
                 ) {
                     OutlinedTextField(
-                        value = uiState.status,
+                        value = if (uiState.status == "active") "Aktif" else "Nonaktif",
                         onValueChange = {},
                         readOnly = true,
                         modifier = Modifier
@@ -164,7 +170,9 @@ fun CreateTryoutScreen(
                             focusedContainerColor = Color(0xFFE0E0E0),
                             unfocusedContainerColor = Color(0xFFE0E0E0),
                             focusedBorderColor = Color.Transparent,
-                            unfocusedBorderColor = Color.Transparent
+                            unfocusedBorderColor = Color.Transparent,
+                            focusedTextColor = Color(0xFF212121),
+                            unfocusedTextColor = Color(0xFF212121)
                         ),
                         trailingIcon = { ExposedDropdownMenuDefaults.TrailingIcon(expanded = expanded) }
                     )
@@ -172,15 +180,20 @@ fun CreateTryoutScreen(
                         expanded = expanded,
                         onDismissRequest = { expanded = false }
                     ) {
-                        listOf("active", "inactive").forEach { status ->
-                            DropdownMenuItem(
-                                text = { Text(status) },
-                                onClick = {
-                                    viewModel.updateStatus(status)
-                                    expanded = false
-                                }
-                            )
-                        }
+                        DropdownMenuItem(
+                            text = { Text("Aktif") },
+                            onClick = {
+                                viewModel.updateStatus("active")
+                                expanded = false
+                            }
+                        )
+                        DropdownMenuItem(
+                            text = { Text("Nonaktif") },
+                            onClick = {
+                                viewModel.updateStatus("inactive")
+                                expanded = false
+                            }
+                        )
                     }
                 }
 

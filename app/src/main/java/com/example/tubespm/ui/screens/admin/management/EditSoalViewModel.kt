@@ -1,9 +1,11 @@
 package com.example.tubespm.ui.screens.admin.management
 
+import android.net.Uri
 import android.util.Log
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import com.example.tubespm.data.model.QuizQuestion
+import com.example.tubespm.utils.ImageUtils
 import com.google.firebase.Firebase
 import com.google.firebase.firestore.firestore
 import kotlinx.coroutines.flow.MutableStateFlow
@@ -19,6 +21,7 @@ data class EditQuestionUiState(
     val isSaving: Boolean = false,
     val questionData: QuizQuestion = QuizQuestion(),
     val answerMap: Map<String, String> = mapOf("A" to "", "B" to "", "C" to "", "D" to "", "E" to ""),
+    val questionImageUri: Uri? = null, // URI untuk gambar baru yang dipilih
     val error: String? = null,
     val isSavedSuccess: Boolean = false
 )
@@ -30,14 +33,15 @@ class EditQuestionViewModel : ViewModel() {
     private val db = Firebase.firestore
 
     /**
-     * Mengambil data soal berdasarkan Tryout ID dan Question ID
-     * (Asumsi struktur: tryouts/{id}/questions/{qid})
+     * Mengambil data soal berdasarkan Parent ID dan Question ID
+     * (Asumsi struktur: tryouts/{id}/questions/{qid} atau latihan_soal/{id}/questions/{qid})
      */
-    fun loadQuestion(tryoutId: String, questionId: String) {
+    fun loadQuestion(parentId: String, questionId: String, type: String = "tryout") {
         _uiState.update { it.copy(isLoading = true) }
         viewModelScope.launch {
             try {
-                val docRef = db.collection("tryouts").document(tryoutId)
+                val collectionName = if (type == "tryout") "tryouts" else "latihan_soal"
+                val docRef = db.collection(collectionName).document(parentId)
                     .collection("questions").document(questionId)
 
                 val snapshot = docRef.get().await()
@@ -89,29 +93,48 @@ class EditQuestionViewModel : ViewModel() {
         _uiState.update { it.copy(questionData = it.questionData.copy(correctAnswer = label)) }
     }
 
+    fun updateQuestionImageUri(uri: Uri) {
+        _uiState.update { it.copy(questionImageUri = uri) }
+    }
+
     /**
      * Simpan perubahan ke Firestore
      */
-    fun saveQuestion(tryoutId: String, questionId: String) {
+    fun saveQuestion(parentId: String, questionId: String, type: String = "tryout") {
         _uiState.update { it.copy(isSaving = true) }
         viewModelScope.launch {
             try {
-                // Konversi Map jawaban kembali ke List
                 val currentState = _uiState.value
+                
+                // Upload gambar jika ada URI baru
+                var imageUrl: String? = currentState.questionData.questionImage
+                if (currentState.questionImageUri != null) {
+                    imageUrl = ImageUtils.uploadImageToFirebaseStorage(currentState.questionImageUri)
+                }
+                
+                // Konversi Map jawaban kembali ke List
                 val optionsList = listOf("A", "B", "C", "D", "E").map { label ->
                     currentState.answerMap[label] ?: ""
                 }
 
                 val updatedQuestion = currentState.questionData.copy(
-                    options = optionsList
+                    options = optionsList,
+                    questionImage = imageUrl
                 )
 
-                db.collection("tryouts").document(tryoutId)
+                val collectionName = if (type == "tryout") "tryouts" else "latihan_soal"
+                db.collection(collectionName).document(parentId)
                     .collection("questions").document(questionId)
                     .set(updatedQuestion)
                     .await()
 
-                _uiState.update { it.copy(isSaving = false, isSavedSuccess = true) }
+                _uiState.update { 
+                    it.copy(
+                        isSaving = false, 
+                        isSavedSuccess = true,
+                        questionImageUri = null // Reset setelah upload
+                    ) 
+                }
             } catch (e: Exception) {
                 _uiState.update { it.copy(isSaving = false, error = "Gagal menyimpan: ${e.message}") }
             }
