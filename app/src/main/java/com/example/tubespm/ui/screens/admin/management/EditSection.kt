@@ -3,8 +3,10 @@ package com.example.tubespm.ui.screens.admin.management
 import android.widget.Toast
 import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.*
+import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.text.KeyboardOptions
+import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.ArrowBack
 import androidx.compose.material3.*
@@ -34,7 +36,7 @@ fun EditSectionDialog(
     sectionName: String,
     initialState: EditSectionUiState,
     onDismiss: () -> Unit,
-    onEditSoalTryout: () -> Unit,
+    onEditSoalTryout: (String, String, String, String, Int) -> Unit, // (type, parentId, questionId, paketName, questionNumber)
     // Inject ViewModel
     viewModel: EditSectionViewModel = viewModel()
 ) {
@@ -77,7 +79,7 @@ fun AddSectionDialog(
     paketName: String,
     initialState: EditSectionUiState = EditSectionUiState(type = "TPS", subtest = "Penalaran Umum", timeMinutes = 0, questionCount = 0),
     onDismiss: () -> Unit,
-    onEditSoalTryout: () -> Unit,
+    onEditSoalTryout: (String, String, String, String, Int) -> Unit, // (type, parentId, questionId, paketName, questionNumber)
     // Inject ViewModel
     viewModel: EditSectionViewModel = viewModel()
 ) {
@@ -122,9 +124,21 @@ private fun SectionFormDialog(
     initialState: EditSectionUiState,
     onDismiss: () -> Unit,
     onConfirm: (EditSectionUiState) -> Unit,
-    onEditSoalTryout: () -> Unit
+    onEditSoalTryout: (String, String, String, String, Int) -> Unit // (type, parentId, questionId, paketName, questionNumber)
 ) {
     var uiState by remember { mutableStateOf(initialState) }
+    var expandedType by remember { mutableStateOf(false) }
+    var expandedSubtest by remember { mutableStateOf(false) }
+
+    val typeOptions = listOf("TPS", "Literasi")
+    val subtestOptions = listOf(
+        "Penalaran Umum",
+        "Penalaran Kuantitatif",
+        "Pengetahuan dan Pemahaman Umum",
+        "Pemahaman Membaca dan Menulis",
+        "Literasi dalam Bahasa Indonesia",
+        "Literasi dalam Bahasa Inggris"
+    )
 
     Dialog(onDismissRequest = onDismiss) {
         Surface(
@@ -134,43 +148,204 @@ private fun SectionFormDialog(
             modifier = Modifier.fillMaxWidth()
         ) {
             Column(
-                modifier = Modifier.background(Color(0xFFFDFDFD)).padding(horizontal = 16.dp, vertical = 12.dp)
+                modifier = Modifier
+                    .background(Color(0xFFFDFDFD))
+                    .padding(horizontal = 16.dp, vertical = 12.dp)
+                    .verticalScroll(rememberScrollState())
             ) {
-                // ... (Header Code sama seperti sebelumnya) ...
+                // Header
                 Row(verticalAlignment = Alignment.CenterVertically) {
-                    IconButton(onClick = onDismiss) { Icon(Icons.Default.ArrowBack, contentDescription = "Back") }
-                    Column(modifier = Modifier.weight(1f), horizontalAlignment = Alignment.CenterHorizontally) {
-                        Text(text = title, fontWeight = FontWeight.Bold, fontSize = 18.sp, color = Color(0xFF212121))
+                    IconButton(onClick = onDismiss) {
+                        Icon(Icons.Default.ArrowBack, contentDescription = "Back")
+                    }
+                    Column(
+                        modifier = Modifier.weight(1f),
+                        horizontalAlignment = Alignment.CenterHorizontally
+                    ) {
+                        Text(
+                            text = title,
+                            fontWeight = FontWeight.Bold,
+                            fontSize = 18.sp,
+                            color = Color(0xFF212121)
+                        )
                         Text(text = paketName, fontSize = 13.sp, color = Color(0xFF616161))
                         Spacer(modifier = Modifier.height(4.dp))
                         Divider(modifier = Modifier.width(140.dp), color = Color(0xFFBDBDBD))
                     }
                     Spacer(modifier = Modifier.width(40.dp))
                 }
-                Spacer(modifier = Modifier.height(12.dp))
+                Spacer(modifier = Modifier.height(16.dp))
 
                 // Tipe Tryout Dropdown
-                Text("Tipe Tryout", fontSize = 14.sp, fontWeight = FontWeight.SemiBold)
-                // ... (Implementasi Dropdown Code sama) ...
-                // Agar singkat, saya asumsikan dropdown code sama persis
+                Text(
+                    "Tipe Tryout",
+                    fontSize = 14.sp,
+                    fontWeight = FontWeight.SemiBold,
+                    color = Color(0xFF757575)
+                )
+                Spacer(modifier = Modifier.height(4.dp))
+                ExposedDropdownMenuBox(
+                    expanded = expandedType,
+                    onExpandedChange = { expandedType = !expandedType }
+                ) {
+                    OutlinedTextField(
+                        value = uiState.type,
+                        onValueChange = {},
+                        readOnly = true,
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .menuAnchor(),
+                        trailingIcon = { ExposedDropdownMenuDefaults.TrailingIcon(expanded = expandedType) },
+                        colors = OutlinedTextFieldDefaults.colors(
+                            focusedContainerColor = Color(0xFFE0E0E0),
+                            unfocusedContainerColor = Color(0xFFE0E0E0),
+                            focusedBorderColor = Color.Transparent,
+                            unfocusedBorderColor = Color.Transparent,
+                            focusedTextColor = Color(0xFF212121),
+                            unfocusedTextColor = Color(0xFF212121),
+                            cursorColor = Color(0xFF212121)
+                        ),
+                        shape = RoundedCornerShape(6.dp)
+                    )
+                    ExposedDropdownMenu(
+                        expanded = expandedType,
+                        onDismissRequest = { expandedType = false }
+                    ) {
+                        typeOptions.forEach { option ->
+                            DropdownMenuItem(
+                                text = { Text(option) },
+                                onClick = {
+                                    uiState = uiState.copy(type = option)
+                                    expandedType = false
+                                }
+                            )
+                        }
+                    }
+                }
 
-                Spacer(modifier = Modifier.height(12.dp))
+                Spacer(modifier = Modifier.height(16.dp))
 
                 // Jenis Subtest Dropdown
-                Text("Jenis Subtest", fontSize = 14.sp, fontWeight = FontWeight.SemiBold)
-                // ... (Implementasi Dropdown Subtest Code sama) ...
+                Text(
+                    "Jenis Subtest",
+                    fontSize = 14.sp,
+                    fontWeight = FontWeight.SemiBold,
+                    color = Color(0xFF757575)
+                )
+                Spacer(modifier = Modifier.height(4.dp))
+                ExposedDropdownMenuBox(
+                    expanded = expandedSubtest,
+                    onExpandedChange = { expandedSubtest = !expandedSubtest }
+                ) {
+                    OutlinedTextField(
+                        value = uiState.subtest,
+                        onValueChange = {},
+                        readOnly = true,
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .menuAnchor(),
+                        trailingIcon = { ExposedDropdownMenuDefaults.TrailingIcon(expanded = expandedSubtest) },
+                        colors = OutlinedTextFieldDefaults.colors(
+                            focusedContainerColor = Color(0xFFE0E0E0),
+                            unfocusedContainerColor = Color(0xFFE0E0E0),
+                            focusedBorderColor = Color.Transparent,
+                            unfocusedBorderColor = Color.Transparent,
+                            focusedTextColor = Color(0xFF212121),
+                            unfocusedTextColor = Color(0xFF212121),
+                            cursorColor = Color(0xFF212121)
+                        ),
+                        shape = RoundedCornerShape(6.dp)
+                    )
+                    ExposedDropdownMenu(
+                        expanded = expandedSubtest,
+                        onDismissRequest = { expandedSubtest = false }
+                    ) {
+                        subtestOptions.forEach { option ->
+                            DropdownMenuItem(
+                                text = { Text(option) },
+                                onClick = {
+                                    uiState = uiState.copy(subtest = option)
+                                    expandedSubtest = false
+                                }
+                            )
+                        }
+                    }
+                }
 
-                // Waktu & Soal Inputs
-                // ... (Implementasi Input Number Code sama) ...
+                Spacer(modifier = Modifier.height(16.dp))
+
+                // Waktu Input
+                Text(
+                    "Waktu (Menit)",
+                    fontSize = 14.sp,
+                    fontWeight = FontWeight.SemiBold,
+                    color = Color(0xFF757575)
+                )
+                Spacer(modifier = Modifier.height(4.dp))
+                OutlinedTextField(
+                    value = uiState.timeMinutes.toString(),
+                    onValueChange = {
+                        val value = it.toIntOrNull() ?: 0
+                        uiState = uiState.copy(timeMinutes = value)
+                    },
+                    modifier = Modifier.fillMaxWidth(),
+                    keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Number),
+                    colors = OutlinedTextFieldDefaults.colors(
+                        focusedContainerColor = Color(0xFFE0E0E0),
+                        unfocusedContainerColor = Color(0xFFE0E0E0),
+                        focusedBorderColor = Color.Transparent,
+                        unfocusedBorderColor = Color.Transparent,
+                        focusedTextColor = Color(0xFF212121),
+                        unfocusedTextColor = Color(0xFF212121),
+                        cursorColor = Color(0xFF212121)
+                    ),
+                    shape = RoundedCornerShape(6.dp)
+                )
+
+                Spacer(modifier = Modifier.height(16.dp))
+
+                // Jumlah Soal Input
+                Text(
+                    "Jumlah Soal",
+                    fontSize = 14.sp,
+                    fontWeight = FontWeight.SemiBold,
+                    color = Color(0xFF757575)
+                )
+                Spacer(modifier = Modifier.height(4.dp))
+                OutlinedTextField(
+                    value = uiState.questionCount.toString(),
+                    onValueChange = {
+                        val value = it.toIntOrNull() ?: 0
+                        uiState = uiState.copy(questionCount = value)
+                    },
+                    modifier = Modifier.fillMaxWidth(),
+                    keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Number),
+                    colors = OutlinedTextFieldDefaults.colors(
+                        focusedContainerColor = Color(0xFFE0E0E0),
+                        unfocusedContainerColor = Color(0xFFE0E0E0),
+                        focusedBorderColor = Color.Transparent,
+                        unfocusedBorderColor = Color.Transparent,
+                        focusedTextColor = Color(0xFF212121),
+                        unfocusedTextColor = Color(0xFF212121),
+                        cursorColor = Color(0xFF212121)
+                    ),
+                    shape = RoundedCornerShape(6.dp)
+                )
+
+                Spacer(modifier = Modifier.height(24.dp))
 
                 // BUTTON UTAMA
                 Button(
                     onClick = { onConfirm(uiState) },
-                    modifier = Modifier.fillMaxWidth().padding(top = 24.dp),
+                    modifier = Modifier.fillMaxWidth(),
                     shape = RoundedCornerShape(8.dp),
                     colors = ButtonDefaults.buttonColors(containerColor = Color(0xFF4CAF50))
                 ) {
-                    Text(primaryButtonText, fontWeight = FontWeight.SemiBold)
+                    Text(
+                        text = primaryButtonText,
+                        fontWeight = FontWeight.SemiBold,
+                        color = Color.White
+                    )
                 }
             }
         }

@@ -19,6 +19,11 @@ import com.example.tubespm.ui.screens.admin.homepage.AdminHomeScreen
 import com.example.tubespm.ui.screens.admin.profile.AdminProfileScreen
 import com.example.tubespm.ui.screens.admin.management.ManajemenTryoutScreen
 import com.example.tubespm.ui.screens.admin.management.EditQuestionScreen
+import com.example.tubespm.ui.screens.admin.management.CreateQuestionScreen
+import com.example.tubespm.ui.screens.admin.management.CreateLatihanSoalScreen
+import com.example.tubespm.ui.screens.admin.management.CreateTryoutScreen
+import com.example.tubespm.ui.screens.admin.management.EditLatihanSoalScreen
+import com.example.tubespm.ui.screens.admin.management.ListSoalScreen
 import com.example.tubespm.ui.screens.pembahasan.PembahasanScreen
 import com.example.tubespm.ui.screens.siswa.activity.ActivityLatihanScreen
 import com.example.tubespm.ui.screens.siswa.activity.ActivityScreen
@@ -190,12 +195,27 @@ fun AdminNavGraph(
         composable("admin_management") {
             ManajemenTryoutScreen(
                 paddingValuesFromNavHost = paddingValues,
-                // PERBAIKAN DI SINI:
-                // Tangkap 4 parameter yang dikirim dari ManajemenTryoutScreen
-                onGoToEditQuestion = { tryoutId, questionId, paketName, questionNumber ->
-
-                    // Gunakan parameter tersebut untuk navigasi
-                    navController.navigate("admin_edit_question/$tryoutId/$questionId/$paketName/$questionNumber")
+                onGoToEditQuestion = { type, parentId, questionId, paketName, questionNumber ->
+                    when {
+                        questionId == "edit_nama" && type == "latihan_soal" -> {
+                            // Navigate to edit latihan soal (nama)
+                            navController.navigate("admin_edit_latihan/$parentId")
+                        }
+                        questionId.startsWith("list") -> {
+                            // Navigate to list soal
+                            navController.navigate("admin_list_soal/$type/$parentId/$paketName")
+                        }
+                        else -> {
+                            // Navigate to edit question
+                            navController.navigate("admin_edit_question/$type/$parentId/$questionId/$paketName/$questionNumber")
+                        }
+                    }
+                },
+                onNavigateToCreateTryout = {
+                    navController.navigate("admin_create_tryout")
+                },
+                onNavigateToCreateLatihan = {
+                    navController.navigate("admin_create_latihan")
                 }
             )
         }
@@ -203,8 +223,9 @@ fun AdminNavGraph(
         // ------------ Edit Question (DIPERBAIKI) ------------
         composable(
             // Tambahkan argumen di route
-            route = "admin_edit_question/{tryoutId}/{questionId}/{paketName}/{questionNumber}",
+            route = "admin_edit_question/{type}/{tryoutId}/{questionId}/{paketName}/{questionNumber}",
             arguments = listOf(
+                navArgument("type") { type = NavType.StringType },
                 navArgument("tryoutId") { type = NavType.StringType },
                 navArgument("questionId") { type = NavType.StringType },
                 navArgument("paketName") { type = NavType.StringType },
@@ -212,6 +233,7 @@ fun AdminNavGraph(
             )
         ) { backStackEntry ->
             // Ambil data dari argument
+            val type = backStackEntry.arguments?.getString("type") ?: "tryout"
             val tryoutId = backStackEntry.arguments?.getString("tryoutId") ?: ""
             val questionId = backStackEntry.arguments?.getString("questionId") ?: ""
             val paketName = backStackEntry.arguments?.getString("paketName") ?: ""
@@ -224,7 +246,133 @@ fun AdminNavGraph(
                 paketName = paketName,
                 questionNumber = questionNumber,
                 paddingValuesFromNavHost = paddingValues,
-                onBackClick = { navController.popBackStack() }
+                onBackClick = { navController.popBackStack() },
+                type = type
+            )
+        }
+
+        // ------------ Create Question ------------
+        composable(
+            route = "admin_create_question/{type}/{parentId}/{paketName}/{questionNumber}",
+            arguments = listOf(
+                navArgument("type") { type = NavType.StringType },
+                navArgument("parentId") { type = NavType.StringType },
+                navArgument("paketName") { type = NavType.StringType },
+                navArgument("questionNumber") { type = NavType.IntType }
+            )
+        ) { backStackEntry ->
+            val type = backStackEntry.arguments?.getString("type") ?: ""
+            val parentId = backStackEntry.arguments?.getString("parentId") ?: ""
+            val paketName = backStackEntry.arguments?.getString("paketName") ?: ""
+            val questionNumber = backStackEntry.arguments?.getInt("questionNumber") ?: 1
+
+            CreateQuestionScreen(
+                parentId = parentId,
+                type = type,
+                paketName = paketName,
+                questionNumber = questionNumber,
+                paddingValuesFromNavHost = paddingValues,
+                onBackClick = { navController.popBackStack() },
+                onQuestionCreated = {
+                    // Kembali ke halaman sebelumnya setelah berhasil
+                    navController.popBackStack()
+                }
+            )
+        }
+
+        // ------------ Create Latihan Soal ------------
+        composable("admin_create_latihan") {
+            CreateLatihanSoalScreen(
+                paddingValuesFromNavHost = paddingValues,
+                onBackClick = { navController.popBackStack() },
+                onLatihanCreated = { latihanId ->
+                    // Navigasi ke Create Question Screen
+                    navController.navigate("admin_create_question/latihan_soal/$latihanId/Latihan Soal Baru/1") {
+                        popUpTo("admin_management") { inclusive = false }
+                    }
+                }
+            )
+        }
+
+        // ------------ Create Tryout ------------
+        composable("admin_create_tryout") {
+            CreateTryoutScreen(
+                paddingValuesFromNavHost = paddingValues,
+                onBackClick = { navController.popBackStack() },
+                onTryoutCreated = { tryoutId ->
+                    // Navigasi ke Edit Management untuk menambah section
+                    // Atau bisa langsung ke Create Section Screen
+                    navController.navigate("admin_management") {
+                        popUpTo("admin_management") { inclusive = false }
+                        // Setelah tryout dibuat, admin bisa klik settings untuk tambah section
+                    }
+                }
+            )
+        }
+
+        // ------------ List Soal ------------
+        composable(
+            route = "admin_list_soal/{type}/{parentId}/{paketName}",
+            arguments = listOf(
+                navArgument("type") { type = NavType.StringType },
+                navArgument("parentId") { type = NavType.StringType },
+                navArgument("paketName") { type = NavType.StringType }
+            )
+        ) { backStackEntry ->
+            val type = backStackEntry.arguments?.getString("type") ?: ""
+            val parentId = backStackEntry.arguments?.getString("parentId") ?: ""
+            val paketName = backStackEntry.arguments?.getString("paketName") ?: ""
+
+            // Extract section name dari paketName jika format "Paket - Section"
+            val sectionName = if (paketName.contains(" - ")) {
+                paketName.split(" - ").getOrNull(1)
+            } else {
+                null
+            }
+            
+            val actualSectionId: String? = if (sectionName != null && type == "tryout") {
+                sectionName // Temporary: gunakan section name sebagai identifier
+            } else {
+                null
+            }
+            
+            ListSoalScreen(
+                parentId = parentId,
+                type = type,
+                sectionName = sectionName,
+                subtestId = null,
+                sectionId = actualSectionId,
+                paketName = paketName,
+                paddingValuesFromNavHost = paddingValues,
+                onBackClick = { navController.popBackStack() },
+                onEditQuestion = { t, pId, qId, pName, qNum ->
+                    navController.navigate("admin_edit_question/$t/$pId/$qId/$pName/$qNum")
+                },
+                onAddQuestion = { t, pId, pName, qNum ->
+                    navController.navigate("admin_create_question/$t/$pId/$pName/$qNum")
+                }
+            )
+        }
+
+        // ------------ Edit Latihan Soal ------------
+        composable(
+            route = "admin_edit_latihan/{latihanId}",
+            arguments = listOf(
+                navArgument("latihanId") { type = NavType.StringType }
+            )
+        ) { backStackEntry ->
+            val latihanId = backStackEntry.arguments?.getString("latihanId") ?: ""
+
+            EditLatihanSoalScreen(
+                latihanId = latihanId,
+                paddingValuesFromNavHost = paddingValues,
+                onBackClick = { navController.popBackStack() },
+                onLatihanUpdated = {
+                    navController.popBackStack()
+                },
+                onGoToListSoal = { type, parentId, paketName ->
+                    navController.navigate("admin_list_soal/$type/$parentId/$paketName")
+                }
             )
         }
 

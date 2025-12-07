@@ -3,6 +3,7 @@ package com.example.tubespm.ui.screens.admin.management
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import com.example.tubespm.data.model.Section
+import com.example.tubespm.data.model.Subtest
 import com.example.tubespm.data.model.Tryout
 import com.google.firebase.Firebase
 import com.google.firebase.firestore.firestore
@@ -27,16 +28,24 @@ class EditSectionViewModel : ViewModel() {
      */
     fun addSection(
         tryoutId: String,
-        sectionData: EditSectionUiState, // Error merah akan hilang sekarang
+        sectionData: EditSectionUiState,
         onSuccess: () -> Unit,
         onError: (String) -> Unit
     ) {
+        // Buat subtest baru dengan data yang diinput
+        val newSubtest = Subtest(
+            subtestId = UUID.randomUUID().toString().take(8),
+            subtestName = sectionData.subtest,
+            duration = sectionData.timeMinutes,
+            questionCount = sectionData.questionCount,
+            topics = emptyList()
+        )
+
+        // Buat section baru dengan subtest
         val newSection = Section(
-            sectionId = UUID.randomUUID().toString().take(8), // Generate ID simple
+            sectionId = if (sectionData.type == "TPS") "tps" else "literasi",
             sectionName = sectionData.subtest,
-//            sectionDuration = sectionData.timeMinutes,
-//            sectionQuestionCount = sectionData.questionCount
-            // subtests bisa diisi default atau kosong
+            subtests = listOf(newSubtest)
         )
 
         updateTryoutSections(tryoutId, newSection, isAdd = true, onSuccess, onError)
@@ -52,18 +61,57 @@ class EditSectionViewModel : ViewModel() {
         onSuccess: () -> Unit,
         onError: (String) -> Unit
     ) {
-        // Note: Firestore tidak bisa update array item secara parsial dengan mudah.
-        // Kita harus baca dokumen, modifikasi list di memori, lalu tulis ulang listnya.
-        // Fungsi helper `updateTryoutSections` akan menangani ini.
-
-        val updatedSection = Section(
-            sectionId = oldSectionId, // Pertahankan ID lama
-            sectionName = sectionData.subtest,
-//            sectionDuration = sectionData.timeMinutes,
-//            sectionQuestionCount = sectionData.questionCount
-        )
-
-        updateTryoutSections(tryoutId, updatedSection, isAdd = false, onSuccess, onError)
+        // Baca section yang ada, update subtest pertama, atau buat subtest baru jika belum ada
+        viewModelScope.launch {
+            try {
+                val tryoutRef = db.collection("tryouts").document(tryoutId)
+                
+                db.runTransaction { transaction ->
+                    val snapshot = transaction.get(tryoutRef)
+                    val tryout = snapshot.toObject(Tryout::class.java) ?: throw Exception("Tryout not found")
+                    
+                    val currentSections = tryout.sections.toMutableList()
+                    val sectionIndex = currentSections.indexOfFirst { it.sectionId == oldSectionId }
+                    
+                    if (sectionIndex == -1) {
+                        throw Exception("Section not found")
+                    }
+                    
+                    val existingSection = currentSections[sectionIndex]
+                    val existingSubtests = existingSection.subtests.toMutableList()
+                    
+                    // Update atau buat subtest pertama
+                    val updatedSubtest = Subtest(
+                        subtestId = existingSubtests.firstOrNull()?.subtestId ?: UUID.randomUUID().toString().take(8),
+                        subtestName = sectionData.subtest,
+                        duration = sectionData.timeMinutes,
+                        questionCount = sectionData.questionCount,
+                        topics = existingSubtests.firstOrNull()?.topics ?: emptyList()
+                    )
+                    
+                    if (existingSubtests.isEmpty()) {
+                        existingSubtests.add(updatedSubtest)
+                    } else {
+                        existingSubtests[0] = updatedSubtest
+                    }
+                    
+                    // Update section dengan subtests yang baru
+                    val updatedSection = existingSection.copy(
+                        sectionName = sectionData.subtest,
+                        subtests = existingSubtests
+                    )
+                    
+                    currentSections[sectionIndex] = updatedSection
+                    transaction.update(tryoutRef, "sections", currentSections)
+                }.addOnSuccessListener {
+                    onSuccess()
+                }.addOnFailureListener {
+                    onError(it.message ?: "Unknown error")
+                }
+            } catch (e: Exception) {
+                onError(e.message ?: "Error updating section")
+            }
+        }
     }
 
     private fun updateTryoutSections(

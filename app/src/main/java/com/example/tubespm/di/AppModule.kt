@@ -18,6 +18,11 @@ import dagger.hilt.InstallIn
 import dagger.hilt.android.qualifiers.ApplicationContext // Penting
 import dagger.hilt.components.SingletonComponent
 import javax.inject.Singleton
+import androidx.lifecycle.ViewModel
+import androidx.lifecycle.ViewModelProvider
+import com.example.tubespm.ui.screens.admin.management.CreateQuestionViewModel
+import com.example.tubespm.ui.screens.admin.management.CreateLatihanSoalViewModel
+import com.example.tubespm.ui.screens.admin.management.CreateTryoutViewModel
 
 @Module
 @InstallIn(SingletonComponent::class)
@@ -68,5 +73,28 @@ object AppModule {
     @Singleton
     fun provideQuizRepository(db: FirebaseFirestore): QuizRepository {
         return QuizRepositoryImpl(db)
+    }
+
+    @Provides
+    fun provideViewModelFactory(
+        exerciseCatalogRepository: ExerciseCatalogRepository
+    ): ViewModelProvider.Factory {
+        return object : ViewModelProvider.Factory {
+            override fun <T : ViewModel> create(modelClass: Class<T>): T {
+                @Suppress("UNCHECKED_CAST")
+                return when {
+                    modelClass.isAssignableFrom(CreateQuestionViewModel::class.java) -> {
+                        CreateQuestionViewModel(exerciseCatalogRepository) as T
+                    }
+                    modelClass.isAssignableFrom(CreateLatihanSoalViewModel::class.java) -> {
+                        CreateLatihanSoalViewModel(exerciseCatalogRepository) as T
+                    }
+                    modelClass.isAssignableFrom(CreateTryoutViewModel::class.java) -> {
+                        CreateTryoutViewModel(exerciseCatalogRepository) as T
+                    }
+                    else -> throw IllegalArgumentException("Unknown ViewModel class: ${modelClass.name}")
+                }
+            }
+        }
     }
 }

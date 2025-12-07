@@ -29,7 +29,7 @@ fun EditManagementDialog(
     onDismiss: () -> Unit,
     onDeactivatePackage: () -> Unit, // Callback ke parent (opsional, bisa dihandle VM juga)
     onAddMoreSection: () -> Unit,
-    onGoToEditQuestion: () -> Unit,
+    onGoToEditQuestion: (String, String, String, String, Int) -> Unit, // (type, parentId, questionId, paketName, questionNumber)
     // Inject ViewModel
     viewModel: EditManagementViewModel = viewModel()
 ) {
@@ -51,9 +51,16 @@ fun EditManagementDialog(
                 onClose = onDismiss,
                 onDeactivatePackage = {
                     // Panggil logika di VM, lalu tutup dialog/refresh parent
-                    viewModel.deactivatePackage(paket.id) {
-                        onDeactivatePackage() // trigger refresh di parent jika perlu
-                        onDismiss()
+                    if (paket.isActive) {
+                        viewModel.deactivatePackage(paket.id) {
+                            onDeactivatePackage() // trigger refresh di parent jika perlu
+                            onDismiss()
+                        }
+                    } else {
+                        viewModel.activatePackage(paket.id) {
+                            onDeactivatePackage() // trigger refresh di parent jika perlu
+                            onDismiss()
+                        }
                     }
                 },
                 onAddMoreSection = onAddMoreSection,
@@ -73,7 +80,7 @@ private fun EditManagementContent(
     onClose: () -> Unit,
     onDeactivatePackage: () -> Unit,
     onAddMoreSection: () -> Unit,
-    onGoToEditQuestion: () -> Unit
+    onGoToEditQuestion: (String, String, String, String, Int) -> Unit // (type, parentId, questionId, paketName, questionNumber)
 ) {
     // Observasi State dari ViewModel
     val uiState by viewModel.uiState.collectAsState()
@@ -131,6 +138,17 @@ private fun EditManagementContent(
                         onEditClick = { clicked ->
                             selectedSectionForEdit = clicked
                             showEditSectionDialog = true
+                        },
+                        onEditSoalClick = { clicked ->
+                            // Navigate to list soal untuk section ini
+                            // Pass section name sebagai identifier
+                            onGoToEditQuestion(
+                                "tryout",
+                                paket.id,
+                                "list_${clicked.id}", // Special ID untuk list dengan section ID
+                                "${paket.name} - ${clicked.title}",
+                                0
+                            )
                         }
                     )
                 }
@@ -148,24 +166,27 @@ private fun EditManagementContent(
             modifier = Modifier.align(Alignment.End),
             colors = ButtonDefaults.outlinedButtonColors(contentColor = Color.Gray)
         ) {
-            Text("Add More Section")
+            Text("Tambah Section")
         }
 
         Spacer(modifier = Modifier.height(16.dp))
 
-        // Tombol Nonaktifkan Paket
+        // Tombol Aktifkan/Nonaktifkan Paket
         Button(
             onClick = onDeactivatePackage,
             modifier = Modifier
                 .fillMaxWidth()
                 .height(48.dp),
             colors = ButtonDefaults.buttonColors(
-                containerColor = Color(0xFFE53935),
+                containerColor = if (paket.isActive) Color(0xFFE53935) else Color(0xFF4CAF50),
                 contentColor = Color.White
             ),
             shape = RoundedCornerShape(8.dp)
         ) {
-            Text(text = "Nonaktifkan Paket", fontWeight = FontWeight.SemiBold)
+            Text(
+                text = if (paket.isActive) "Nonaktifkan Paket" else "Aktifkan Paket",
+                fontWeight = FontWeight.SemiBold
+            )
         }
 
         Spacer(modifier = Modifier.height(4.dp))
@@ -219,7 +240,8 @@ private fun EditManagementContent(
 @Composable
 private fun SectionCard(
     section: TryoutSectionUiModel,
-    onEditClick: (TryoutSectionUiModel) -> Unit
+    onEditClick: (TryoutSectionUiModel) -> Unit,
+    onEditSoalClick: (TryoutSectionUiModel) -> Unit
 ) {
     Surface(
         modifier = Modifier.fillMaxWidth(),
@@ -236,13 +258,23 @@ private fun SectionCard(
                     text = section.title,
                     fontSize = 16.sp,
                     fontWeight = FontWeight.SemiBold,
-                    color = Color(0xFF212121)
+                    color = Color(0xFF212121),
+                    modifier = Modifier.weight(1f)
                 )
-                IconButton(
-                    onClick = { onEditClick(section) },
-                    modifier = Modifier.size(24.dp)
-                ) {
-                    Icon(Icons.Default.Settings, contentDescription = "Edit", tint = Color.Gray)
+                Row {
+                    // Tombol Edit Soal
+                    TextButton(
+                        onClick = { onEditSoalClick(section) }
+                    ) {
+                        Text("Edit Soal", fontSize = 12.sp, color = Color(0xFF4CAF50))
+                    }
+                    // Tombol Edit Section
+                    IconButton(
+                        onClick = { onEditClick(section) },
+                        modifier = Modifier.size(24.dp)
+                    ) {
+                        Icon(Icons.Default.Settings, contentDescription = "Edit Section", tint = Color.Gray)
+                    }
                 }
             }
             Spacer(modifier = Modifier.height(4.dp))

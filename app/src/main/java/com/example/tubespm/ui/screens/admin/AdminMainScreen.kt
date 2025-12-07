@@ -18,7 +18,12 @@ import androidx.navigation.compose.rememberNavController
 import androidx.navigation.navArgument
 import com.example.tubespm.ui.navigation.BottomNavbarAdmin
 import com.example.tubespm.ui.screens.admin.homepage.AdminHomeScreen
+import com.example.tubespm.ui.screens.admin.management.CreateLatihanSoalScreen
+import com.example.tubespm.ui.screens.admin.management.CreateQuestionScreen
+import com.example.tubespm.ui.screens.admin.management.CreateTryoutScreen
+import com.example.tubespm.ui.screens.admin.management.EditLatihanSoalScreen
 import com.example.tubespm.ui.screens.admin.management.EditQuestionScreen
+import com.example.tubespm.ui.screens.admin.management.ListSoalScreen
 import com.example.tubespm.ui.screens.admin.management.ManajemenTryoutScreen
 import com.example.tubespm.ui.screens.admin.profile.AdminProfileScreen
 
@@ -70,8 +75,28 @@ fun AdminMainScreen(
                 ManajemenTryoutScreen(
                     paddingValuesFromNavHost = paddingValues,
                     // Navigasi ke Edit Question (menggunakan adminNavController)
-                    onGoToEditQuestion = { tryoutId, questionId, paketName, questionNumber ->
-                        adminNavController.navigate("admin_edit_question/$tryoutId/$questionId/$paketName/$questionNumber")
+                    onGoToEditQuestion = { type, parentId, questionId, paketName, questionNumber ->
+                        when {
+                            questionId == "edit_nama" && type == "latihan_soal" -> {
+                                // Navigate to edit latihan soal (nama)
+                                adminNavController.navigate("admin_edit_latihan/$parentId")
+                            }
+                            questionId.startsWith("list") -> {
+                                // Navigate to list soal
+                                // sectionId sudah di-encode di paketName format "Paket - Section"
+                                adminNavController.navigate("admin_list_soal/$type/$parentId/$paketName")
+                            }
+                            else -> {
+                                // Navigate to edit question
+                                adminNavController.navigate("admin_edit_question/$type/$parentId/$questionId/$paketName/$questionNumber")
+                            }
+                        }
+                    },
+                    onNavigateToCreateTryout = {
+                        adminNavController.navigate("admin_create_tryout")
+                    },
+                    onNavigateToCreateLatihan = {
+                        adminNavController.navigate("admin_create_latihan")
                     }
                 )
             }
@@ -100,14 +125,16 @@ fun AdminMainScreen(
 
             // Rute 5: Edit Question
             composable(
-                route = "admin_edit_question/{tryoutId}/{questionId}/{paketName}/{questionNumber}",
+                route = "admin_edit_question/{type}/{tryoutId}/{questionId}/{paketName}/{questionNumber}",
                 arguments = listOf(
+                    navArgument("type") { type = NavType.StringType },
                     navArgument("tryoutId") { type = NavType.StringType },
                     navArgument("questionId") { type = NavType.StringType },
                     navArgument("paketName") { type = NavType.StringType },
                     navArgument("questionNumber") { type = NavType.IntType }
                 )
             ) { backStackEntry ->
+                val type = backStackEntry.arguments?.getString("type") ?: "tryout"
                 val tryoutId = backStackEntry.arguments?.getString("tryoutId") ?: ""
                 val questionId = backStackEntry.arguments?.getString("questionId") ?: ""
                 val paketName = backStackEntry.arguments?.getString("paketName") ?: ""
@@ -119,7 +146,136 @@ fun AdminMainScreen(
                     paketName = paketName,
                     questionNumber = questionNumber,
                     paddingValuesFromNavHost = paddingValues,
-                    onBackClick = { adminNavController.popBackStack() }
+                    onBackClick = { adminNavController.popBackStack() },
+                    type = type
+                )
+            }
+
+            // Rute 6: Create Tryout
+            composable("admin_create_tryout") {
+                CreateTryoutScreen(
+                    paddingValuesFromNavHost = paddingValues,
+                    onBackClick = { adminNavController.popBackStack() },
+                    onTryoutCreated = { tryoutId ->
+                        // Navigasi kembali ke management setelah tryout dibuat
+                        adminNavController.navigate("admin_management") {
+                            popUpTo("admin_management") { inclusive = false }
+                        }
+                    }
+                )
+            }
+
+            // Rute 7: Create Latihan Soal
+            composable("admin_create_latihan") {
+                CreateLatihanSoalScreen(
+                    paddingValuesFromNavHost = paddingValues,
+                    onBackClick = { adminNavController.popBackStack() },
+                    onLatihanCreated = { latihanId ->
+                        // Navigasi ke Create Question Screen
+                        adminNavController.navigate("admin_create_question/latihan_soal/$latihanId/Latihan Soal Baru/1") {
+                            popUpTo("admin_management") { inclusive = false }
+                        }
+                    }
+                )
+            }
+
+            // Rute 8: Create Question
+            composable(
+                route = "admin_create_question/{type}/{parentId}/{paketName}/{questionNumber}",
+                arguments = listOf(
+                    navArgument("type") { type = NavType.StringType },
+                    navArgument("parentId") { type = NavType.StringType },
+                    navArgument("paketName") { type = NavType.StringType },
+                    navArgument("questionNumber") { type = NavType.IntType }
+                )
+            ) { backStackEntry ->
+                val type = backStackEntry.arguments?.getString("type") ?: ""
+                val parentId = backStackEntry.arguments?.getString("parentId") ?: ""
+                val paketName = backStackEntry.arguments?.getString("paketName") ?: ""
+                val questionNumber = backStackEntry.arguments?.getInt("questionNumber") ?: 1
+
+                CreateQuestionScreen(
+                    parentId = parentId,
+                    type = type,
+                    paketName = paketName,
+                    questionNumber = questionNumber,
+                    paddingValuesFromNavHost = paddingValues,
+                    onBackClick = { adminNavController.popBackStack() },
+                    onQuestionCreated = {
+                        // Kembali ke halaman sebelumnya setelah soal berhasil dibuat
+                        adminNavController.popBackStack()
+                    }
+                )
+            }
+
+            // Rute 9: List Soal
+            composable(
+                route = "admin_list_soal/{type}/{parentId}/{paketName}",
+                arguments = listOf(
+                    navArgument("type") { type = NavType.StringType },
+                    navArgument("parentId") { type = NavType.StringType },
+                    navArgument("paketName") { type = NavType.StringType }
+                )
+            ) { backStackEntry ->
+                val type = backStackEntry.arguments?.getString("type") ?: ""
+                val parentId = backStackEntry.arguments?.getString("parentId") ?: ""
+                val paketName = backStackEntry.arguments?.getString("paketName") ?: ""
+                
+                // Extract section name dari paketName jika format "Paket - Section"
+                val sectionName = if (paketName.contains(" - ")) {
+                    paketName.split(" - ").getOrNull(1)
+                } else {
+                    null
+                }
+                
+                // Extract sectionId dari paketName (section name bisa digunakan untuk mencari sectionId)
+                // Untuk sekarang, kita load semua soal dan filter di ViewModel berdasarkan section name
+                // Atau bisa di-improve dengan pass sectionId sebagai parameter terpisah
+                val actualSectionId: String? = if (sectionName != null && type == "tryout") {
+                    // Akan di-extract di ViewModel berdasarkan section name
+                    sectionName // Temporary: gunakan section name sebagai identifier
+                } else {
+                    null
+                }
+
+                ListSoalScreen(
+                    parentId = parentId,
+                    type = type,
+                    sectionName = sectionName,
+                    subtestId = null,
+                    sectionId = actualSectionId,
+                    paketName = paketName,
+                    paddingValuesFromNavHost = paddingValues,
+                    onBackClick = { adminNavController.popBackStack() },
+                    onEditQuestion = { t, pId, qId, pName, qNum ->
+                        adminNavController.navigate("admin_edit_question/$t/$pId/$qId/$pName/$qNum")
+                    },
+                    onAddQuestion = { t, pId, pName, qNum ->
+                        adminNavController.navigate("admin_create_question/$t/$pId/$pName/$qNum")
+                    }
+                )
+            }
+
+            // Rute 10: Edit Latihan Soal
+            composable(
+                route = "admin_edit_latihan/{latihanId}",
+                arguments = listOf(
+                    navArgument("latihanId") { type = NavType.StringType }
+                )
+            ) { backStackEntry ->
+                val latihanId = backStackEntry.arguments?.getString("latihanId") ?: ""
+
+                EditLatihanSoalScreen(
+                    latihanId = latihanId,
+                    paddingValuesFromNavHost = paddingValues,
+                    onBackClick = { adminNavController.popBackStack() },
+                    onLatihanUpdated = {
+                        adminNavController.popBackStack()
+                    },
+                    onGoToListSoal = { type, parentId, paketName ->
+                        // Navigate ke list soal dengan nama latihan yang benar
+                        adminNavController.navigate("admin_list_soal/$type/$parentId/$paketName")
+                    }
                 )
             }
         }
