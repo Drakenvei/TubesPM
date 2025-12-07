@@ -1,10 +1,14 @@
 package com.example.tubespm.ui.screens.siswa.quiz
 
+import android.graphics.BitmapFactory
+import android.util.Base64
 import android.widget.Toast
+import androidx.compose.foundation.Image
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.rememberScrollState
+import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Flag
@@ -12,11 +16,15 @@ import androidx.compose.material3.*
 import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.graphics.asImageBitmap
+import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
+import androidx.compose.ui.unit.max
 import androidx.compose.ui.unit.sp
 import androidx.hilt.navigation.compose.hiltViewModel
 import androidx.navigation.NavHostController
@@ -135,26 +143,58 @@ fun QuizScreen(
                         .weight(1f)
                         .verticalScroll(rememberScrollState())
                         .padding(16.dp),
-                    horizontalAlignment = Alignment.CenterHorizontally
+                    horizontalAlignment = Alignment.Start
                 ) {
-                    Text(uiState.subtestName, style = MaterialTheme.typography.titleMedium, color = Color.Gray)
-                    Spacer(Modifier.height(24.dp))
+                    val questionImageBase64 = currentQuestion.questionImage
+
+                    val questionBitMap = remember(questionImageBase64) {
+                        if(!questionImageBase64.isNullOrBlank()) {
+                            try {
+                                val bytes = Base64.decode(questionImageBase64, Base64.DEFAULT)
+                                BitmapFactory.decodeByteArray(bytes, 0, bytes.size)?.asImageBitmap()
+                            } catch (e: Exception) {
+                                null
+                            }
+                        } else {
+                            null
+                        }
+                    }
+                    if (questionBitMap != null) {
+                        Image(
+                            bitmap = questionBitMap,
+                            contentDescription = "Gambar Soal",
+                            contentScale = ContentScale.FillWidth,
+                            modifier = Modifier
+                                .fillMaxWidth()
+                                .wrapContentHeight()
+                                .clip(RoundedCornerShape(8.dp))
+                                .background(Color.LightGray.copy(alpha = 0.1f)) // Placeholder bg
+                        )
+                        Spacer(Modifier.height(16.dp)) // Jarak antara gambar dan teks soal
+                    }
                     // Teks Soal
                     Text(
                         text = currentQuestion.questionText,
                         style = MaterialTheme.typography.bodyLarge.copy(
                             fontWeight = FontWeight.SemiBold,
-                            lineHeight = 24.sp
+                            lineHeight = 28.sp
                         ),
-                        textAlign = TextAlign.Center
+                        textAlign = TextAlign.Start,
+                        modifier = Modifier.fillMaxWidth()
                     )
                     Spacer(Modifier.height(32.dp))
 
                     currentQuestion.options.forEachIndexed { index, optionText ->
                         val optionLabel = ('A' + index).toString()
+
+                        // Ambil gambar untuk opsi ini (jika ada)
+                        // Gunakan getOrNull untuk menghindari IndexOutOfBounds jika list gambar kosong/kurang
+                        val optionImg = currentQuestion.optionImages.getOrNull(index)
+
                         AnswerOption(
                             optionLabel = optionLabel,
                             optionText = optionText,
+                            optionImageBase64 = optionImg,
                             // --- LOGIKA ISSELECTED BARU ---
                             isSelected = uiState.userAnswers[currentQuestion.id] == optionLabel,
                             onClick = {

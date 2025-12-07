@@ -88,10 +88,13 @@ class PembahasanViewModel @Inject constructor(
 
             QuestionWithExplanation(
                 id = question.id,
-                subtest = question.subtestId,
+                subtest = question.subtestId.uppercase(),
                 questionText = question.questionText,
+                questionImage = question.questionImage,
                 options = question.options,
+                optionImages = question.optionImages,
                 explanation = question.discussion,
+                explanationImage = question.explanationImage,
                 correctAnswerIndex = correctAnwerIndex,
                 userAnswerIndex = userAnswerIndex
             )

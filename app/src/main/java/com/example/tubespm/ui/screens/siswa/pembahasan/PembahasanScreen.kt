@@ -1,6 +1,10 @@
 package com.example.tubespm.ui.screens.pembahasan
 
+import android.graphics.BitmapFactory
+import android.util.Base64
+import androidx.compose.foundation.Image
 import androidx.compose.foundation.background
+import androidx.compose.foundation.border
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.shape.RoundedCornerShape
@@ -12,7 +16,10 @@ import androidx.compose.material3.*
 import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.graphics.asImageBitmap
+import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
@@ -32,17 +39,31 @@ fun PembahasanScreen(
 ) {
     val uiState by viewModel.uiState.collectAsState()
     var currentQuestionIndex by remember { mutableStateOf(0) }
-
+    val currentQuestionForTopBar = uiState.questions.getOrNull(currentQuestionIndex)
     Scaffold(
         topBar = {
             TopAppBar(
                 title = {
-                    Text(
-                        text = "Pembahasan",
-                        fontWeight = FontWeight.Bold,
-                        modifier = Modifier.fillMaxWidth(),
-                        textAlign = TextAlign.Center
-                    )
+                    Column (
+                        horizontalAlignment = Alignment.CenterHorizontally,
+                        modifier = Modifier.fillMaxWidth()
+                    ) {
+                        Text(
+                            text = "Pembahasan",
+                            fontWeight = FontWeight.Bold,
+                            fontSize = 18.sp
+                        )
+                        if (currentQuestionForTopBar != null) {
+                            Text(
+                                text = currentQuestionForTopBar.subtest,
+                                style = MaterialTheme.typography.labelMedium,
+                                color = Color.Gray,
+                                maxLines = 1,
+                                overflow = androidx.compose.ui.text.style.TextOverflow.Ellipsis,
+                            )
+                        }
+                    }
+
                 },
                 navigationIcon = {
                     IconButton(onClick = { navController.popBackStack() }) {
@@ -101,29 +122,52 @@ fun PembahasanScreen(
                             .verticalScroll(rememberScrollState())
                             .padding(16.dp)
                     ) {
-                        // Subtest
-                        Text(
-                            text = currentQuestion.subtest,
-                            style = MaterialTheme.typography.titleMedium,
-                            color = Color.Gray
-                        )
+                        // Question Image
+                        val questionBitmap = remember (currentQuestion.questionImage) {
+                            if (!currentQuestion.questionImage.isNullOrBlank()) {
+                                try {
+                                    val bytes = Base64.decode(currentQuestion.questionImage, Base64.DEFAULT)
+                                    BitmapFactory.decodeByteArray(bytes, 0, bytes.size)?.asImageBitmap()
+                                } catch (e: Exception) {
+                                    null
+                                }
+                            } else {
+                                null
+                            }
+                        }
 
-                        Spacer(modifier = Modifier.height(24.dp))
+                        if (questionBitmap != null) {
+                            Image(
+                                bitmap = questionBitmap,
+                                contentDescription = "Gambar Soal",
+                                contentScale = ContentScale.FillWidth,
+                                modifier = Modifier
+                                    .fillMaxWidth()
+                                    .wrapContentHeight()
+                                    .clip(RoundedCornerShape(8.dp))
+                                    .border(1.dp, Color.LightGray, RoundedCornerShape(8.dp))
+                            )
+                            Spacer(modifier = Modifier.height(16.dp))
+                        }
 
                         // Question Text
                         Text(
                             text = currentQuestion.questionText,
-                            style = MaterialTheme.typography.headlineSmall,
-                            fontWeight = FontWeight.Bold
+                            style = MaterialTheme.typography.bodyLarge.copy(
+                                fontWeight = FontWeight.SemiBold,
+                                lineHeight = 28.sp
+                            ),
                         )
 
                         Spacer(modifier = Modifier.height(24.dp))
 
                         // Answer Options
                         currentQuestion.options.forEachIndexed { index, optionText ->
+                            val optionImg = currentQuestion.optionImages.getOrNull(index)
                             PembahasanAnswerOption(
                                 optionLabel = ('A' + index).toString(),
                                 optionText = optionText,
+                                optionImageBase64 = optionImg,
                                 isCorrectAnswer = index == currentQuestion.correctAnswerIndex,
                                 isUserAnswer = index == currentQuestion.userAnswerIndex
                             )
@@ -149,7 +193,35 @@ fun PembahasanScreen(
                                     fontSize = 16.sp,
                                     color = Color.Black
                                 )
+
                                 Spacer(modifier = Modifier.height(8.dp))
+
+                                val explanationBitmap = remember (currentQuestion.explanationImage) {
+                                    if (!currentQuestion.explanationImage.isNullOrBlank()) {
+                                        try {
+                                            val bytes = Base64.decode(currentQuestion.explanationImage, Base64.DEFAULT)
+                                            BitmapFactory.decodeByteArray(bytes, 0, bytes.size)?.asImageBitmap()
+                                        } catch (e: Exception) {
+                                            null
+                                        }
+                                    } else {
+                                        null
+                                    }
+                                }
+
+                                if (explanationBitmap != null) {
+                                    Image(
+                                        bitmap = explanationBitmap,
+                                        contentDescription = "Gambar Pembahasan",
+                                        contentScale = ContentScale.FillWidth,
+                                        modifier = Modifier
+                                            .fillMaxWidth()
+                                            .wrapContentHeight()
+                                            .clip(RoundedCornerShape(8.dp))
+                                    )
+                                    Spacer(modifier = Modifier.height(8.dp))
+                                }
+
                                 Text(
                                     text = currentQuestion.explanation,
                                     style = MaterialTheme.typography.bodyMedium,
