@@ -138,17 +138,6 @@ private fun EditManagementContent(
                         onEditClick = { clicked ->
                             selectedSectionForEdit = clicked
                             showEditSectionDialog = true
-                        },
-                        onEditSoalClick = { clicked ->
-                            // Navigate to list soal untuk section ini
-                            // Pass section name sebagai identifier
-                            onGoToEditQuestion(
-                                "tryout",
-                                paket.id,
-                                "list_${clicked.id}", // Special ID untuk list dengan section ID
-                                "${paket.name} - ${clicked.title}",
-                                0
-                            )
                         }
                     )
                 }
@@ -156,6 +145,25 @@ private fun EditManagementContent(
         }
 
         Spacer(modifier = Modifier.height(12.dp))
+
+        // Tombol Edit Soal (umum, bukan per section)
+        OutlinedButton(
+            onClick = {
+                onGoToEditQuestion(
+                    "tryout",
+                    paket.id,
+                    "list_soal",
+                    paket.name,
+                    0
+                )
+            },
+            modifier = Modifier.align(Alignment.End),
+            colors = ButtonDefaults.outlinedButtonColors(contentColor = Color.Gray)
+        ) {
+            Text("Edit Soal")
+        }
+
+        Spacer(modifier = Modifier.height(8.dp))
 
         // Tombol Add More Section
         OutlinedButton(
@@ -240,8 +248,7 @@ private fun EditManagementContent(
 @Composable
 private fun SectionCard(
     section: TryoutSectionUiModel,
-    onEditClick: (TryoutSectionUiModel) -> Unit,
-    onEditSoalClick: (TryoutSectionUiModel) -> Unit
+    onEditClick: (TryoutSectionUiModel) -> Unit
 ) {
     Surface(
         modifier = Modifier.fillMaxWidth(),
@@ -262,12 +269,6 @@ private fun SectionCard(
                     modifier = Modifier.weight(1f)
                 )
                 Row {
-                    // Tombol Edit Soal
-                    TextButton(
-                        onClick = { onEditSoalClick(section) }
-                    ) {
-                        Text("Edit Soal", fontSize = 12.sp, color = Color(0xFF4CAF50))
-                    }
                     // Tombol Edit Section
                     IconButton(
                         onClick = { onEditClick(section) },

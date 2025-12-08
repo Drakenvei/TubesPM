@@ -18,10 +18,11 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.text.font.FontWeight
-import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.lifecycle.viewmodel.compose.viewModel
+import androidx.compose.material3.FabPosition
+import androidx.compose.foundation.layout.WindowInsets
 import com.example.tubespm.ui.theme.TubesPMTheme
 
 // ======================================================
@@ -100,6 +101,7 @@ fun ManajemenTryoutScreen(
                         onNavigateToCreateLatihan()
                     }
                 },
+                modifier = Modifier.offset(x = 0.dp, y = (-80).dp),
                 containerColor = Color(0xFF00C853),
                 contentColor = Color.White,
                 shape = CircleShape
@@ -110,15 +112,16 @@ fun ManajemenTryoutScreen(
                     modifier = Modifier.size(32.dp)
                 )
             }
-        }
+        },
+        floatingActionButtonPosition = FabPosition.End,
+        contentWindowInsets = WindowInsets(0.dp)
     ) { innerPadding ->
         Column(
             modifier = Modifier
                 .fillMaxSize()
                 .padding(innerPadding)
-                .padding(paddingValuesFromNavHost)
+            // HAPUS .padding(paddingValuesFromNavHost)
         ) {
-
             // TAB ROW
             TabRow(
                 selectedTabIndex = selectedTab,
@@ -155,7 +158,10 @@ fun ManajemenTryoutScreen(
                         LatihanSoalTabContent(
                             contentPadding = PaddingValues(0.dp),
                             onAddClick = onNavigateToCreateLatihan,
-                            onEditClick = onGoToEditQuestion
+                            onEditClick = onGoToEditQuestion,
+                            onGoToListSoal = { type, parentId, paketName ->
+                                onGoToEditQuestion(type, parentId, "list_soal", paketName, 0)
+                            }
                         )
                     }
                 }
@@ -170,12 +176,10 @@ fun ManajemenTryoutScreen(
                         selectedPackageForEdit = null
                     },
                     onDeactivatePackage = {
-                        // TODO: Panggil fungsi di ViewModel untuk update status
                         showEditManagementDialog = false
                         selectedPackageForEdit = null
                     },
                     onAddMoreSection = { },
-                    // Callback untuk navigate ke edit question
                     onGoToEditQuestion = { type, parentId, questionId, paketName, questionNumber ->
                         onGoToEditQuestion(type, parentId, questionId, paketName, questionNumber)
                     }
@@ -213,7 +217,12 @@ fun TryoutTabContent(
 
         LazyColumn(
             modifier = Modifier.fillMaxSize(),
-            contentPadding = PaddingValues(horizontal = 16.dp, vertical = 8.dp),
+            contentPadding = PaddingValues(
+                start = 16.dp,
+                end = 16.dp,
+                top = 8.dp,
+                bottom = 100.dp
+            ),
             verticalArrangement = Arrangement.spacedBy(16.dp)
         ) {
             if (tryoutPackages.isEmpty()) {
@@ -302,18 +311,5 @@ fun TryoutSection(title: String, soal: Int, menit: Int) {
             Spacer(modifier = Modifier.width(4.dp))
             Text(text = if (menit > 0) "$menit menit" else "- menit", color = Color.White, fontSize = 14.sp)
         }
-    }
-}
-
-@Preview(showBackground = true)
-@Composable
-fun ManajemenTryoutScreenPreview() {
-    TubesPMTheme {
-        ManajemenTryoutScreen(
-            paddingValuesFromNavHost = PaddingValues(0.dp),
-            onGoToEditQuestion = { _, _, _, _, _ -> },
-            onNavigateToCreateTryout = { },
-            onNavigateToCreateLatihan = { }
-        )
     }
 }

@@ -12,8 +12,8 @@ import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.automirrored.filled.ArrowBack
 import androidx.compose.material.icons.filled.Add
-import androidx.compose.material.icons.filled.ArrowBack
 import androidx.compose.material.icons.filled.Check
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
@@ -40,6 +40,7 @@ fun CreateQuestionScreen(
     type: String,                // "tryout" atau "latihan_soal"
     paketName: String,
     questionNumber: Int = 1,
+    subtestId: String? = null,   // SubtestId untuk section tryout (optional)
     paddingValuesFromNavHost: androidx.compose.foundation.layout.PaddingValues,
     onBackClick: () -> Unit,
     onQuestionCreated: () -> Unit, // Callback setelah soal berhasil dibuat
@@ -79,9 +80,12 @@ fun CreateQuestionScreen(
         )
     }
 
-    // Set initial question number
-    LaunchedEffect(currentQuestionNum) {
+    // Set initial question number and subtestId
+    LaunchedEffect(currentQuestionNum, subtestId) {
         viewModel.updateQuestionNumber(currentQuestionNum)
+        if (subtestId != null) {
+            viewModel.updateSubtestId(subtestId)
+        }
     }
 
     Scaffold(
@@ -105,7 +109,7 @@ fun CreateQuestionScreen(
                 navigationIcon = {
                     IconButton(onClick = onBackClick) {
                         Icon(
-                            Icons.Default.ArrowBack,
+                            Icons.AutoMirrored.Filled.ArrowBack,
                             contentDescription = "Back",
                             tint = Color.White
                         )
@@ -297,7 +301,7 @@ fun CreateQuestionScreen(
                             Row(
                                 modifier = Modifier
                                     .fillMaxWidth()
-                                    .height(42.dp)
+                                    .height(52.dp)
                                     .padding(horizontal = 4.dp),
                                 verticalAlignment = Alignment.CenterVertically
                             ) {
@@ -311,9 +315,7 @@ fun CreateQuestionScreen(
                                 OutlinedTextField(
                                     value = uiState.answerMap[labelStr] ?: "",
                                     onValueChange = { viewModel.updateAnswerOption(labelStr, it) },
-                                    modifier = Modifier
-                                        .weight(1f)
-                                        .height(32.dp),
+                                    modifier = Modifier.weight(1f),
                                     placeholder = {
                                         Text(
                                             option.placeholder,
@@ -324,16 +326,16 @@ fun CreateQuestionScreen(
                                     singleLine = true,
                                     textStyle = TextStyle(
                                         fontSize = 13.sp,
-                                        color = Color.Black
+                                        color = Color(0xFF212121)
                                     ),
                                     colors = OutlinedTextFieldDefaults.colors(
-                                        focusedContainerColor = Color(0xFFE0E0E0),
-                                        unfocusedContainerColor = Color(0xFFE0E0E0),
+                                        focusedContainerColor = Color.White,
+                                        unfocusedContainerColor = Color.White,
                                         focusedBorderColor = Color.Transparent,
                                         unfocusedBorderColor = Color.Transparent,
-                                        focusedTextColor = Color.Black,
-                                        unfocusedTextColor = Color.Black,
-                                        cursorColor = Color.Black
+                                        focusedTextColor = Color(0xFF212121),
+                                        unfocusedTextColor = Color(0xFF212121),
+                                        cursorColor = Color(0xFF212121)
                                     )
                                 )
 
@@ -365,7 +367,7 @@ fun CreateQuestionScreen(
                                 }
                             }
                             if (option.label != 'E') {
-                                Divider(
+                                HorizontalDivider(
                                     color = Color(0xFFCCCCCC),
                                     thickness = 0.5.dp
                                 )

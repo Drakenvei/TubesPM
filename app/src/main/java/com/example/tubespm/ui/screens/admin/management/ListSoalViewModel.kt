@@ -15,7 +15,8 @@ import kotlinx.coroutines.tasks.await
 data class ListSoalUiState(
     val isLoading: Boolean = true,
     val questions: List<QuizQuestion> = emptyList(),
-    val error: String? = null
+    val error: String? = null,
+    val currentSubtestId: String? = null // SubtestId untuk section yang sedang dilihat
 )
 
 class ListSoalViewModel : ViewModel() {
@@ -130,11 +131,15 @@ class ListSoalViewModel : ViewModel() {
                 
                 val filteredQuestions = allQuestions.filter { it.subtestId in subtestIds }
                 
+                // Ambil subtestId pertama untuk digunakan saat menambah soal baru
+                val firstSubtestId = subtestIds.firstOrNull()
+                
                 _uiState.update {
                     it.copy(
                         isLoading = false,
                         questions = filteredQuestions,
-                        error = null
+                        error = null,
+                        currentSubtestId = firstSubtestId
                     )
                 }
             } catch (e: Exception) {
@@ -148,3 +153,4 @@ class ListSoalViewModel : ViewModel() {
         }
     }
 }
+

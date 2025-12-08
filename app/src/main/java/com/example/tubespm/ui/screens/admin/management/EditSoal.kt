@@ -13,8 +13,8 @@ import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.automirrored.filled.ArrowBack
 import androidx.compose.material.icons.filled.Add
-import androidx.compose.material.icons.filled.ArrowBack
 import androidx.compose.material.icons.filled.Check
 import androidx.compose.material.icons.filled.Save
 import androidx.compose.material3.*
@@ -79,7 +79,7 @@ fun EditQuestionScreen(
                 },
                 navigationIcon = {
                     IconButton(onClick = onBackClick) {
-                        Icon(Icons.Default.ArrowBack, contentDescription = "Back", tint = Color.White)
+                        Icon(Icons.AutoMirrored.Filled.ArrowBack, contentDescription = "Back", tint = Color.White)
                     }
                 },
                 actions = {
@@ -194,7 +194,7 @@ fun EditQuestionScreen(
                             val isCorrect = uiState.questionData.correctAnswer == labelStr
 
                             Row(
-                                modifier = Modifier.fillMaxWidth().height(42.dp).padding(horizontal = 4.dp),
+                                modifier = Modifier.fillMaxWidth().height(52.dp).padding(horizontal = 4.dp),
                                 verticalAlignment = Alignment.CenterVertically
                             ) {
                                 Text(text = "(${option.label})", fontSize = 13.sp, color = Color(0xFF757575), modifier = Modifier.width(32.dp))
@@ -202,21 +202,21 @@ fun EditQuestionScreen(
                                 OutlinedTextField(
                                     value = uiState.answerMap[labelStr] ?: "",
                                     onValueChange = { viewModel.updateAnswerOption(labelStr, it) },
-                                    modifier = Modifier.weight(1f).height(32.dp),
+                                    modifier = Modifier.weight(1f),
                                     placeholder = { Text(option.placeholder, color = Color(0xFFB0B0B0), fontSize = 13.sp) },
                                     singleLine = true,
                                     textStyle = TextStyle(
                                         fontSize = 13.sp,
-                                        color = Color.Black
+                                        color = Color(0xFF212121)
                                     ),
                                     colors = OutlinedTextFieldDefaults.colors(
-                                        focusedContainerColor = Color(0xFFE0E0E0),
-                                        unfocusedContainerColor = Color(0xFFE0E0E0),
+                                        focusedContainerColor = Color.White,
+                                        unfocusedContainerColor = Color.White,
                                         focusedBorderColor = Color.Transparent,
                                         unfocusedBorderColor = Color.Transparent,
-                                        focusedTextColor = Color.Black,
-                                        unfocusedTextColor = Color.Black,
-                                        cursorColor = Color.Black
+                                        focusedTextColor = Color(0xFF212121),
+                                        unfocusedTextColor = Color(0xFF212121),
+                                        cursorColor = Color(0xFF212121)
                                     )
                                 )
 
@@ -238,7 +238,7 @@ fun EditQuestionScreen(
                                     }
                                 }
                             }
-                            if (option.label != 'E') Divider(color = Color(0xFFCCCCCC), thickness = 0.5.dp)
+                            if (option.label != 'E') HorizontalDivider(color = Color(0xFFCCCCCC), thickness = 0.5.dp)
                         }
                     }
 
