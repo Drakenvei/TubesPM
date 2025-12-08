@@ -18,7 +18,8 @@ data class PaketSoal(
     val nama: String,
     val subtest: String,    // Tambahan: Untuk Tag kategori (misal: Penalaran Umum)
     val totalSoal: Int,     // Tambahan: Jumlah total soal langsung
-    val code: String        // Tambahan: Kode paket (opsional, untuk info tambahan)
+    val code: String,       // Tambahan: Kode paket (opsional, untuk info tambahan)
+    val isActive: Boolean = true  // Status aktif/nonaktif
 )
 
 data class ManajemenLatihanUiState(
@@ -48,7 +49,7 @@ class ManajemenLatihanSoalViewModel : ViewModel() {
             val firestoreFlow = getLatihanSoalFromFirestore()
 
             combine(firestoreFlow, _searchQuery) { list, query ->
-                if (query.isBlank()) {
+                val filtered = if (query.isBlank()) {
                     list
                 } else {
                     list.filter {
@@ -56,6 +57,8 @@ class ManajemenLatihanSoalViewModel : ViewModel() {
                                 it.subtest.contains(query, ignoreCase = true)
                     }
                 }
+                // Sort: active items first, then inactive items
+                filtered.sortedByDescending { it.isActive }
             }
                 .catch { e ->
                     _uiState.update { it.copy(isLoading = false, error = e.message) }
@@ -88,7 +91,8 @@ class ManajemenLatihanSoalViewModel : ViewModel() {
                                     nama = it.title.ifEmpty { "Latihan Tanpa Judul" },
                                     subtest = it.subtest.ifEmpty { "Umum" }, // Ambil subtest
                                     totalSoal = it.questionCount,
-                                    code = it.code
+                                    code = it.code,
+                                    isActive = it.status == "active"
                                 )
                             }
                         } catch (err: Exception) {

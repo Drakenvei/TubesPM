@@ -20,6 +20,7 @@ import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.lifecycle.viewmodel.compose.viewModel
+import androidx.compose.foundation.layout.WindowInsets
 
 // ======================================================
 // SCREEN UTAMA — TAB "Latihan Soal"
@@ -29,6 +30,7 @@ fun LatihanSoalTabContent(
     contentPadding: PaddingValues,
     onAddClick: () -> Unit,
     onEditClick: (String, String, String, String, Int) -> Unit, // (type, latihanId, questionId, paketName, questionNumber)
+    onGoToListSoal: (String, String, String) -> Unit = { _, _, _ -> }, // (type, parentId, paketName)
     viewModel: ManajemenLatihanSoalViewModel = viewModel()
 ) {
     val uiState by viewModel.uiState.collectAsState()
@@ -38,6 +40,7 @@ fun LatihanSoalTabContent(
         floatingActionButton = {
             FloatingActionButton(
                 onClick = onAddClick,
+                modifier = Modifier.offset(x = 0.dp, y = (-80).dp),
                 containerColor = Color(0xFF00C853),
                 contentColor = Color.White,
                 shape = androidx.compose.foundation.shape.CircleShape
@@ -48,7 +51,8 @@ fun LatihanSoalTabContent(
                     modifier = Modifier.size(32.dp)
                 )
             }
-        }
+        },
+        contentWindowInsets = WindowInsets(0.dp)
     ) { innerPadding ->
         Column(
             modifier = Modifier
@@ -91,7 +95,12 @@ fun LatihanSoalTabContent(
             } else {
                 LazyColumn(
                     modifier = Modifier.fillMaxSize(),
-                    contentPadding = PaddingValues(horizontal = 16.dp, vertical = 8.dp),
+                    contentPadding = PaddingValues(
+                        start = 16.dp,
+                        end = 16.dp,
+                        top = 16.dp,
+                        bottom = 100.dp
+                    ),
                     verticalArrangement = Arrangement.spacedBy(16.dp)
                 ) {
                     if (uiState.paketSoalList.isEmpty()) {
@@ -118,6 +127,10 @@ fun LatihanSoalTabContent(
                                         paket.nama,
                                         0
                                     )
+                                },
+                                onGoToListSoal = {
+                                    // Navigate directly to list soal
+                                    onGoToListSoal("latihan_soal", paket.id, paket.nama)
                                 }
                             )
                         }
@@ -134,7 +147,8 @@ fun LatihanSoalTabContent(
 @Composable
 fun PaketSoalAdminCard(
     paket: PaketSoal,
-    onEditClick: () -> Unit = {}
+    onEditClick: () -> Unit = {},
+    onGoToListSoal: () -> Unit = {}
 ) {
     Card(
         modifier = Modifier
@@ -164,19 +178,28 @@ fun PaketSoalAdminCard(
                     modifier = Modifier.weight(1f) // Text ambil sisa ruang
                 )
 
-                // Tombol Edit (Khas Admin)
-                // Dibuat semi-transparan putih agar menyatu
-                IconButton(
-                    onClick = onEditClick,
-                    modifier = Modifier
-                        .size(32.dp)
-                        .offset(x = 8.dp, y = (-8).dp) // Sedikit geser ke pojok
-                ) {
-                    Icon(
-                        imageVector = Icons.Filled.Edit,
-                        contentDescription = "Edit",
-                        tint = Color.White
-                    )
+                // Row untuk tombol-tombol
+                Row {
+                    // Tombol Lihat Soal (Baru)
+                    TextButton(
+                        onClick = onGoToListSoal,
+                        colors = ButtonDefaults.textButtonColors(contentColor = Color.White)
+                    ) {
+                        Text("Lihat Soal", fontSize = 12.sp)
+                    }
+
+                    // Tombol Edit (Khas Admin)
+                    IconButton(
+                        onClick = onEditClick,
+                        modifier = Modifier.size(32.dp)
+                    ) {
+                        Icon(
+
+                            imageVector = Icons.Filled.Edit,
+                            contentDescription = "Edit",
+                            tint = Color.White
+                        )
+                    }
                 }
             }
 
@@ -199,20 +222,40 @@ fun PaketSoalAdminCard(
 
             Spacer(modifier = Modifier.height(12.dp))
 
-            // --- Footer: Jumlah Soal ---
-            Row(verticalAlignment = Alignment.CenterVertically) {
-                Icon(
-                    imageVector = Icons.Filled.Description,
-                    contentDescription = "Jumlah Soal",
-                    tint = Color.White,
-                    modifier = Modifier.size(20.dp)
-                )
-                Spacer(modifier = Modifier.width(6.dp))
-                Text(
-                    text = "${paket.totalSoal} soal",
-                    color = Color.White,
-                    style = MaterialTheme.typography.bodyMedium
-                )
+            // --- Footer: Jumlah Soal dan Status ---
+            Row(
+                modifier = Modifier.fillMaxWidth(),
+                horizontalArrangement = Arrangement.SpaceBetween,
+                verticalAlignment = Alignment.CenterVertically
+            ) {
+                Row(verticalAlignment = Alignment.CenterVertically) {
+                    Icon(
+                        imageVector = Icons.Filled.Description,
+                        contentDescription = "Jumlah Soal",
+                        tint = Color.White,
+                        modifier = Modifier.size(20.dp)
+                    )
+                    Spacer(modifier = Modifier.width(6.dp))
+                    Text(
+                        text = "${paket.totalSoal} soal",
+                        color = Color.White,
+                        style = MaterialTheme.typography.bodyMedium
+                    )
+                }
+
+                // Status Badge
+                Surface(
+                    color = if (paket.isActive) Color.White else Color(0xFFB0BEC5), // Putih untuk active, abu untuk inactive
+                    shape = RoundedCornerShape(8.dp)
+                ) {
+                    Text(
+                        text = if (paket.isActive) "active" else "inactive", // Ganti dari Aktif/Nonaktif
+                        color = if (paket.isActive) Color(0xFFE61C5D) else Color.White, // Pink untuk active, putih untuk inactive
+                        fontSize = 11.sp,
+                        fontWeight = FontWeight.SemiBold,
+                        modifier = Modifier.padding(horizontal = 8.dp, vertical = 4.dp)
+                    )
+                }
             }
         }
     }

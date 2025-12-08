@@ -8,7 +8,6 @@ import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Add
-import androidx.compose.material.icons.filled.ArrowBack
 import androidx.compose.material.icons.filled.Edit
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
@@ -19,20 +18,24 @@ import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.lifecycle.viewmodel.compose.viewModel
+import androidx.compose.material3.FabPosition
+import androidx.compose.foundation.layout.WindowInsets
+import androidx.compose.foundation.shape.CircleShape
+import androidx.compose.material.icons.automirrored.filled.ArrowBack
+import com.example.tubespm.ui.theme.TubesPMTheme
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun ListSoalScreen(
     parentId: String,
-    type: String, // "tryout" atau "latihan_soal"
-    sectionName: String? = null, // Nama section jika filter by section
-    subtestId: String? = null, // ID subtest jika filter by subtest
-    sectionId: String? = null, // ID section untuk filter
+    type: String,
+    sectionName: String? = null,
+    subtestId: String? = null,
+    sectionId: String? = null,
     paketName: String,
-    paddingValuesFromNavHost: androidx.compose.foundation.layout.PaddingValues,
     onBackClick: () -> Unit,
-    onEditQuestion: (String, String, String, String, Int) -> Unit, // (type, parentId, questionId, paketName, questionNumber)
-    onAddQuestion: (String, String, String, Int) -> Unit, // (type, parentId, paketName, questionNumber)
+    onEditQuestion: (String, String, String, String, Int) -> Unit,
+    onAddQuestion: (String, String, String, Int, String?) -> Unit,
     viewModel: ListSoalViewModel = viewModel()
 ) {
     // Extract section name dari paketName jika format "Paket - Section"
@@ -97,7 +100,7 @@ fun ListSoalScreen(
                 navigationIcon = {
                     IconButton(onClick = onBackClick) {
                         Icon(
-                            Icons.Default.ArrowBack,
+                            Icons.AutoMirrored.Filled.ArrowBack,
                             contentDescription = "Kembali",
                             tint = Color.White
                         )
@@ -113,19 +116,24 @@ fun ListSoalScreen(
             FloatingActionButton(
                 onClick = {
                     val nextQuestionNumber = (uiState.questions.maxOfOrNull { it.questionNumber } ?: 0) + 1
-                    onAddQuestion(type, parentId, paketName, nextQuestionNumber)
+                    val subtestIdForNewQuestion = if (type == "tryout") uiState.currentSubtestId else null
+                    onAddQuestion(type, parentId, paketName, nextQuestionNumber, subtestIdForNewQuestion)
                 },
+                modifier = Modifier.offset(x = 0.dp, y = (-80).dp),
                 containerColor = Color(0xFF4CAF50),
-                contentColor = Color.White
+                contentColor = Color.White,
+                shape = CircleShape
             ) {
                 Icon(Icons.Default.Add, contentDescription = "Tambah Soal")
             }
-        }
+        },
+        floatingActionButtonPosition = FabPosition.End,
+        contentWindowInsets = WindowInsets(0.dp)
     ) { innerPadding ->
         Box(
             modifier = Modifier
                 .padding(innerPadding)
-                .padding(paddingValuesFromNavHost)
+                // HAPUS .padding(paddingValuesFromNavHost)
                 .fillMaxSize()
                 .background(Color(0xFFF5F5F5))
         ) {
@@ -185,7 +193,12 @@ fun ListSoalScreen(
                 else -> {
                     LazyColumn(
                         modifier = Modifier.fillMaxSize(),
-                        contentPadding = PaddingValues(16.dp),
+                        contentPadding = PaddingValues(
+                            start = 16.dp,
+                            end = 16.dp,
+                            top = 16.dp,
+                            bottom = 100.dp
+                        ),
                         verticalArrangement = Arrangement.spacedBy(12.dp)
                     ) {
                         items(uiState.questions) { question ->
@@ -243,20 +256,6 @@ fun QuestionCard(
                     color = Color(0xFF757575),
                     maxLines = 2
                 )
-                if (question.subtestId.isNotEmpty()) {
-                    Spacer(modifier = Modifier.height(4.dp))
-                    Surface(
-                        color = Color(0xFFE3F2FD),
-                        shape = RoundedCornerShape(4.dp)
-                    ) {
-                        Text(
-                            text = question.subtestId,
-                            fontSize = 11.sp,
-                            color = Color(0xFF1976D2),
-                            modifier = Modifier.padding(horizontal = 6.dp, vertical = 2.dp)
-                        )
-                    }
-                }
             }
             Icon(
                 Icons.Default.Edit,
@@ -267,3 +266,4 @@ fun QuestionCard(
         }
     }
 }
+

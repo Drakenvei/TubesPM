@@ -181,24 +181,31 @@ fun AdminMainScreen(
 
             // Rute 8: Create Question
             composable(
-                route = "admin_create_question/{type}/{parentId}/{paketName}/{questionNumber}",
+                route = "admin_create_question/{type}/{parentId}/{paketName}/{questionNumber}?subtestId={subtestId}",
                 arguments = listOf(
                     navArgument("type") { type = NavType.StringType },
                     navArgument("parentId") { type = NavType.StringType },
                     navArgument("paketName") { type = NavType.StringType },
-                    navArgument("questionNumber") { type = NavType.IntType }
+                    navArgument("questionNumber") { type = NavType.IntType },
+                    navArgument("subtestId") {
+                        type = NavType.StringType
+                        defaultValue = ""
+                        nullable = true
+                    }
                 )
             ) { backStackEntry ->
                 val type = backStackEntry.arguments?.getString("type") ?: ""
                 val parentId = backStackEntry.arguments?.getString("parentId") ?: ""
                 val paketName = backStackEntry.arguments?.getString("paketName") ?: ""
                 val questionNumber = backStackEntry.arguments?.getInt("questionNumber") ?: 1
+                val subtestId = backStackEntry.arguments?.getString("subtestId")?.takeIf { it.isNotEmpty() }
 
                 CreateQuestionScreen(
                     parentId = parentId,
                     type = type,
                     paketName = paketName,
                     questionNumber = questionNumber,
+                    subtestId = subtestId,
                     paddingValuesFromNavHost = paddingValues,
                     onBackClick = { adminNavController.popBackStack() },
                     onQuestionCreated = {
@@ -245,13 +252,13 @@ fun AdminMainScreen(
                     subtestId = null,
                     sectionId = actualSectionId,
                     paketName = paketName,
-                    paddingValuesFromNavHost = paddingValues,
                     onBackClick = { adminNavController.popBackStack() },
                     onEditQuestion = { t, pId, qId, pName, qNum ->
                         adminNavController.navigate("admin_edit_question/$t/$pId/$qId/$pName/$qNum")
                     },
-                    onAddQuestion = { t, pId, pName, qNum ->
-                        adminNavController.navigate("admin_create_question/$t/$pId/$pName/$qNum")
+                    onAddQuestion = { t, pId, pName, qNum, subtestId ->
+                        val subtestParam = if (subtestId != null) "?subtestId=$subtestId" else ""
+                        adminNavController.navigate("admin_create_question/$t/$pId/$pName/$qNum$subtestParam")
                     }
                 )
             }
