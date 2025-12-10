@@ -17,7 +17,8 @@ import javax.inject.Inject
 data class PembahasanUiState(
     val isLoading: Boolean = true,
     val error: String? = null,
-    val questions: List<QuestionWithExplanation> = emptyList()
+    val questions: List<QuestionWithExplanation> = emptyList(),
+    val activityId: String = "" // field ini sudah ada
 )
 
 @HiltViewModel
@@ -28,36 +29,45 @@ class PembahasanViewModel @Inject constructor(
     private val _uiState = MutableStateFlow(PembahasanUiState())
     val uiState = _uiState.asStateFlow()
 
-    private val activityId: String = savedStateHandle.get<String>("activityId")!!
+    // FIX: Ambil activityId dengan aman (default ke String kosong jika null)
+    private val activityIdNav: String = savedStateHandle.get<String>("activityId") ?: ""
 
     init {
         loadPembahasanData()
     }
 
     private fun loadPembahasanData(){
-        if (activityId.isBlank()) {
+        // Validasi ID sebelum fetching data
+        if (activityIdNav.isBlank()) {
             _uiState.update {
-                it.copy(isLoading = false, error = "Activity ID tidak valid")
+                it.copy(
+                    isLoading = false,
+                    error = "Kesalahan Navigasi: Activity ID tidak ditemukan."
+                )
             }
             return
         }
-            viewModelScope.launch {
-            try {
-                // 1. Ambil data aktivitas (untuk mendapatkan ID tryout)
-                val activity = repository.getActivity(activityId)
-                if (activity == null) throw Exception("Aktivitas tidak ditemukan")
 
-                // 2. Ambil semua soal dari bank soal (kunci jawaban & pembahasan)
-                val allQuestions = repository.getQuestions(
-                    refId = activity.activityRefId,
-                    type = activity.type
+        // Simpan activityId yang valid ke UI State agar PembahasanScreen bisa membacanya
+        _uiState.update { it.copy(activityId = activityIdNav) }
+
+        viewModelScope.launch {
+            try {
+                val userActivity = repository.getActivity(activityIdNav)
+                    ?: throw Exception("Aktivitas pengguna tidak ditemukan.")
+
+                // NOTE: getQuestions() di interface mengembalikan List<QuizQuestion>,
+                // jadi langsung assign tanpa .first()
+                val questions: List<QuizQuestion> = repository.getQuestions(
+                    refId = userActivity.activityRefId,
+                    type = userActivity.type
                 )
 
-                // 3. Ambil semua jawaban user (hanya butuh data terakhir, jadi pakai .first())
-                val userAnswers = repository.getSavedAnswers(activityId).first()
+                // getSavedAnswers() mengembalikan Flow<Map<...>>, jadi ambil first() dari Flow
+                val userAnswers = repository.getSavedAnswers(activityIdNav).first()
 
-                // 4. Gabungkan (mapping) kedua data
-                val combinedData: List<QuestionWithExplanation> = mapData(allQuestions,userAnswers)
+                // Sekarang types cocok: mapData(List<QuizQuestion>, Map<String, String>)
+                val combinedData = mapData(questions, userAnswers)
 
                 _uiState.update {
                     it.copy(isLoading = false, questions = combinedData)
@@ -70,10 +80,10 @@ class PembahasanViewModel @Inject constructor(
         }
     }
 
+
     /**
      * Helper untuk "menjahit" data soal dan data jawaban
      */
-
     private fun mapData(
         questions: List<QuizQuestion>,
         userAnswers: Map<String, String> // Map<QuestionID, AnswerString>
@@ -83,8 +93,8 @@ class PembahasanViewModel @Inject constructor(
             val userAnswerString = userAnswers[question.id] // Jawaban user (misal: "B")
 
             // Konversi "A" -> 0, "B" -> 1, dst.
-            val correctAnwerIndex = question.correctAnswer[0] - 'A'
-            val userAnswerIndex = userAnswerString?.get(0)?.minus('A') // Bisa null
+            val correctAnwerIndex = question.correctAnswer.firstOrNull()?.minus('A') ?: 0
+            val userAnswerIndex = userAnswerString?.firstOrNull()?.minus('A') // Bisa null
 
             QuestionWithExplanation(
                 id = question.id,

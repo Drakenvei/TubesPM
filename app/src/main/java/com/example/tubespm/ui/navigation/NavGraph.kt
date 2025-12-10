@@ -24,6 +24,7 @@ import com.example.tubespm.ui.screens.admin.management.CreateLatihanSoalScreen
 import com.example.tubespm.ui.screens.admin.management.CreateTryoutScreen
 import com.example.tubespm.ui.screens.admin.management.EditLatihanSoalScreen
 import com.example.tubespm.ui.screens.admin.management.ListSoalScreen
+import com.example.tubespm.ui.screens.pembahasan.DiskusiAiScreen
 import com.example.tubespm.ui.screens.pembahasan.PembahasanScreen
 import com.example.tubespm.ui.screens.siswa.activity.ActivityLatihanScreen
 import com.example.tubespm.ui.screens.siswa.activity.ActivityScreen
@@ -151,6 +152,19 @@ fun StudentNavGraph(
             arguments = listOf(navArgument("activityId") { type = NavType.StringType })
         ) {
             PembahasanScreen(navController = navController)
+        }
+
+        // --- DISKUSI AI ---
+        composable(
+            // Route harus mencakup kedua argumen
+            route = "diskusi_ai/{activityId}/{questionIndex}",
+            arguments = listOf(
+                navArgument("activityId") { type = NavType.StringType },
+                navArgument("questionIndex") { type = NavType.IntType }
+            )
+        ) {
+            // Memanggil fungsi Composable baru yang sudah kita buat
+            DiskusiAiScreen(navController = navController)
         }
 
         // --- Setting ---
