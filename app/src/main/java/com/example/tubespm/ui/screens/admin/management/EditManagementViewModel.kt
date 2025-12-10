@@ -14,16 +14,17 @@ import kotlinx.coroutines.launch
 
 // Model UI khusus untuk list di dalam Dialog
 data class TryoutSectionUiModel(
-    val id: String, // biasanya sectionId (misal "tps")
-    val title: String,
-    val type: String, // "TPS" atau "Literasi"
-    val timeMinutes: Int,
-    val questionCount: Int
+    val id: String, // subtestId (Bukan sectionId!)
+    val title: String, // subtestName
+    val type: String, // "TPS" atau "Literasi" (Diambil dari parent section)
+    val timeMinutes: Int, // duration
+    val questionCount: Int, // questionCount
+    val parentSectionId: String // "tps" atau "literasi" (Penting untuk referensi)
 )
 
 data class EditManagementUiState(
     val isLoading: Boolean = true,
-    val sections: List<TryoutSectionUiModel> = emptyList(),
+    val sections: List<TryoutSectionUiModel> = emptyList(), //Ini sebenarnya list of Subtests
     val error: String? = null
 )
 
@@ -50,25 +51,33 @@ class EditManagementViewModel : ViewModel() {
                 if (snapshot != null && snapshot.exists()) {
                     try {
                         val tryout = snapshot.toObject(Tryout::class.java)
-                        val uiSections = tryout?.sections?.map { sec ->
-                            // Logika menentukan Tipe (TPS/Literasi) berdasarkan ID atau Nama
-                            val type = if (sec.sectionId.contains("literasi", true) || sec.sectionName.contains("literasi", true)) {
-                                "Literasi"
-                            } else {
-                                "TPS"
-                            }
 
-                            TryoutSectionUiModel(
-                                id = sec.sectionId, // Menggunakan sectionId dari data model
-                                title = sec.sectionName,
-                                type = type,
-                                timeMinutes = sec.sectionDuration,
-                                questionCount = sec.sectionQuestionCount
-                            )
-                        } ?: emptyList()
+                        // --- FLATTEING DATA ---
+                        // Mengubah struktur nested (Section -> Subtests) menjadi satu list datar
+                        val flatList = mutableListOf<TryoutSectionUiModel>()
+
+                        tryout?.sections?.forEach { section ->
+                            // Logic to determine type label (TPS/Literasi)
+                            val typeLabel = if (section.sectionId.equals("tps", ignoreCase = true)) "TPS" else "Literasi"
+
+                            section.subtests.forEach { subtest ->
+                                flatList.add(
+                                    TryoutSectionUiModel(
+                                        // ERROR IS LIKELY HERE:
+                                        // Ensure you are using 'subtest.subtestId' (e.g., "pu"), NOT 'section.sectionId' (e.g., "tps")
+                                        id = subtest.subtestId,
+                                        title = subtest.subtestName,
+                                        type = typeLabel,
+                                        timeMinutes = subtest.duration,
+                                        questionCount = subtest.questionCount,
+                                        parentSectionId = section.sectionId
+                                    )
+                                )
+                            }
+                        }
 
                         _uiState.update {
-                            it.copy(isLoading = false, sections = uiSections, error = null)
+                            it.copy(isLoading = false, sections = flatList, error = null)
                         }
                     } catch (err: Exception) {
                         Log.e("EditManagementVM", "Error parsing data", err)

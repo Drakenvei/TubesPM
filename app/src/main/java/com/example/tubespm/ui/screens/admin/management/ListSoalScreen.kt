@@ -59,8 +59,13 @@ fun ListSoalScreen(
     // Load questions saat screen pertama kali dibuka
     LaunchedEffect(parentId, type, subtestId, sectionId, actualSectionName) {
         when {
+            // [REVISI] PRIORITAS UTAMA: Jika ada Subtest ID, pakai itu!
+            subtestId != null && subtestId.isNotBlank() -> {
+                viewModel.loadQuestionsBySubtest(parentId, type, subtestId)
+            }
+
+            // PRIORITAS KEDUA: Baru cek Section
             sectionId != null || actualSectionName != null -> {
-                // Gunakan sectionId jika ada, atau sectionName sebagai fallback
                 val identifier = sectionId ?: actualSectionName ?: ""
                 if (identifier.isNotEmpty()) {
                     viewModel.loadQuestionsBySection(parentId, type, identifier)
@@ -68,9 +73,8 @@ fun ListSoalScreen(
                     viewModel.loadQuestions(parentId, type)
                 }
             }
-            subtestId != null -> {
-                viewModel.loadQuestionsBySubtest(parentId, type, subtestId)
-            }
+
+            // TERAKHIR: Load Semua
             else -> {
                 viewModel.loadQuestions(parentId, type)
             }
@@ -78,6 +82,8 @@ fun ListSoalScreen(
     }
 
     val uiState by viewModel.uiState.collectAsState()
+
+    val context = androidx.compose.ui.platform.LocalContext.current
 
     Scaffold(
         topBar = {
@@ -116,8 +122,23 @@ fun ListSoalScreen(
             FloatingActionButton(
                 onClick = {
                     val nextQuestionNumber = (uiState.questions.maxOfOrNull { it.questionNumber } ?: 0) + 1
-                    val subtestIdForNewQuestion = if (type == "tryout") uiState.currentSubtestId else null
-                    onAddQuestion(type, parentId, paketName, nextQuestionNumber, subtestIdForNewQuestion)
+
+                    // LOGIKA UTAMA PERBAIKAN:
+                    // Prioritaskan 'subtestId' dari parameter Navigasi.
+                    // Jika null, baru coba ambil dari ViewModel state.
+                    val targetSubtestId = subtestId ?: uiState.currentSubtestId
+
+                    // Validasi Kritis sebelum pindah layar
+                    if (type == "tryout" && targetSubtestId.isNullOrBlank()) {
+                        // Tampilkan pesan error jika ID benar-benar hilang (Bug prevention)
+                        android.widget.Toast.makeText(
+                            context, // Error context di sini, butuh context
+                            "Gagal: Subtest ID tidak ditemukan",
+                            android.widget.Toast.LENGTH_SHORT
+                        ).show()
+                    } else {
+                        onAddQuestion(type, parentId, paketName, nextQuestionNumber, targetSubtestId)
+                    }
                 },
                 modifier = Modifier.offset(x = 0.dp, y = (-80).dp),
                 containerColor = Color(0xFF4CAF50),
@@ -186,6 +207,10 @@ fun ListSoalScreen(
                                 text = "Tekan tombol + untuk menambah soal",
                                 color = Color.Gray,
                                 fontSize = 12.sp
+                            )
+                            Spacer(modifier = Modifier.height(8.dp))
+                            Text(
+                                text = "${subtestId}, ${sectionId}, ${sectionName}"
                             )
                         }
                     }

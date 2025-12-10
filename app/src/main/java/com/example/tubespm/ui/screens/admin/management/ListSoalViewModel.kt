@@ -65,7 +65,11 @@ class ListSoalViewModel : ViewModel() {
     fun loadQuestionsBySubtest(parentId: String, type: String, subtestId: String) {
         _uiState.update { it.copy(isLoading = true) }
         viewModelScope.launch {
+            android.util.Log.d("DEBUG_SOAL", "Mencari soal di Parent: $parentId")
+            android.util.Log.d("DEBUG_SOAL", "Dengan Subtest ID: '$subtestId'") // Pakai tanda kutip untuk cek spasi
             try {
+                android.util.Log.d("DEBUG_SOAL", "Mencari soal di Parent: $parentId")
+                android.util.Log.d("DEBUG_SOAL", "Dengan Subtest ID: '$subtestId'") // Pakai tanda kutip untuk cek spasi
                 val collectionName = if (type == "tryout") "tryouts" else "latihan_soal"
                 val snapshot = db.collection(collectionName)
                     .document(parentId)
@@ -97,49 +101,28 @@ class ListSoalViewModel : ViewModel() {
     /**
      * Load soal berdasarkan section (load semua soal, filter di UI berdasarkan subtestId di section)
      */
-    fun loadQuestionsBySection(parentId: String, type: String, sectionIdOrName: String) {
+    fun loadQuestionsBySection(parentId: String, type: String, subtestId: String) {
         _uiState.update { it.copy(isLoading = true) }
         viewModelScope.launch {
             try {
                 val collectionName = if (type == "tryout") "tryouts" else "latihan_soal"
-                
-                // Ambil tryout untuk mendapatkan subtestId dari section
-                val tryoutDoc = db.collection(collectionName).document(parentId).get().await()
-                val tryout = tryoutDoc.toObject(com.example.tubespm.data.model.Tryout::class.java)
-                
-                // Cari section berdasarkan sectionId atau sectionName
-                val section = tryout?.sections?.find { 
-                    it.sectionId == sectionIdOrName || it.sectionName == sectionIdOrName 
-                }
-                
-                val subtestIds = section?.subtests?.map { it.subtestId } ?: emptyList()
-                
-                if (subtestIds.isEmpty()) {
-                    // Jika tidak ada subtest, load semua soal
-                    loadQuestions(parentId, type)
-                    return@launch
-                }
-                
-                // Load semua soal dan filter berdasarkan subtestId
-                val allQuestions = db.collection(collectionName)
+                val snapshot = db.collection(collectionName)
                     .document(parentId)
                     .collection("questions")
+                    .whereEqualTo("subtestId", subtestId)
                     .orderBy("questionNumber")
                     .get()
                     .await()
-                    .toObjects(com.example.tubespm.data.model.QuizQuestion::class.java)
-                
-                val filteredQuestions = allQuestions.filter { it.subtestId in subtestIds }
-                
-                // Ambil subtestId pertama untuk digunakan saat menambah soal baru
-                val firstSubtestId = subtestIds.firstOrNull()
-                
+
+                val questions = snapshot.toObjects(QuizQuestion::class.java)
+
+                // UPDATE DISINI: Simpan currentSubtestId ke state!
                 _uiState.update {
                     it.copy(
                         isLoading = false,
-                        questions = filteredQuestions,
+                        questions = questions,
                         error = null,
-                        currentSubtestId = firstSubtestId
+                        currentSubtestId = subtestId // <--- PENTING!
                     )
                 }
             } catch (e: Exception) {

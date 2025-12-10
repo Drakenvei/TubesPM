@@ -212,15 +212,26 @@ fun AdminNavGraph(
                 onGoToEditQuestion = { type, parentId, questionId, paketName, questionNumber ->
                     when {
                         questionId == "edit_nama" && type == "latihan_soal" -> {
-                            // Navigate to edit latihan soal (nama)
                             navController.navigate("admin_edit_latihan/$parentId")
                         }
                         questionId.startsWith("list") -> {
-                            // Navigate to list soal
-                            navController.navigate("admin_list_soal/$type/$parentId/$paketName")
+                            // HERE IS THE LOGIC:
+                            // If EditManagement sends questionId as "list_soal|subtest_123", split it
+                            val parts = questionId.split("|")
+                            val actualSubtestId = if (parts.size > 1) parts[1] else null
+
+                            // DEBUG LOG (Cek di Logcat)
+                            android.util.Log.d("AdminNav", "Raw: $questionId, Parsed ID: $actualSubtestId")
+
+                            val route = if (actualSubtestId != null && actualSubtestId.isNotBlank()) {
+                                // Pastikan formatnya benar
+                                "admin_list_soal/$type/$parentId/$paketName?subtestId=$actualSubtestId"
+                            } else {
+                                "admin_list_soal/$type/$parentId/$paketName"
+                            }
+                            navController.navigate(route)
                         }
                         else -> {
-                            // Navigate to edit question
                             navController.navigate("admin_edit_question/$type/$parentId/$questionId/$paketName/$questionNumber")
                         }
                     }
@@ -333,16 +344,24 @@ fun AdminNavGraph(
 
         // ------------ List Soal ------------
         composable(
-            route = "admin_list_soal/{type}/{parentId}/{paketName}",
+            route = "admin_list_soal/{type}/{parentId}/{paketName}?subtestId={subtestId}",
             arguments = listOf(
                 navArgument("type") { type = NavType.StringType },
                 navArgument("parentId") { type = NavType.StringType },
-                navArgument("paketName") { type = NavType.StringType }
+                navArgument("paketName") { type = NavType.StringType },
+                // CHANGE 2: Add argument definition for subtestId (optional)
+                navArgument("subtestId") {
+                    type = NavType.StringType
+                    nullable = true
+                    defaultValue = null
+                }
             )
         ) { backStackEntry ->
             val type = backStackEntry.arguments?.getString("type") ?: ""
             val parentId = backStackEntry.arguments?.getString("parentId") ?: ""
             val paketName = backStackEntry.arguments?.getString("paketName") ?: ""
+            // CHANGE 3: Capture the subtestId
+            val subtestId = backStackEntry.arguments?.getString("subtestId")
 
             // Extract section name dari paketName jika format "Paket - Section"
             val sectionName = if (paketName.contains(" - ")) {
@@ -350,26 +369,27 @@ fun AdminNavGraph(
             } else {
                 null
             }
-            
+
             val actualSectionId: String? = if (sectionName != null && type == "tryout") {
                 sectionName // Temporary: gunakan section name sebagai identifier
             } else {
                 null
             }
-            
+
             ListSoalScreen(
                 parentId = parentId,
                 type = type,
-                sectionName = sectionName,
-                subtestId = null,
-                sectionId = actualSectionId,
+                sectionName = null,
+                subtestId = subtestId,
+                sectionId = null,
                 paketName = paketName,
                 onBackClick = { navController.popBackStack() },
                 onEditQuestion = { t, pId, qId, pName, qNum ->
                     navController.navigate("admin_edit_question/$t/$pId/$qId/$pName/$qNum")
                 },
-                onAddQuestion = { t, pId, pName, qNum, subtestId ->
-                    val subtestParam = if (subtestId != null) "?subtestId=$subtestId" else ""
+                onAddQuestion = { t, pId, pName, qNum, sId ->
+                    // CHANGE 4: Construct navigation with subtestId parameter
+                    val subtestParam = if (sId != null) "?subtestId=$sId" else ""
                     navController.navigate("admin_create_question/$t/$pId/$pName/$qNum$subtestParam")
                 }
             )

@@ -16,10 +16,16 @@ object ImageUtils {
     fun uriToBase64(context: Context, uri: Uri): String? {
         return try {
             val inputStream: InputStream? = context.contentResolver.openInputStream(uri)
-            val bitmap = BitmapFactory.decodeStream(inputStream)
+//            val bitmap = BitmapFactory.decodeStream(inputStream)
+            val originalBitmap = BitmapFactory.decodeStream(inputStream) ?: return null
+
             // Resize gambar jika perlu agar tidak melebihi 1MB Firestore limit
             // val scaledBitmap = Bitmap.createScaledBitmap(bitmap, 500, 500, true)
-            bitmapToBase64(bitmap)
+
+            // Ubah ukuran gambar agar sisi terpanjang max 800px
+            val scaledBitmap = getResizedBitmap(originalBitmap, 800)
+
+            bitmapToBase64(scaledBitmap)
         } catch (e: Exception) {
             e.printStackTrace()
             null
@@ -34,6 +40,28 @@ object ImageUtils {
         val byteArray = outputStream.toByteArray()
         return Base64.encodeToString(byteArray, Base64.DEFAULT)
     }
+
+    /**
+     * Helper untuk mengubah ukuran gambar secara proporsional
+     * (Agar gambar tidak gepeng/stretching)
+     */
+    private fun getResizedBitmap(image: Bitmap, maxSize: Int): Bitmap {
+        var width = image.width
+        var height = image.height
+
+        val bitmapRatio = width.toFloat() / height.toFloat()
+        if (bitmapRatio > 1) {
+            // Gambar Landscape (Lebar > Tinggi)
+            width = maxSize
+            height = (width / bitmapRatio).toInt()
+        } else {
+            // Gambar Portrait (Tinggi > Lebar)
+            height = maxSize
+            width = (height * bitmapRatio).toInt()
+        }
+        return Bitmap.createScaledBitmap(image, width, height, true)
+    }
+
 
     private val storage = FirebaseStorage.getInstance()
     private val storageRef = storage.reference

@@ -1,16 +1,19 @@
 package com.example.tubespm.ui.screens.admin.management
 
+import android.content.Context
 import android.net.Uri
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import com.example.tubespm.data.model.QuizQuestion
 import com.example.tubespm.repository.ExerciseCatalogRepository
 import com.example.tubespm.utils.ImageUtils
+import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.flow.update
 import kotlinx.coroutines.launch
+import kotlinx.coroutines.withContext
 import javax.inject.Inject
 
 data class CreateQuestionUiState(
@@ -85,6 +88,7 @@ class CreateQuestionViewModel @Inject constructor(
      * Simpan soal baru ke Firestore
      */
     fun createQuestion(
+        context: Context, // ADDED: Context for image processing
         parentId: String,
         type: String, // "tryout" atau "latihan_soal"
         onSuccess: (String) -> Unit, // Callback dengan questionId
@@ -108,15 +112,22 @@ class CreateQuestionViewModel @Inject constructor(
             return
         }
 
+        if (type == "tryout" && currentState.subtestId.isBlank()) {
+            onError("Error Fatal: Subtest ID Hilang. Silakan kembali ke menu sebelumnya.")
+            return // <--- WAJIB ADA: Agar kode di bawah tidak dijalankan
+        }
+
         _uiState.update { it.copy(isSaving = true, error = null) }
 
         viewModelScope.launch {
             try {
-                var imageUrl: String? = currentState.questionImageUrl
-
-                // Upload gambar jika ada
-                if (currentState.questionImageUri != null) {
-                    imageUrl = ImageUtils.uploadImageToFirebaseStorage(currentState.questionImageUri)
+                // 1. Process Image to Base64 (Background Thread)
+                val imageBase64: String? = if (currentState.questionImageUri != null) {
+                    withContext(Dispatchers.IO) {
+                        ImageUtils.uriToBase64(context, currentState.questionImageUri)
+                    }
+                } else {
+                    null
                 }
 
                 // Konversi Map jawaban ke List
@@ -131,7 +142,7 @@ class CreateQuestionViewModel @Inject constructor(
                     subtestId = currentState.subtestId,
                     topicId = currentState.topicId,
                     questionText = currentState.questionText,
-                    questionImage = imageUrl,
+                    questionImage = imageBase64,
                     options = optionsList,
                     correctAnswer = currentState.correctAnswer,
                     discussion = currentState.discussion

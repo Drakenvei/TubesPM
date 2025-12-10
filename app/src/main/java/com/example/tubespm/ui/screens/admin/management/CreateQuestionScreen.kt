@@ -81,9 +81,11 @@ fun CreateQuestionScreen(
     }
 
     // Set initial question number and subtestId
-    LaunchedEffect(currentQuestionNum, subtestId) {
-        viewModel.updateQuestionNumber(currentQuestionNum)
-        if (subtestId != null) {
+    LaunchedEffect(subtestId) {
+        // Log untuk debugging (Cek di Logcat)
+        android.util.Log.d("CreateQuestion", "Received SubtestID: $subtestId")
+
+        if (!subtestId.isNullOrBlank()) {
             viewModel.updateSubtestId(subtestId)
         }
     }
@@ -120,6 +122,7 @@ fun CreateQuestionScreen(
                     IconButton(
                         onClick = {
                             viewModel.createQuestion(
+                                context = context,
                                 parentId = parentId,
                                 type = type,
                                 onSuccess = {

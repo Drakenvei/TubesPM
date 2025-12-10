@@ -10,9 +10,6 @@ import com.google.firebase.firestore.firestore
 import kotlinx.coroutines.launch
 import java.util.UUID
 
-// ==========================================
-// ✅ PINDAHKAN DATA CLASS KE SINI
-// ==========================================
 data class EditSectionUiState(
     val type: String = "TPS",
     val subtest: String = "Penalaran Umum",
@@ -23,133 +20,122 @@ data class EditSectionUiState(
 class EditSectionViewModel : ViewModel() {
     private val db = Firebase.firestore
 
-    /**
-     * Menambahkan Section baru ke dalam Tryout
-     */
-    fun addSection(
+    fun saveSubtest(
         tryoutId: String,
-        sectionData: EditSectionUiState,
+        subtestIdToEdit: String? = null,
+        data: EditSectionUiState,
         onSuccess: () -> Unit,
         onError: (String) -> Unit
     ) {
-        // Buat subtest baru dengan data yang diinput
-        val newSubtest = Subtest(
-            subtestId = UUID.randomUUID().toString().take(8),
-            subtestName = sectionData.subtest,
-            duration = sectionData.timeMinutes,
-            questionCount = sectionData.questionCount,
-            topics = emptyList()
-        )
-
-        // Buat section baru dengan subtest
-        val newSection = Section(
-            sectionId = if (sectionData.type == "TPS") "tps" else "literasi",
-            sectionName = sectionData.subtest,
-            subtests = listOf(newSubtest)
-        )
-
-        updateTryoutSections(tryoutId, newSection, isAdd = true, onSuccess, onError)
-    }
-
-    /**
-     * Mengupdate Section yang sudah ada
-     */
-    fun updateSection(
-        tryoutId: String,
-        oldSectionId: String,
-        sectionData: EditSectionUiState,
-        onSuccess: () -> Unit,
-        onError: (String) -> Unit
-    ) {
-        // Baca section yang ada, update subtest pertama, atau buat subtest baru jika belum ada
         viewModelScope.launch {
-            try {
-                val tryoutRef = db.collection("tryouts").document(tryoutId)
-                
-                db.runTransaction { transaction ->
-                    val snapshot = transaction.get(tryoutRef)
-                    val tryout = snapshot.toObject(Tryout::class.java) ?: throw Exception("Tryout not found")
-                    
-                    val currentSections = tryout.sections.toMutableList()
-                    val sectionIndex = currentSections.indexOfFirst { it.sectionId == oldSectionId }
-                    
-                    if (sectionIndex == -1) {
-                        throw Exception("Section not found")
-                    }
-                    
-                    val existingSection = currentSections[sectionIndex]
-                    val existingSubtests = existingSection.subtests.toMutableList()
-                    
-                    // Update atau buat subtest pertama
-                    val updatedSubtest = Subtest(
-                        subtestId = existingSubtests.firstOrNull()?.subtestId ?: UUID.randomUUID().toString().take(8),
-                        subtestName = sectionData.subtest,
-                        duration = sectionData.timeMinutes,
-                        questionCount = sectionData.questionCount,
-                        topics = existingSubtests.firstOrNull()?.topics ?: emptyList()
+            val tryoutRef = db.collection("tryouts").document(tryoutId)
+
+            db.runTransaction { transaction ->
+                val snapshot = transaction.get(tryoutRef)
+                val tryout = snapshot.toObject(Tryout::class.java) ?: throw Exception("Tryout tidak ditemukan")
+
+                // 1. Siapkan Data Target (Tujuan Baru)
+                val targetSectionId = if (data.type.equals("TPS", ignoreCase = true)) "tps" else "literasi"
+                val targetSectionName = if (targetSectionId == "tps") "Tes Potensi Skolastik" else "Literasi"
+
+                // Ambil daftar section saat ini untuk dimodifikasi
+                val currentSections = tryout.sections.toMutableList()
+
+                // ============================
+                // LOGIKA TAMBAH BARU (ADD)
+                // ============================
+                if (subtestIdToEdit == null) {
+                    val newSubtest = Subtest(
+                        subtestId = UUID.randomUUID().toString(),
+                        subtestName = data.subtest,
+                        duration = data.timeMinutes,
+                        questionCount = data.questionCount,
+                        topics = emptyList()
                     )
-                    
-                    if (existingSubtests.isEmpty()) {
-                        existingSubtests.add(updatedSubtest)
-                    } else {
-                        existingSubtests[0] = updatedSubtest
-                    }
-                    
-                    // Update section dengan subtests yang baru
-                    val updatedSection = existingSection.copy(
-                        sectionName = sectionData.subtest,
-                        subtests = existingSubtests
-                    )
-                    
-                    currentSections[sectionIndex] = updatedSection
-                    transaction.update(tryoutRef, "sections", currentSections)
-                }.addOnSuccessListener {
-                    onSuccess()
-                }.addOnFailureListener {
-                    onError(it.message ?: "Unknown error")
+
+                    // Masukkan ke section tujuan (Buat section jika belum ada)
+                    addToSection(currentSections, targetSectionId, targetSectionName, newSubtest)
                 }
-            } catch (e: Exception) {
-                onError(e.message ?: "Error updating section")
+
+                // ============================
+                // LOGIKA EDIT (UPDATE / MOVE)
+                // ============================
+                else {
+                    // A. Cari Lokasi ASLI Subtest (Sumber)
+                    val sourceSectionIndex = currentSections.indexOfFirst { sec ->
+                        sec.subtests.any { it.subtestId == subtestIdToEdit }
+                    }
+
+                    if (sourceSectionIndex == -1) {
+                        throw Exception("Subtest asli tidak ditemukan. Mungkin sudah dihapus?")
+                    }
+
+                    val sourceSection = currentSections[sourceSectionIndex]
+                    val subtestIndex = sourceSection.subtests.indexOfFirst { it.subtestId == subtestIdToEdit }
+                    val existingSubtest = sourceSection.subtests[subtestIndex]
+
+                    // B. Update Data Subtest
+                    val updatedSubtest = existingSubtest.copy(
+                        subtestName = data.subtest,
+                        duration = data.timeMinutes,
+                        questionCount = data.questionCount
+                    )
+
+                    // C. Cek Apakah Pindah Kategori? (Misal: TPS -> Literasi)
+                    if (sourceSection.sectionId == targetSectionId) {
+                        // KASUS 1: Tidak Pindah (Update di tempat)
+                        val mutableSubtests = sourceSection.subtests.toMutableList()
+                        mutableSubtests[subtestIndex] = updatedSubtest
+                        currentSections[sourceSectionIndex] = sourceSection.copy(subtests = mutableSubtests)
+                    } else {
+                        // KASUS 2: Pindah Kategori (Move)
+
+                        // 1. Hapus dari Section Lama
+                        val sourceSubtests = sourceSection.subtests.toMutableList()
+                        sourceSubtests.removeAt(subtestIndex)
+
+                        // Jika section lama jadi kosong, opsional: bisa dihapus atau dibiarkan
+                        currentSections[sourceSectionIndex] = sourceSection.copy(subtests = sourceSubtests)
+
+                        // 2. Tambahkan ke Section Baru
+                        addToSection(currentSections, targetSectionId, targetSectionName, updatedSubtest)
+                    }
+                }
+
+                // Simpan perubahan ke Firestore
+                transaction.update(tryoutRef, "sections", currentSections)
+
+            }.addOnSuccessListener {
+                onSuccess()
+            }.addOnFailureListener { e ->
+                onError(e.message ?: "Gagal menyimpan subtest")
             }
         }
     }
 
-    private fun updateTryoutSections(
-        tryoutId: String,
-        sectionItem: Section,
-        isAdd: Boolean,
-        onSuccess: () -> Unit,
-        onError: (String) -> Unit
+    // Helper untuk menambahkan subtest ke section list (menangani jika section belum ada)
+    private fun addToSection(
+        sectionsList: MutableList<Section>,
+        targetId: String,
+        targetName: String,
+        subtest: Subtest
     ) {
-        viewModelScope.launch {
-            try {
-                val tryoutRef = db.collection("tryouts").document(tryoutId)
+        val targetIndex = sectionsList.indexOfFirst { it.sectionId == targetId }
 
-                db.runTransaction { transaction ->
-                    val snapshot = transaction.get(tryoutRef)
-                    val tryout = snapshot.toObject(Tryout::class.java) ?: throw Exception("Tryout not found")
-
-                    val currentSections = tryout.sections.toMutableList()
-
-                    if (isAdd) {
-                        currentSections.add(sectionItem)
-                    } else {
-                        // Find index and replace
-                        val index = currentSections.indexOfFirst { it.sectionId == sectionItem.sectionId }
-                        if (index != -1) {
-                            currentSections[index] = sectionItem
-                        }
-                    }
-
-                    transaction.update(tryoutRef, "sections", currentSections)
-                }.addOnSuccessListener {
-                    onSuccess()
-                }.addOnFailureListener {
-                    onError(it.message ?: "Unknown error")
-                }
-            } catch (e: Exception) {
-                onError(e.message ?: "Error updating section")
-            }
+        if (targetIndex != -1) {
+            // Section sudah ada, tambahkan ke list
+            val targetSection = sectionsList[targetIndex]
+            val newSubtests = targetSection.subtests.toMutableList()
+            newSubtests.add(subtest)
+            sectionsList[targetIndex] = targetSection.copy(subtests = newSubtests)
+        } else {
+            // Section belum ada, buat baru
+            val newSection = Section(
+                sectionId = targetId,
+                sectionName = targetName,
+                subtests = listOf(subtest)
+            )
+            sectionsList.add(newSection)
         }
     }
 }

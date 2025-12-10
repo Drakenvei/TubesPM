@@ -7,6 +7,7 @@ import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.ArrowBack
+import androidx.compose.material.icons.filled.List
 import androidx.compose.material.icons.filled.Settings
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
@@ -138,6 +139,22 @@ private fun EditManagementContent(
                         onEditClick = { clicked ->
                             selectedSectionForEdit = clicked
                             showEditSectionDialog = true
+                        },
+                        onManageQuestionClick = { subtestId ->
+                            // NAVIGASI KE LIST SOAL DENGAN MEMBAWA SUBTEST ID
+                            onGoToEditQuestion(
+                                "tryout",      // type
+                                paket.id,      // parentId (tryoutId)
+                                "list_soal|$subtestId",   // Pass ID here separated by pipe |
+                                paket.name,    // paketName
+                                0              // questionNumber
+                                // PENTING: Anda perlu memodifikasi Navigasi Anda
+                                // agar bisa menerima parameter 'subtestId' tambahan
+                                // atau selipkan di parameter yang ada jika malas ubah route.
+                            ).apply {
+                                // Cara terbaik: Tambahkan parameter ke-6 di callback onGoToEditQuestion
+                                // onGoToEditQuestion(type, parentId, ..., subtestId)
+                            }
                         }
                     )
                 }
@@ -147,23 +164,23 @@ private fun EditManagementContent(
         Spacer(modifier = Modifier.height(12.dp))
 
         // Tombol Edit Soal (umum, bukan per section)
-        OutlinedButton(
-            onClick = {
-                onGoToEditQuestion(
-                    "tryout",
-                    paket.id,
-                    "list_soal",
-                    paket.name,
-                    0
-                )
-            },
-            modifier = Modifier.align(Alignment.End),
-            colors = ButtonDefaults.outlinedButtonColors(contentColor = Color.Gray)
-        ) {
-            Text("Edit Soal")
-        }
+//        OutlinedButton(
+//            onClick = {
+//                onGoToEditQuestion(
+//                    "tryout",
+//                    paket.id,
+//                    "list_soal",
+//                    paket.name,
+//                    0
+//                )
+//            },
+//            modifier = Modifier.align(Alignment.End),
+//            colors = ButtonDefaults.outlinedButtonColors(contentColor = Color.Gray)
+//        ) {
+//            Text("Edit Soal")
+//        }
 
-        Spacer(modifier = Modifier.height(8.dp))
+//        Spacer(modifier = Modifier.height(8.dp))
 
         // Tombol Add More Section
         OutlinedButton(
@@ -248,7 +265,8 @@ private fun EditManagementContent(
 @Composable
 private fun SectionCard(
     section: TryoutSectionUiModel,
-    onEditClick: (TryoutSectionUiModel) -> Unit
+    onEditClick: (TryoutSectionUiModel) -> Unit,
+    onManageQuestionClick: (String) -> Unit // Callback baru: ID Subtest
 ) {
     Surface(
         modifier = Modifier.fillMaxWidth(),
@@ -269,6 +287,16 @@ private fun SectionCard(
                     modifier = Modifier.weight(1f)
                 )
                 Row {
+                    // Tombol kelola Soal Spesifik Subtest ini
+                    IconButton(
+                        onClick = {onManageQuestionClick(section.id)}, //// section.id disini adalah subtestId
+                        modifier = Modifier.size(24.dp)
+                    ) {
+                        Icon(Icons.Default.List, contentDescription = "Kelola Soal", tint = Color.Blue)
+                    }
+
+                    Spacer(modifier = Modifier.width(8.dp))
+
                     // Tombol Edit Section
                     IconButton(
                         onClick = { onEditClick(section) },

@@ -26,7 +26,7 @@ import androidx.lifecycle.viewmodel.compose.viewModel
 
 
 // ======================================
-// DIALOG EDIT SECTION
+// DIALOG EDIT SECTION (Sebenarnya Edit Subtest)
 // ======================================
 @Composable
 fun EditSectionDialog(
@@ -44,20 +44,21 @@ fun EditSectionDialog(
     var isSaving by remember { mutableStateOf(false) }
 
     SectionFormDialog(
-        title = "Edit Section",
-        primaryButtonText = if (isSaving) "Saving..." else "Edit Section",
+        title = "Edit Subtest",
+        primaryButtonText = if (isSaving) "Saving..." else "Edit Subtest",
         paketName = paketName,
         initialState = initialState,
         onDismiss = onDismiss,
         onConfirm = { data ->
             if (isSaving) return@SectionFormDialog
             isSaving = true
-            viewModel.updateSection(
+            // PANGGIL FUNGSI SAVE BARU
+            viewModel.saveSubtest(
                 tryoutId = tryoutId,
-                oldSectionId = sectionId,
-                sectionData = data,
+                subtestIdToEdit = sectionId, // Kirim ID untuk diedit
+                data = data,
                 onSuccess = {
-                    Toast.makeText(context, "Section Updated", Toast.LENGTH_SHORT).show()
+                    Toast.makeText(context, "Subtest Updated", Toast.LENGTH_SHORT).show()
                     onDismiss()
                 },
                 onError = { msg ->
@@ -87,19 +88,20 @@ fun AddSectionDialog(
     var isSaving by remember { mutableStateOf(false) }
 
     SectionFormDialog(
-        title = "Add Section",
-        primaryButtonText = if (isSaving) "Saving..." else "Tambah Section",
+        title = "Tambah Subtest",
+        primaryButtonText = if (isSaving) "Saving..." else "Tambah Subtest",
         paketName = paketName,
         initialState = initialState,
         onDismiss = onDismiss,
         onConfirm = { data ->
             if (isSaving) return@SectionFormDialog
             isSaving = true
-            viewModel.addSection(
+            viewModel.saveSubtest(
                 tryoutId = tryoutId,
-                sectionData = data,
+                subtestIdToEdit = null, // Null artinya Add Baru
+                data = data,
                 onSuccess = {
-                    Toast.makeText(context, "Section Added", Toast.LENGTH_SHORT).show()
+                    Toast.makeText(context, "Subtest Added", Toast.LENGTH_SHORT).show()
                     onDismiss()
                 },
                 onError = { msg ->
