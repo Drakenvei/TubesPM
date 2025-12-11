@@ -135,11 +135,12 @@ private fun SectionFormDialog(
     val typeOptions = listOf("TPS", "Literasi")
     val subtestOptions = listOf(
         "Penalaran Umum",
-        "Penalaran Kuantitatif",
+        "Pengetahuan Kuantitatif",
         "Pengetahuan dan Pemahaman Umum",
-        "Pemahaman Membaca dan Menulis",
+        "Pemahaman Bacaan dan Menulis",
         "Literasi dalam Bahasa Indonesia",
-        "Literasi dalam Bahasa Inggris"
+        "Literasi dalam Bahasa Inggris",
+        "Penalaran Matematika"
     )
 
     Dialog(onDismissRequest = onDismiss) {
@@ -332,6 +333,35 @@ private fun SectionFormDialog(
                         cursorColor = Color(0xFF212121)
                     ),
                     shape = RoundedCornerShape(6.dp)
+                )
+
+                Spacer(modifier = Modifier.height(16.dp))
+
+                Text(
+                    "Kisi-kisi (Pisahkan dengan koma)",
+                    fontSize = 14.sp,
+                    fontWeight = FontWeight.SemiBold,
+                    color = Color(0xFF757575)
+                )
+                Spacer(modifier = Modifier.height(4.dp))
+                OutlinedTextField(
+                    value = uiState.topicsString,
+                    onValueChange = { newValue ->
+                        uiState = uiState.copy(topicsString = newValue)
+                    },
+                    modifier = Modifier.fillMaxWidth(),
+                    placeholder = {Text("Contoh: Aljabar, Geometri, Logika", color = Color(0xFF9E9E9E))},
+                    colors = OutlinedTextFieldDefaults.colors(
+                        focusedContainerColor = Color(0xFFE0E0E0),
+                        unfocusedContainerColor = Color(0xFFE0E0E0),
+                        focusedBorderColor = Color.Transparent,
+                        unfocusedBorderColor = Color.Transparent,
+                        focusedTextColor = Color(0xFF212121),
+                        unfocusedTextColor = Color(0xFF212121),
+                        cursorColor = Color(0xFF212121)
+                    ),
+                    shape = RoundedCornerShape(6.dp),
+                    minLines = 2
                 )
 
                 Spacer(modifier = Modifier.height(24.dp))

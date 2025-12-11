@@ -27,7 +27,7 @@ import com.google.firebase.firestore.FirebaseFirestore
 fun CreateLatihanSoalScreen(
     paddingValuesFromNavHost: androidx.compose.foundation.layout.PaddingValues,
     onBackClick: () -> Unit,
-    onLatihanCreated: (String) -> Unit, // Callback dengan latihanId
+    onLatihanCreated: (String, String) -> Unit, // Callback dengan latihanId
     viewModel: CreateLatihanSoalViewModel = viewModel(
         factory = object : ViewModelProvider.Factory {
             override fun <T : androidx.lifecycle.ViewModel> create(modelClass: Class<T>): T {
@@ -43,10 +43,25 @@ fun CreateLatihanSoalScreen(
     val uiState by viewModel.uiState.collectAsState()
     val context = LocalContext.current
 
+    var expandedSubtest by remember { mutableStateOf(false)}
+
+    val subtestOptions = listOf(
+        "Penalaran Umum",
+        "Pengetahuan Kuantitatif",
+        "Pengetahuan dan Pemahaman Umum",
+        "Pemahaman Bacaan dan Menulis",
+        "Literasi dalam Bahasa Indonesia",
+        "Literasi dalam Bahasa Inggris",
+        "Penalaran Matematika"
+    )
+
     // Handle success
     LaunchedEffect(uiState.isSavedSuccess) {
         if (uiState.isSavedSuccess && uiState.createdLatihanId != null) {
-            onLatihanCreated(uiState.createdLatihanId!!)
+            onLatihanCreated(
+                uiState.createdLatihanId!!,
+                uiState.subtestId
+            )
         }
     }
 
@@ -129,7 +144,7 @@ fun CreateLatihanSoalScreen(
                     value = uiState.title,
                     onValueChange = { viewModel.updateTitle(it) },
                     modifier = Modifier.fillMaxWidth(),
-                    placeholder = { Text("Contoh: Latihan Aljabar", color = Color(0xFF9E9E9E)) },
+                    placeholder = { Text("Contoh: Latihan Penalaran Umum Paket 1", color = Color(0xFF9E9E9E)) },
                     shape = RoundedCornerShape(6.dp),
                     colors = OutlinedTextFieldDefaults.colors(
                         focusedContainerColor = Color(0xFFE0E0E0),
@@ -146,18 +161,68 @@ fun CreateLatihanSoalScreen(
 
                 // Subtest
                 Text(
-                    text = "Subtest",
+                    text = "Jenis Subtest",
                     fontSize = 14.sp,
                     fontWeight = FontWeight.SemiBold,
                     color = Color(0xFF757575)
                 )
-                Spacer(modifier = Modifier.height(4.dp))
+                ExposedDropdownMenuBox(
+                    expanded = expandedSubtest,
+                    onExpandedChange = { expandedSubtest = !expandedSubtest }
+                ) {
+                    OutlinedTextField(
+                        value = uiState.subtest, // Menampilkan Nama Subtest
+                        onValueChange = {},
+                        readOnly = true,
+                        modifier = Modifier.fillMaxWidth().menuAnchor(),
+                        placeholder = { Text("Pilih Subtest") },
+                        trailingIcon = { ExposedDropdownMenuDefaults.TrailingIcon(expanded = expandedSubtest) },
+                        colors = OutlinedTextFieldDefaults.colors(
+                            focusedContainerColor = Color(0xFFE0E0E0),
+                            unfocusedContainerColor = Color(0xFFE0E0E0),
+                            focusedBorderColor = Color.Transparent,
+                            unfocusedBorderColor = Color.Transparent,
+                            focusedTextColor = Color(0xFF212121),
+                            unfocusedTextColor = Color(0xFF212121),
+                            cursorColor = Color(0xFF212121)
+                        ),
+                        shape = RoundedCornerShape(6.dp)
+                    )
+                    ExposedDropdownMenu(
+                        expanded = expandedSubtest,
+                        onDismissRequest = { expandedSubtest = false }
+                    ) {
+                        subtestOptions.forEach { option ->
+                            DropdownMenuItem(
+                                text = { Text(option) },
+                                onClick = {
+                                    viewModel.updateSubtest(option) // Update ke ViewModel
+                                    expandedSubtest = false
+                                }
+                            )
+                        }
+                    }
+                }
+
+                // Menampilkan Subtest ID otomatis (Read Only - Optional)
+//                if (uiState.subtestId.isNotEmpty()) {
+//                    Spacer(Modifier.height(4.dp))
+//                    Text(
+//                        text = "Subtest ID: ${uiState.subtestId}",
+//                        fontSize = 12.sp,
+//                        color = Color(0xFFE61C5D)
+//                    )
+//                }
+
+                Spacer(modifier = Modifier.height(16.dp))
+
+                Text("Kisi-kisi (Pisahkan dengan koma)", fontWeight = FontWeight.SemiBold, color = Color.Gray)
+                Spacer(Modifier.height(4.dp))
                 OutlinedTextField(
-                    value = uiState.subtest,
-                    onValueChange = { viewModel.updateSubtest(it) },
+                    value = uiState.topicsString,
+                    onValueChange = { viewModel.updateTopicsString(it) }, // Buat fungsi ini di VM
                     modifier = Modifier.fillMaxWidth(),
-                    placeholder = { Text("Contoh: Matematika", color = Color(0xFF9E9E9E)) },
-                    shape = RoundedCornerShape(6.dp),
+                    placeholder = { Text("Contoh: Persamaan Linear, Fungsi Kuadrat", color = Color(0xFF9E9E9E)) },
                     colors = OutlinedTextFieldDefaults.colors(
                         focusedContainerColor = Color(0xFFE0E0E0),
                         unfocusedContainerColor = Color(0xFFE0E0E0),
@@ -166,7 +231,8 @@ fun CreateLatihanSoalScreen(
                         focusedTextColor = Color(0xFF212121),
                         unfocusedTextColor = Color(0xFF212121),
                         cursorColor = Color(0xFF212121)
-                    )
+                    ),
+                    minLines = 2
                 )
 
                 Spacer(modifier = Modifier.height(16.dp))

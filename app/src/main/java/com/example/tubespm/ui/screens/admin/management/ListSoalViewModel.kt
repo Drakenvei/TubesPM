@@ -135,5 +135,41 @@ class ListSoalViewModel : ViewModel() {
             }
         }
     }
+
+    /**
+     * Specialized loader for Latihan Soal to fetch parent metadata first
+     */
+    fun loadLatihanSoalQuestions(latihanId: String) {
+        _uiState.update { it.copy(isLoading = true) }
+        viewModelScope.launch {
+            try {
+                // 1. Fetch Latihan Metadata to get subtestId
+                val latihanDoc = db.collection("latihan_soal").document(latihanId).get().await()
+                val latihan = latihanDoc.toObject(com.example.tubespm.data.model.LatihanSoal::class.java)
+                val parentSubtestId = latihan?.subtestId // e.g., "pu"
+
+                // 2. Fetch Questions
+                val snapshot = db.collection("latihan_soal")
+                    .document(latihanId)
+                    .collection("questions")
+                    .orderBy("questionNumber")
+                    .get()
+                    .await()
+
+                val questions = snapshot.toObjects(QuizQuestion::class.java)
+
+                _uiState.update {
+                    it.copy(
+                        isLoading = false,
+                        questions = questions,
+                        error = null,
+                        currentSubtestId = parentSubtestId // <--- STORE THIS IN STATE
+                    )
+                }
+            } catch (e: Exception) {
+                _uiState.update { it.copy(isLoading = false, error = e.message) }
+            }
+        }
+    }
 }
 

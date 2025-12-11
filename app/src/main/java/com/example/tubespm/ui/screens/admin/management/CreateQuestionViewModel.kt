@@ -151,11 +151,10 @@ class CreateQuestionViewModel @Inject constructor(
                 // Simpan ke Firestore
                 val questionId = repository.createQuestion(parentId, type, newQuestion)
 
-                // Update questionCount di parent
-                // Note: Untuk akurasi, sebaiknya hitung ulang dari subcollection
-                // Tapi untuk sekarang, kita increment saja
-                val currentCount = getCurrentQuestionCount(parentId, type)
-                repository.updateQuestionCount(parentId, type, currentCount + 1)
+//                Update questionCount di parent (Auto Increment)
+                // Kita kirim 0 atau angka berapapun, karena di Repository kita pakai FieldValue.increment(1)
+//                val currentCount = getCurrentQuestionCount(parentId, type)
+                repository.updateQuestionCount(parentId, type, 0)
 
                 _uiState.update {
                     it.copy(

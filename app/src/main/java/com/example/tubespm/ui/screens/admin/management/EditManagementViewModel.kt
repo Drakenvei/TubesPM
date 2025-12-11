@@ -19,7 +19,8 @@ data class TryoutSectionUiModel(
     val type: String, // "TPS" atau "Literasi" (Diambil dari parent section)
     val timeMinutes: Int, // duration
     val questionCount: Int, // questionCount
-    val parentSectionId: String // "tps" atau "literasi" (Penting untuk referensi)
+    val parentSectionId: String, // "tps" atau "literasi" (Penting untuk referensi)
+    val topicsString: String = "" //untuk menampung kisi-kisi
 )
 
 data class EditManagementUiState(
@@ -61,6 +62,11 @@ class EditManagementViewModel : ViewModel() {
                             val typeLabel = if (section.sectionId.equals("tps", ignoreCase = true)) "TPS" else "Literasi"
 
                             section.subtests.forEach { subtest ->
+
+                                // Proses Mapping Topics ke String
+                                // Mengubah List<Topic> menjadi String "Aljabar, Geometri"
+                                val topicsStr = subtest.topics.joinToString(", ") { it.name }
+
                                 flatList.add(
                                     TryoutSectionUiModel(
                                         // ERROR IS LIKELY HERE:
@@ -70,7 +76,8 @@ class EditManagementViewModel : ViewModel() {
                                         type = typeLabel,
                                         timeMinutes = subtest.duration,
                                         questionCount = subtest.questionCount,
-                                        parentSectionId = section.sectionId
+                                        parentSectionId = section.sectionId,
+                                        topicsString = topicsStr
                                     )
                                 )
                             }

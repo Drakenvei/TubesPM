@@ -317,9 +317,9 @@ fun AdminNavGraph(
             CreateLatihanSoalScreen(
                 paddingValuesFromNavHost = paddingValues,
                 onBackClick = { navController.popBackStack() },
-                onLatihanCreated = { latihanId ->
+                onLatihanCreated = { latihanId, subtestId ->
                     // Navigasi ke Create Question Screen
-                    navController.navigate("admin_create_question/latihan_soal/$latihanId/Latihan Soal Baru/1") {
+                    navController.navigate("admin_create_question/latihan_soal/$latihanId/Latihan Soal Baru/1?subtestId=$subtestId") {
                         popUpTo("admin_management") { inclusive = false }
                     }
                 }

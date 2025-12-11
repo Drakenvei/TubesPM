@@ -59,6 +59,12 @@ fun ListSoalScreen(
     // Load questions saat screen pertama kali dibuka
     LaunchedEffect(parentId, type, subtestId, sectionId, actualSectionName) {
         when {
+
+            // NEW: Logic for Latihan Soal
+            type == "latihan_soal" -> {
+                viewModel.loadLatihanSoalQuestions(parentId)
+            }
+
             // [REVISI] PRIORITAS UTAMA: Jika ada Subtest ID, pakai itu!
             subtestId != null && subtestId.isNotBlank() -> {
                 viewModel.loadQuestionsBySubtest(parentId, type, subtestId)

@@ -4,6 +4,7 @@ import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import com.example.tubespm.data.model.Section
 import com.example.tubespm.data.model.Subtest
+import com.example.tubespm.data.model.Topic
 import com.example.tubespm.data.model.Tryout
 import com.google.firebase.Firebase
 import com.google.firebase.firestore.firestore
@@ -14,11 +15,22 @@ data class EditSectionUiState(
     val type: String = "TPS",
     val subtest: String = "Penalaran Umum",
     val timeMinutes: Int = 20,
-    val questionCount: Int = 20
+    val questionCount: Int = 20,
+    val topicsString: String = ""
 )
 
 class EditSectionViewModel : ViewModel() {
     private val db = Firebase.firestore
+
+    private val subtestIdMap = mapOf(
+        "Penalaran Umum" to "pu",
+        "Pengetahuan Kuantitatif" to "pk",
+        "Pengetahuan dan Pemahaman Umum" to "ppu",
+        "Pemahaman Bacaan dan Menulis" to "pbm",
+        "Literasi dalam Bahasa Indonesia" to "lbi",
+        "Literasi dalam Bahasa Inggris" to "lbing",
+        "Penalaran Matematika" to "pm"
+    )
 
     fun saveSubtest(
         tryoutId: String,
@@ -41,16 +53,32 @@ class EditSectionViewModel : ViewModel() {
                 // Ambil daftar section saat ini untuk dimodifikasi
                 val currentSections = tryout.sections.toMutableList()
 
+                val finalSubtestId = if (subtestIdToEdit != null) {
+                    subtestIdToEdit
+                } else {
+                    // Cek apakah ID ini sudah dipakai di section ini? (Opsional, tapi aman ditimpa kalau logic benar)
+                    subtestIdMap[data.subtest] ?: "umum_${System.currentTimeMillis()}"
+                }
+
+                val topicList = data.topicsString.split(",")
+                    .map { it.trim() }
+                    .filter { it.isNotEmpty() }
+                    .map { topicName ->
+                        // Buat ID topik simple (misal: "Aljabar Linear" -> "aljabar_linear")
+                        val tId = topicName.lowercase().replace(" ", "_")
+                        Topic(topicId = tId, name = topicName)
+                    }
+
                 // ============================
                 // LOGIKA TAMBAH BARU (ADD)
                 // ============================
                 if (subtestIdToEdit == null) {
                     val newSubtest = Subtest(
-                        subtestId = UUID.randomUUID().toString(),
+                        subtestId = finalSubtestId, // Pakai ID standar (pu, pk...)
                         subtestName = data.subtest,
                         duration = data.timeMinutes,
                         questionCount = data.questionCount,
-                        topics = emptyList()
+                        topics = topicList
                     )
 
                     // Masukkan ke section tujuan (Buat section jika belum ada)
@@ -78,7 +106,8 @@ class EditSectionViewModel : ViewModel() {
                     val updatedSubtest = existingSubtest.copy(
                         subtestName = data.subtest,
                         duration = data.timeMinutes,
-                        questionCount = data.questionCount
+                        questionCount = data.questionCount,
+                        topics = topicList
                     )
 
                     // C. Cek Apakah Pindah Kategori? (Misal: TPS -> Literasi)
@@ -102,8 +131,21 @@ class EditSectionViewModel : ViewModel() {
                     }
                 }
 
+                val newTotalDuration = currentSections.sumOf { sec ->
+                    sec.subtests.sumOf { sub -> sub.duration }
+                }
+
+                val newTotalQuestionCount = currentSections.sumOf { sec ->
+                    sec.subtests.sumOf { sub -> sub.questionCount }
+                }
+
                 // Simpan perubahan ke Firestore
-                transaction.update(tryoutRef, "sections", currentSections)
+                transaction.update(tryoutRef, mapOf(
+                    "sections" to currentSections,
+                    // Field ini sekarang akan TERTULIS di database
+                    "totalDuration" to newTotalDuration,
+                    "totalQuestionCount" to newTotalQuestionCount
+                ))
 
             }.addOnSuccessListener {
                 onSuccess()

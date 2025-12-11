@@ -230,7 +230,8 @@ private fun EditManagementContent(
                 type = section.type,
                 subtest = section.title,
                 timeMinutes = section.timeMinutes,
-                questionCount = section.questionCount
+                questionCount = section.questionCount,
+                topicsString = section.topicsString
             ),
             onDismiss = {
                 showEditSectionDialog = false
