@@ -25,6 +25,7 @@ import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.lifecycle.viewmodel.compose.viewModel
+import kotlin.math.max
 
 @Composable
 fun AdminHomeScreen(
@@ -130,7 +131,15 @@ fun AdminHomeScreen(
                                 }
                             }
                         }
-                        item { ActivityChartCard() }
+                        item {
+                            ActivityChartCard(
+                                points = uiState.chartPoints,
+                                selectedFilter = uiState.chartFilter,
+                                isLoading = uiState.isChartLoading,
+                                total = uiState.chartTotal,
+                                onFilterChange = { viewModel.loadActivityChart(it) }
+                            )
+                        }
                     }
                 }
             }
@@ -208,10 +217,19 @@ private fun AdminStatCard(
 }
 
 @Composable
-private fun ActivityChartCard() {
-    val filterOptions = listOf("Daily", "Weekly", "Monthly")
+private fun ActivityChartCard(
+    points: List<ActivityPoint> = emptyList(),
+    selectedFilter: ActivityRange = ActivityRange.WEEKLY,
+    isLoading: Boolean = false,
+    total: Int = 0,
+    onFilterChange: (ActivityRange) -> Unit = {}
+) {
+    val filterOptions = listOf(
+        ActivityRange.DAILY to "Daily",
+        ActivityRange.WEEKLY to "Weekly",
+        ActivityRange.MONTHLY to "Monthly"
+    )
     var expanded by remember { mutableStateOf(false) }
-    var selectedFilter by remember { mutableStateOf("Weekly") }
 
     Surface(
         modifier = Modifier.fillMaxWidth(),
@@ -239,20 +257,38 @@ private fun ActivityChartCard() {
                 Box {
                     AssistChip(
                         onClick = { expanded = true },
-                        label = { Text(selectedFilter, fontSize = 12.sp, color = Color(0xFF333333)) },
-                        leadingIcon = { Icon(Icons.Default.ArrowDropDown, contentDescription = "Filter", tint = Color(0xFF333333)) },
+                        label = {
+                            Text(
+                                filterOptions.first { it.first == selectedFilter }.second,
+                                fontSize = 12.sp,
+                                color = Color(0xFF333333)
+                            )
+                        },
+                        leadingIcon = {
+                            Icon(
+                                Icons.Default.ArrowDropDown,
+                                contentDescription = "Filter",
+                                tint = Color(0xFF333333)
+                            )
+                        },
                         shape = RoundedCornerShape(50),
-                        colors = AssistChipDefaults.assistChipColors(containerColor = Color(0xFFF7F7F7), labelColor = Color(0xFF333333))
+                        colors = AssistChipDefaults.assistChipColors(
+                            containerColor = Color(0xFFF7F7F7),
+                            labelColor = Color(0xFF333333)
+                        )
                     )
                     DropdownMenu(
                         expanded = expanded,
                         onDismissRequest = { expanded = false },
                         containerColor = Color.White
                     ) {
-                        filterOptions.forEach { option ->
+                        filterOptions.forEach { (range, label) ->
                             DropdownMenuItem(
-                                text = { Text(text = option, color = Color.Black, fontWeight = FontWeight.Medium) },
-                                onClick = { selectedFilter = option; expanded = false }
+                                text = { Text(text = label, color = Color.Black, fontWeight = FontWeight.Medium) },
+                                onClick = {
+                                    expanded = false
+                                    if (range != selectedFilter) onFilterChange(range)
+                                }
                             )
                         }
                     }
@@ -260,19 +296,55 @@ private fun ActivityChartCard() {
             }
 
             Spacer(modifier = Modifier.height(16.dp))
-            Column(horizontalAlignment = Alignment.CenterHorizontally) {
-                Box(modifier = Modifier.clip(RoundedCornerShape(12.dp)).background(Color(0xFFF29A3A)).padding(horizontal = 12.dp, vertical = 4.dp)) {
-                    Text("2,313", color = Color.White, fontSize = 12.sp)
+            Column(horizontalAlignment = Alignment.CenterHorizontally, modifier = Modifier.fillMaxWidth()) {
+                Box(
+                    modifier = Modifier
+                        .clip(RoundedCornerShape(12.dp))
+                        .background(Color(0xFFF29A3A))
+                        .padding(horizontal = 12.dp, vertical = 4.dp)
+                ) {
+                    Text(total.toString(), color = Color.White, fontSize = 12.sp)
                 }
-                Spacer(modifier = Modifier.height(8.dp))
-                Row(modifier = Modifier.fillMaxWidth().height(160.dp), horizontalArrangement = Arrangement.SpaceBetween, verticalAlignment = Alignment.Bottom) {
-                    val days = listOf("MON", "TUE", "WED", "THU", "FRI", "SAT", "SUN")
-                    val heights = listOf(50, 35, 65, 55, 110, 40, 45)
-                    days.forEachIndexed { index, day ->
-                        Column(modifier = Modifier.weight(1f), horizontalAlignment = Alignment.CenterHorizontally) {
-                            Box(modifier = Modifier.width(if (day == "FRI") 22.dp else 14.dp).height(heights[index].dp).clip(RoundedCornerShape(6.dp)).background(Color(0xFFF29A3A)))
-                            Spacer(modifier = Modifier.height(6.dp))
-                            Text(day, fontSize = 10.sp, color = Color(0xFF616161))
+                Spacer(modifier = Modifier.height(12.dp))
+
+                if (isLoading) {
+                    Box(
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .height(140.dp),
+                        contentAlignment = Alignment.Center
+                    ) {
+                        CircularProgressIndicator(color = Color(0xFFF29A3A))
+                    }
+                } else {
+                    val maxValue = max(points.maxOfOrNull { it.value } ?: 0, 1)
+                    if (points.isEmpty()) {
+                        Text("Belum ada aktivitas", color = Color(0xFF9E9E9E), fontSize = 12.sp)
+                    } else {
+                        Row(
+                            modifier = Modifier
+                                .fillMaxWidth()
+                                .height(160.dp),
+                            horizontalArrangement = Arrangement.SpaceBetween,
+                            verticalAlignment = Alignment.Bottom
+                        ) {
+                            points.forEach { point ->
+                                val barHeight = (point.value.toFloat() / maxValue.toFloat()) * 100f
+                                Column(
+                                    modifier = Modifier.weight(1f),
+                                    horizontalAlignment = Alignment.CenterHorizontally
+                                ) {
+                                    Box(
+                                        modifier = Modifier
+                                            .width(if (point.value == maxValue) 22.dp else 14.dp)
+                                            .height(barHeight.dp)
+                                            .clip(RoundedCornerShape(6.dp))
+                                            .background(Color(0xFFF29A3A))
+                                    )
+                                    Spacer(modifier = Modifier.height(6.dp))
+                                    Text(point.label, fontSize = 10.sp, color = Color(0xFF616161))
+                                }
+                            }
                         }
                     }
                 }
