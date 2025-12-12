@@ -4,6 +4,7 @@ import android.widget.Toast
 import androidx.compose.animation.core.animateDpAsState
 import androidx.compose.animation.core.tween
 import androidx.compose.foundation.background
+import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
@@ -38,11 +39,15 @@ fun LoginContent(
     isLoading: Boolean,
     onEmailChanged: (String) -> Unit,
     onPassChanged: (String) -> Unit,
-    onLoginClicked: () -> Unit
+    onLoginClicked: () -> Unit,
+    onForgotPasswordClicked: (String) -> Unit // ✅ BARU
 ) {
     var passwordVisible by remember { mutableStateOf(false) }
     var emailFocused by remember { mutableStateOf(false) }
     var passwordFocused by remember { mutableStateOf(false) }
+
+    // ✅ BARU: State untuk menampilkan Dialog Reset Password
+    var showResetDialog by remember { mutableStateOf(false) }
 
     Column(
         horizontalAlignment = Alignment.CenterHorizontally
@@ -52,7 +57,7 @@ fun LoginContent(
         Text("Good to see you again!", color = Color.White, fontSize = 14.sp)
         Spacer(modifier = Modifier.height(32.dp))
 
-        // Email TextField dengan floating label
+        // Email TextField
         val emailElevation by animateDpAsState(
             targetValue = if (email.isNotEmpty() || emailFocused) 8.dp else 2.dp,
             animationSpec = tween(300),
@@ -69,7 +74,7 @@ fun LoginContent(
                     fontWeight = if (email.isNotEmpty() || emailFocused) FontWeight.Medium else FontWeight.Normal
                 )
             },
-            isError = error != null, // <-- DITAMBAHKAN: Tampilkan error
+            isError = error != null,
             modifier = Modifier
                 .fillMaxWidth()
                 .shadow(
@@ -100,7 +105,7 @@ fun LoginContent(
 
         Spacer(modifier = Modifier.height(16.dp))
 
-        // Password TextField dengan floating label
+        // Password TextField
         val passwordElevation by animateDpAsState(
             targetValue = if (pass.isNotEmpty() || passwordFocused) 8.dp else 2.dp,
             animationSpec = tween(300),
@@ -117,7 +122,7 @@ fun LoginContent(
                     fontWeight = if (pass.isNotEmpty() || passwordFocused) FontWeight.Medium else FontWeight.Normal
                 )
             },
-            isError = error != null, // <-- DITAMBAHKAN: Tampilkan error,
+            isError = error != null,
             modifier = Modifier
                 .fillMaxWidth()
                 .shadow(
@@ -168,7 +173,15 @@ fun LoginContent(
             Spacer(modifier = Modifier.height(8.dp))
         }
 
-        Text("Forgot password?", color = Color.White, fontSize = 12.sp, modifier = Modifier.align(Alignment.End))
+        // ✅ BARU: Tombol Forgot Password
+        Text(
+            "Forgot password?",
+            color = Color.White,
+            fontSize = 12.sp,
+            modifier = Modifier
+                .align(Alignment.End)
+                .clickable { showResetDialog = true }
+        )
 
         Spacer(modifier = Modifier.height(32.dp))
 
@@ -188,4 +201,57 @@ fun LoginContent(
             }
         }
     }
+
+    // ✅ BARU: Reset Password Dialog
+    if (showResetDialog) {
+        ResetPasswordDialog(
+            initialEmail = email,
+            onDismiss = { showResetDialog = false },
+            onSendClicked = {
+                onForgotPasswordClicked(it)
+                showResetDialog = false
+            }
+        )
+    }
+}
+
+// ✅ BARU: Reset Password Dialog Composable
+@Composable
+fun ResetPasswordDialog(
+    initialEmail: String,
+    onDismiss: () -> Unit,
+    onSendClicked: (String) -> Unit
+) {
+    var email by remember { mutableStateOf(initialEmail) }
+
+    AlertDialog(
+        onDismissRequest = onDismiss,
+        title = { Text("Reset Password", fontWeight = FontWeight.Bold) },
+        text = {
+            Column {
+                Text("Enter the email address associated with your account.")
+                Spacer(modifier = Modifier.height(16.dp))
+                OutlinedTextField(
+                    value = email,
+                    onValueChange = { email = it },
+                    label = { Text("Email Address") },
+                    singleLine = true,
+                    modifier = Modifier.fillMaxWidth()
+                )
+            }
+        },
+        confirmButton = {
+            Button(
+                onClick = { onSendClicked(email.trim()) },
+                enabled = email.isNotBlank()
+            ) {
+                Text("Send Reset Link")
+            }
+        },
+        dismissButton = {
+            TextButton(onClick = onDismiss) {
+                Text("Cancel")
+            }
+        }
+    )
 }
