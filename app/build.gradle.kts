@@ -1,3 +1,5 @@
+import java.util.Properties
+
 plugins {
     alias(libs.plugins.android.application)
     alias(libs.plugins.kotlin.android)
@@ -24,12 +26,31 @@ android {
         testInstrumentationRunner = "androidx.test.runner.AndroidJUnitRunner"
     }
 
+    val properties = Properties()
+    val localPropertiesFile = project.rootProject.file("local.properties")
+    if (localPropertiesFile.exists()) {
+        properties.load(localPropertiesFile.reader())
+    }
+
     buildTypes {
         release {
             isMinifyEnabled = false
             proguardFiles(
                 getDefaultProguardFile("proguard-android-optimize.txt"),
                 "proguard-rules.pro"
+            )
+            buildConfigField(
+                "String",
+                "GEMINI_API_KEY",
+                properties.getProperty("geminiApiKey", "\"\"")
+            )
+        }
+
+        getByName("debug") {
+            buildConfigField(
+                "String",
+                "GEMINI_API_KEY",
+                properties.getProperty("geminiApiKey", "\"\"")
             )
         }
     }
@@ -44,10 +65,14 @@ android {
 
     buildFeatures {
         compose = true
+        buildConfig = true
     }
 }
 
 dependencies {
+
+    // gemini api
+    implementation("com.google.ai.client.generativeai:generativeai:0.9.0")
     implementation("io.coil-kt:coil-compose:2.5.0")
     implementation("androidx.activity:activity-compose:1.9.0")
     // Hilt

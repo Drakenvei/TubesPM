@@ -12,6 +12,7 @@ import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.ArrowBack
 import androidx.compose.material.icons.automirrored.filled.ArrowForward
+import androidx.compose.material.icons.filled.AddComment
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
@@ -29,7 +30,9 @@ import androidx.navigation.NavHostController
 import com.example.tubespm.data.model.QuestionWithExplanation
 import com.example.tubespm.ui.screens.pembahasan.components.PembahasanAnswerOption
 import com.example.tubespm.ui.screens.pembahasan.components.PembahasanNavigator
+import com.example.tubespm.ui.screens.siswa.pembahasan.PembahasanUiState
 import com.example.tubespm.ui.screens.siswa.pembahasan.PembahasanViewModel
+
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
@@ -195,6 +198,38 @@ fun PembahasanScreen(
                                 )
 
                                 Spacer(modifier = Modifier.height(8.dp))
+
+                                Button(
+                                    onClick = {
+                                        // 1. Ambil activityId dari uiState
+                                        val activityId = uiState.activityId
+
+                                        // 2. Ambil currentQuestionIndex
+                                        val questionIndex = currentQuestionIndex
+
+                                        // FIX: Navigasi HANYA JIKA activityId TIDAK KOSONG
+                                        if (activityId.isNotBlank()) {
+                                            navController.navigate("diskusi_ai/$activityId/$questionIndex")
+                                        }
+                                    },
+                                    modifier = Modifier.fillMaxWidth(),
+                                    colors = ButtonDefaults.buttonColors(
+                                        containerColor = MaterialTheme.colorScheme.primary,
+                                        contentColor = Color.White
+                                    ),
+                                    shape = RoundedCornerShape(12.dp)
+                                ) {
+                                    Icon(
+                                        imageVector = Icons.Filled.AddComment, // Ikon untuk diskusi/chat
+                                        contentDescription = "Tanya AI",
+                                        modifier = Modifier.size(20.dp)
+                                    )
+                                    Spacer(modifier = Modifier.width(8.dp))
+                                    Text("Tanya AI Mengenai Soal Ini")
+                                }
+                                // --- AKHIR TOMBOL TANYA AI ---
+
+                                Spacer(modifier = Modifier.height(16.dp))
 
                                 val explanationBitmap = remember (currentQuestion.explanationImage) {
                                     if (!currentQuestion.explanationImage.isNullOrBlank()) {
