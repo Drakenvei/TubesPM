@@ -16,7 +16,7 @@ data class CreateTryoutUiState(
     val isSaving: Boolean = false,
     val code: String = "",
     val title: String = "",
-    val status: String = "active",
+    val status: String = "inactive",
     val error: String? = null,
     val isSavedSuccess: Boolean = false,
     val createdTryoutId: String? = null
@@ -37,9 +37,9 @@ class CreateTryoutViewModel @Inject constructor(
         _uiState.update { it.copy(title = title) }
     }
 
-    fun updateStatus(status: String) {
-        _uiState.update { it.copy(status = status) }
-    }
+//    fun updateStatus(status: String) {
+//        _uiState.update { it.copy(status = status) }
+//    }
 
     fun createTryout(
         onSuccess: (String) -> Unit, // Callback dengan tryoutId

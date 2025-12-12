@@ -19,7 +19,7 @@ data class CreateLatihanSoalUiState(
     val title: String = "",
     val subtest: String = "",
     val subtestId: String = "",
-    val status: String = "active",
+    val status: String = "inactive",
     val topics: List<Topic> = emptyList(), // Ini untuk hasil jadi (opsional di UI state create)
     val error: String? = null,
     val isSavedSuccess: Boolean = false,
@@ -59,9 +59,9 @@ class CreateLatihanSoalViewModel @Inject constructor(
         _uiState.update { it.copy(title = title) }
     }
 
-    fun updateStatus(status: String) {
-        _uiState.update { it.copy(status = status) }
-    }
+//    fun updateStatus(status: String) {
+//        _uiState.update { it.copy(status = status) }
+//    }
 
     fun updateTopicsString(text: String) {
         _uiState.update { it.copy(topicsString = text) }

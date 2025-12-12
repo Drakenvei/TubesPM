@@ -309,8 +309,33 @@ private fun SectionCard(
             }
             Spacer(modifier = Modifier.height(4.dp))
             InfoRow(label = "Tipe", value = section.type)
+            Spacer(modifier = Modifier.height(4.dp))
             InfoRow(label = "Waktu", value = "${section.timeMinutes} menit")
+            Spacer(modifier = Modifier.height(4.dp))
             InfoRow(label = "Jumlah Soal", value = "${section.questionCount} soal")
+
+            val kisiKisiText = if (section.topicsString.isNotBlank()) section.topicsString else "-"
+
+            Spacer(modifier = Modifier.height(4.dp))
+            Row(
+                modifier = Modifier.fillMaxWidth(),
+                verticalAlignment = Alignment.Top
+            ) {
+                Text(
+                    text = "Kisi-kisi",
+                    fontSize = 13.sp,
+                    color = Color(0xFF616161),
+                    modifier = Modifier.width(90.dp) // Samakan lebar label dengan InfoRow
+                )
+                Text(
+                    text = kisiKisiText,
+                    fontSize = 13.sp, // Font sedikit lebih besar agar terbaca
+                    color = Color(0xFF424242),
+                    fontWeight = FontWeight.Medium,
+                    modifier = Modifier.weight(1f),
+                    lineHeight = 18.sp // Spasi antar baris jika panjang
+                )
+            }
         }
     }
 }

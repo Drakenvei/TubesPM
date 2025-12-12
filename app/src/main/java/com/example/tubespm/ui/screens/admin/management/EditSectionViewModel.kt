@@ -76,19 +76,27 @@ class EditSectionViewModel : ViewModel() {
                         Topic(topicId = tId, name = topicName)
                     }
 
+                val isDuplicate = currentSections.any() { section ->
+                    section.subtests.any() {existingSubtest ->
+                        if (existingSubtest.subtestId == newSubtestId) {
+                            if (subtestIdToEdit == null) {
+                                true
+                            } else {
+                                existingSubtest.subtestId != subtestIdToEdit
+                            }
+                        } else {
+                            false
+                        }
+                    }
+                }
+
+                if (isDuplicate) {
+                    throw Exception("Subtest '${data.subtest}' sudah ada di Tryout ini.")
+                }
                 // ============================
                 // LOGIKA TAMBAH BARU (ADD)
                 // ============================
                 if (subtestIdToEdit == null) {
-
-                    // Cek apakah subtest dengan ID ini (misal "pu") sudah ada di seluruh tryout ini?
-                    // Kita cek di semua section.
-                    val isDuplicate = currentSections.any { section ->
-                        section.subtests.any { it.subtestId == finalSubtestId }
-                    }
-                    if (isDuplicate) {
-                        throw Exception("Subtest '${data.subtest}' sudah ada di Tryout ini.")
-                    }
 
                     val newSubtest = Subtest(
                         subtestId = finalSubtestId, // Pakai ID standar (pu, pk...)

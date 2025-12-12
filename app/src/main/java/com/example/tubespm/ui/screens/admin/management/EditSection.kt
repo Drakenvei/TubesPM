@@ -150,10 +150,14 @@ private fun SectionFormDialog(
     // Pilih opsi berdasarkan Tipe yang sedang dipilih
     val currentSubtestOptions = if (uiState.type == "TPS") tpsOptions else literasiOptions
 
-    // Reset subtest jika tipe berubah (agar tidak ada subtest Literasi di tipe TPS)
+    // Reset subtest ONLY if the current subtest is invalid for the selected type
     LaunchedEffect(uiState.type) {
-        // Jika tidak valid, reset ke opsi pertama dari list yang baru
-        uiState = uiState.copy(subtest = currentSubtestOptions.firstOrNull() ?: "")
+        // Check if the current subtest is in the valid list for this type
+        if (uiState.subtest !in currentSubtestOptions) {
+            // Only then reset to the first option
+            uiState = uiState.copy(subtest = currentSubtestOptions.firstOrNull() ?: "")
+        }
+        // If it IS in the list (which happens on initial load for editing), do nothing.
     }
 
     Dialog(onDismissRequest = onDismiss) {

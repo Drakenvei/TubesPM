@@ -233,49 +233,27 @@ fun EditLatihanSoalScreen(
                         fontWeight = FontWeight.SemiBold,
                         color = Color(0xFF757575)
                     )
-                    Spacer(modifier = Modifier.height(4.dp))
-                    ExposedDropdownMenuBox(
-                        expanded = expandedStatus,
-                        onExpandedChange = { expandedStatus = !expandedStatus }
-                    ) {
-                        OutlinedTextField(
-                            value = if (uiState.status == "active") "Aktif" else "Nonaktif",
-                            onValueChange = {},
-                            readOnly = true,
-                            modifier = Modifier
-                                .fillMaxWidth()
-                                .menuAnchor(),
-                            placeholder = { Text("Pilih Status", color = Color(0xFF9E9E9E)) },
-                            shape = RoundedCornerShape(6.dp),
-                            colors = OutlinedTextFieldDefaults.colors(
-                                focusedContainerColor = Color(0xFFE0E0E0),
-                                unfocusedContainerColor = Color(0xFFE0E0E0),
-                                focusedBorderColor = Color.Transparent,
-                                unfocusedBorderColor = Color.Transparent,
-                                focusedTextColor = Color(0xFF212121),
-                                unfocusedTextColor = Color(0xFF212121)
-                            ),
-                            trailingIcon = { ExposedDropdownMenuDefaults.TrailingIcon(expanded = expandedStatus) }
+                    Spacer(modifier = Modifier.height(8.dp))
+                    Button(
+                        onClick = {
+                            // Toggle status di UI State
+                            val newStatus = if (uiState.status == "active") "inactive" else "active"
+                            viewModel.updateStatus(newStatus)
+                        },
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .height(48.dp),
+                        shape = RoundedCornerShape(8.dp),
+                        colors = ButtonDefaults.buttonColors(
+                            // Merah jika mau Nonaktifkan (sedang active), Hijau jika mau Aktifkan (sedang inactive)
+                            containerColor = if (uiState.status == "active") Color(0xFFE53935) else Color(0xFF4CAF50),
+                            contentColor = Color.White
                         )
-                        ExposedDropdownMenu(
-                            expanded = expandedStatus,
-                            onDismissRequest = { expandedStatus = false }
-                        ) {
-                            DropdownMenuItem(
-                                text = { Text("Aktif") },
-                                onClick = {
-                                    viewModel.updateStatus("active")
-                                    expandedStatus = false
-                                }
-                            )
-                            DropdownMenuItem(
-                                text = { Text("Nonaktif") },
-                                onClick = {
-                                    viewModel.updateStatus("inactive")
-                                    expandedStatus = false
-                                }
-                            )
-                        }
+                    ) {
+                        Text(
+                            text = if (uiState.status == "active") "Nonaktifkan Latihan" else "Aktifkan Latihan",
+                            fontWeight = FontWeight.Bold
+                        )
                     }
 
                     Spacer(modifier = Modifier.height(24.dp))

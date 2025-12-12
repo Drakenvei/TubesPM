@@ -238,52 +238,52 @@ fun CreateLatihanSoalScreen(
                 Spacer(modifier = Modifier.height(16.dp))
 
                 // Status
-                Text(
-                    text = "Status",
-                    fontSize = 14.sp,
-                    fontWeight = FontWeight.SemiBold,
-                    color = Color(0xFF757575)
-                )
-                Spacer(modifier = Modifier.height(4.dp))
-                var expanded by remember { mutableStateOf(false) }
-                ExposedDropdownMenuBox(
-                    expanded = expanded,
-                    onExpandedChange = { expanded = !expanded }
-                ) {
-                    OutlinedTextField(
-                        value = uiState.status,
-                        onValueChange = {},
-                        readOnly = true,
-                        modifier = Modifier
-                            .fillMaxWidth()
-                            .menuAnchor(),
-                        placeholder = { Text("Pilih Status", color = Color(0xFF9E9E9E)) },
-                        shape = RoundedCornerShape(6.dp),
-                        colors = OutlinedTextFieldDefaults.colors(
-                            focusedContainerColor = Color(0xFFE0E0E0),
-                            unfocusedContainerColor = Color(0xFFE0E0E0),
-                            focusedBorderColor = Color.Transparent,
-                            unfocusedBorderColor = Color.Transparent
-                        ),
-                        trailingIcon = { ExposedDropdownMenuDefaults.TrailingIcon(expanded = expanded) }
-                    )
-                    ExposedDropdownMenu(
-                        expanded = expanded,
-                        onDismissRequest = { expanded = false }
-                    ) {
-                        listOf("active", "inactive").forEach { status ->
-                            DropdownMenuItem(
-                                text = { Text(status) },
-                                onClick = {
-                                    viewModel.updateStatus(status)
-                                    expanded = false
-                                }
-                            )
-                        }
-                    }
-                }
+//                Text(
+//                    text = "Status",
+//                    fontSize = 14.sp,
+//                    fontWeight = FontWeight.SemiBold,
+//                    color = Color(0xFF757575)
+//                )
+//                Spacer(modifier = Modifier.height(4.dp))
+//                var expanded by remember { mutableStateOf(false) }
+//                ExposedDropdownMenuBox(
+//                    expanded = expanded,
+//                    onExpandedChange = { expanded = !expanded }
+//                ) {
+//                    OutlinedTextField(
+//                        value = uiState.status,
+//                        onValueChange = {},
+//                        readOnly = true,
+//                        modifier = Modifier
+//                            .fillMaxWidth()
+//                            .menuAnchor(),
+//                        placeholder = { Text("Pilih Status", color = Color(0xFF9E9E9E)) },
+//                        shape = RoundedCornerShape(6.dp),
+//                        colors = OutlinedTextFieldDefaults.colors(
+//                            focusedContainerColor = Color(0xFFE0E0E0),
+//                            unfocusedContainerColor = Color(0xFFE0E0E0),
+//                            focusedBorderColor = Color.Transparent,
+//                            unfocusedBorderColor = Color.Transparent
+//                        ),
+//                        trailingIcon = { ExposedDropdownMenuDefaults.TrailingIcon(expanded = expanded) }
+//                    )
+//                    ExposedDropdownMenu(
+//                        expanded = expanded,
+//                        onDismissRequest = { expanded = false }
+//                    ) {
+//                        listOf("active", "inactive").forEach { status ->
+//                            DropdownMenuItem(
+//                                text = { Text(status) },
+//                                onClick = {
+//                                    viewModel.updateStatus(status)
+//                                    expanded = false
+//                                }
+//                            )
+//                        }
+//                    }
+//                }
 
-                Spacer(modifier = Modifier.height(24.dp))
+//                Spacer(modifier = Modifier.height(24.dp))
 
                 // Error message
                 uiState.error?.let { error ->
