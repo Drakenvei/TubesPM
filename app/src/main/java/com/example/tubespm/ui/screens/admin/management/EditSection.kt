@@ -133,15 +133,28 @@ private fun SectionFormDialog(
     var expandedSubtest by remember { mutableStateOf(false) }
 
     val typeOptions = listOf("TPS", "Literasi")
-    val subtestOptions = listOf(
+
+    val tpsOptions = listOf(
         "Penalaran Umum",
         "Pengetahuan Kuantitatif",
         "Pengetahuan dan Pemahaman Umum",
-        "Pemahaman Bacaan dan Menulis",
+        "Pemahaman Bacaan dan Menulis"
+    )
+
+    val literasiOptions = listOf(
         "Literasi dalam Bahasa Indonesia",
         "Literasi dalam Bahasa Inggris",
         "Penalaran Matematika"
     )
+
+    // Pilih opsi berdasarkan Tipe yang sedang dipilih
+    val currentSubtestOptions = if (uiState.type == "TPS") tpsOptions else literasiOptions
+
+    // Reset subtest jika tipe berubah (agar tidak ada subtest Literasi di tipe TPS)
+    LaunchedEffect(uiState.type) {
+        // Jika tidak valid, reset ke opsi pertama dari list yang baru
+        uiState = uiState.copy(subtest = currentSubtestOptions.firstOrNull() ?: "")
+    }
 
     Dialog(onDismissRequest = onDismiss) {
         Surface(
@@ -263,7 +276,7 @@ private fun SectionFormDialog(
                         expanded = expandedSubtest,
                         onDismissRequest = { expandedSubtest = false }
                     ) {
-                        subtestOptions.forEach { option ->
+                        currentSubtestOptions.forEach { option ->
                             DropdownMenuItem(
                                 text = { Text(option) },
                                 onClick = {

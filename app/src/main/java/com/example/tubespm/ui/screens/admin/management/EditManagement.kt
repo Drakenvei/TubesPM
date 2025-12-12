@@ -191,7 +191,7 @@ private fun EditManagementContent(
             modifier = Modifier.align(Alignment.End),
             colors = ButtonDefaults.outlinedButtonColors(contentColor = Color.Gray)
         ) {
-            Text("Tambah Section")
+            Text("Tambah Subtest")
         }
 
         Spacer(modifier = Modifier.height(16.dp))

@@ -295,9 +295,9 @@ fun AdminMainScreen(
                     onLatihanUpdated = {
                         adminNavController.popBackStack()
                     },
-                    onGoToListSoal = { type, parentId, paketName ->
+                    onGoToListSoal = { type, parentId, paketName, subtestId ->
                         // Navigate ke list soal dengan nama latihan yang benar
-                        adminNavController.navigate("admin_list_soal/$type/$parentId/$paketName")
+                        adminNavController.navigate("admin_list_soal/$type/$parentId/$paketName?subtestId={subtestId}")
                     }
                 )
             }

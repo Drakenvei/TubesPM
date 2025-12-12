@@ -411,8 +411,8 @@ fun AdminNavGraph(
                 onLatihanUpdated = {
                     navController.popBackStack()
                 },
-                onGoToListSoal = { type, parentId, paketName ->
-                    navController.navigate("admin_list_soal/$type/$parentId/$paketName")
+                onGoToListSoal = { type, parentId, paketName, subtestId ->
+                    navController.navigate("admin_list_soal/$type/$parentId/$paketName?subtestId={subtestId}")
                 }
             )
         }

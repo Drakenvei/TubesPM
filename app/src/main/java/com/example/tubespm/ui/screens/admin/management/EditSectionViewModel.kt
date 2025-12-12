@@ -9,6 +9,7 @@ import com.example.tubespm.data.model.Tryout
 import com.google.firebase.Firebase
 import com.google.firebase.firestore.firestore
 import kotlinx.coroutines.launch
+import kotlinx.coroutines.tasks.await
 import java.util.UUID
 
 data class EditSectionUiState(
@@ -42,6 +43,12 @@ class EditSectionViewModel : ViewModel() {
         viewModelScope.launch {
             val tryoutRef = db.collection("tryouts").document(tryoutId)
 
+            // Tentukan ID Baru berdasarkan Nama Baru
+            val newSubtestId = subtestIdMap[data.subtest] ?: "umum_${System.currentTimeMillis()}"
+
+            // Flag untuk cek apakah ID berubah (Hanya berlaku saat Edit)
+            val isIdChanged = subtestIdToEdit != null && subtestIdToEdit != newSubtestId
+
             db.runTransaction { transaction ->
                 val snapshot = transaction.get(tryoutRef)
                 val tryout = snapshot.toObject(Tryout::class.java) ?: throw Exception("Tryout tidak ditemukan")
@@ -73,6 +80,16 @@ class EditSectionViewModel : ViewModel() {
                 // LOGIKA TAMBAH BARU (ADD)
                 // ============================
                 if (subtestIdToEdit == null) {
+
+                    // Cek apakah subtest dengan ID ini (misal "pu") sudah ada di seluruh tryout ini?
+                    // Kita cek di semua section.
+                    val isDuplicate = currentSections.any { section ->
+                        section.subtests.any { it.subtestId == finalSubtestId }
+                    }
+                    if (isDuplicate) {
+                        throw Exception("Subtest '${data.subtest}' sudah ada di Tryout ini.")
+                    }
+
                     val newSubtest = Subtest(
                         subtestId = finalSubtestId, // Pakai ID standar (pu, pk...)
                         subtestName = data.subtest,
@@ -105,6 +122,7 @@ class EditSectionViewModel : ViewModel() {
                     // B. Update Data Subtest
                     val updatedSubtest = existingSubtest.copy(
                         subtestName = data.subtest,
+                        subtestId = newSubtestId,
                         duration = data.timeMinutes,
                         questionCount = data.questionCount,
                         topics = topicList
@@ -148,6 +166,8 @@ class EditSectionViewModel : ViewModel() {
                 ))
 
             }.addOnSuccessListener {
+                if (isIdChanged && subtestIdToEdit != null) {
+                    migrateQuestions(tryoutId, subtestIdToEdit, newSubtestId, onSuccess, onError)                }
                 onSuccess()
             }.addOnFailureListener { e ->
                 onError(e.message ?: "Gagal menyimpan subtest")
@@ -178,6 +198,38 @@ class EditSectionViewModel : ViewModel() {
                 subtests = listOf(subtest)
             )
             sectionsList.add(newSection)
+        }
+    }
+
+    // Fungsi Migrasi Soal: Mencari semua soal dengan ID lama, ubah ke ID baru
+    private fun migrateQuestions(
+        tryoutId: String,
+        oldSubtestId: String,
+        newSubtestId: String,
+        onSuccess: () -> Unit,
+        onError: (String) -> Unit
+    ) {
+        viewModelScope.launch {
+            try {
+                // Cari semua soal yang punya subtestId lama
+                val questionsRef = db.collection("tryouts").document(tryoutId).collection("questions")
+                val snapshot = questionsRef.whereEqualTo("subtestId", oldSubtestId).get().await()
+
+                if (!snapshot.isEmpty) {
+                    // Siapkan batch
+                    val batch = db.batch()
+
+                    snapshot.documents.forEach { doc ->
+                        batch.update(doc.reference, "subtestId", newSubtestId)
+                    }
+
+                    // Eksekusi Batch
+                    batch.commit().await()
+                }
+                onSuccess()
+            } catch (e: Exception) {
+                onError("Parent sukses, tapi gagal migrasi soal: ${e.message}")
+            }
         }
     }
 }

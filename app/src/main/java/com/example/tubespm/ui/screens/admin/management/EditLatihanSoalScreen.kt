@@ -25,11 +25,25 @@ fun EditLatihanSoalScreen(
     paddingValuesFromNavHost: androidx.compose.foundation.layout.PaddingValues,
     onBackClick: () -> Unit,
     onLatihanUpdated: () -> Unit,
-    onGoToListSoal: (String, String, String) -> Unit = { _, _, _ -> }, // (type, parentId, paketName)
+    onGoToListSoal: (String, String, String, String) -> Unit = { _, _, _, _ -> }, // (type, parentId, paketName, subtestId)
     viewModel: EditLatihanSoalViewModel = viewModel()
 ) {
     val uiState by viewModel.uiState.collectAsState()
     val context = LocalContext.current
+
+    // State Dropdown
+    var expandedSubtest by remember { mutableStateOf(false) }
+    var expandedStatus by remember { mutableStateOf(false) }
+
+    val subtestOptions = listOf(
+        "Penalaran Umum",
+        "Pengetahuan Kuantitatif",
+        "Pengetahuan dan Pemahaman Umum",
+        "Pemahaman Bacaan dan Menulis",
+        "Literasi dalam Bahasa Indonesia",
+        "Literasi dalam Bahasa Inggris",
+        "Penalaran Matematika"
+    )
 
     LaunchedEffect(latihanId) {
         viewModel.loadLatihanSoal(latihanId)
@@ -42,8 +56,6 @@ fun EditLatihanSoalScreen(
             showSuccessDialog = true
         }
     }
-
-    var expandedStatus by remember { mutableStateOf(false) }
 
     Scaffold(
         topBar = {
@@ -155,21 +167,61 @@ fun EditLatihanSoalScreen(
                         color = Color(0xFF757575)
                     )
                     Spacer(modifier = Modifier.height(4.dp))
+                    ExposedDropdownMenuBox(
+                        expanded = expandedSubtest,
+                        onExpandedChange = { expandedSubtest = !expandedSubtest }
+                    ) {
+                        OutlinedTextField(
+                            value = uiState.subtest,
+                            onValueChange = {},
+                            readOnly = true,
+                            modifier = Modifier.fillMaxWidth().menuAnchor(),
+                            placeholder = { Text("Pilih Subtest", color = Color(0xFF9E9E9E)) },
+                            trailingIcon = { ExposedDropdownMenuDefaults.TrailingIcon(expanded = expandedSubtest) },
+                            colors = OutlinedTextFieldDefaults.colors(
+                                focusedContainerColor = Color(0xFFE0E0E0),
+                                unfocusedContainerColor = Color(0xFFE0E0E0),
+                                focusedBorderColor = Color.Transparent,
+                                unfocusedBorderColor = Color.Transparent,
+                                focusedTextColor = Color(0xFF212121),
+                                unfocusedTextColor = Color(0xFF212121)
+                            ),
+                            shape = RoundedCornerShape(6.dp)
+                        )
+                        ExposedDropdownMenu(
+                            expanded = expandedSubtest,
+                            onDismissRequest = { expandedSubtest = false }
+                        ) {
+                            subtestOptions.forEach { option ->
+                                DropdownMenuItem(
+                                    text = { Text(option) },
+                                    onClick = {
+                                        viewModel.updateSubtest(option)
+                                        expandedSubtest = false
+                                    }
+                                )
+                            }
+                        }
+                    }
+
+                    Spacer(modifier = Modifier.height(16.dp))
+
+                    // Kisi-kisi
+                    Text("Kisi-kisi (Pisahkan dengan koma)", fontWeight = FontWeight.SemiBold, color = Color(0xFF757575))
+                    Spacer(modifier = Modifier.height(4.dp))
                     OutlinedTextField(
-                        value = uiState.subtest,
-                        onValueChange = { viewModel.updateSubtest(it) },
+                        value = uiState.topicsString,
+                        onValueChange = { viewModel.updateTopicsString(it) },
                         modifier = Modifier.fillMaxWidth(),
-                        placeholder = { Text("Contoh: Matematika", color = Color(0xFF9E9E9E)) },
-                        shape = RoundedCornerShape(6.dp),
+                        placeholder = { Text("Contoh: Aljabar, Geometri") },
                         colors = OutlinedTextFieldDefaults.colors(
                             focusedContainerColor = Color(0xFFE0E0E0),
                             unfocusedContainerColor = Color(0xFFE0E0E0),
                             focusedBorderColor = Color.Transparent,
-                            unfocusedBorderColor = Color.Transparent,
-                            focusedTextColor = Color(0xFF212121),
-                            unfocusedTextColor = Color(0xFF212121),
-                            cursorColor = Color(0xFF212121)
-                        )
+                            unfocusedBorderColor = Color.Transparent
+                        ),
+                        shape = RoundedCornerShape(6.dp),
+                        minLines = 2
                     )
 
                     Spacer(modifier = Modifier.height(16.dp))
@@ -291,7 +343,7 @@ fun EditLatihanSoalScreen(
                             showSuccessDialog = false
                             // Pass nama latihan dari state
                             val latihanName = uiState.title.ifEmpty { "Latihan Soal" }
-                            onGoToListSoal("latihan_soal", latihanId, latihanName)
+                            onGoToListSoal("latihan_soal", latihanId, latihanName, uiState.subtestId)
                         },
                         colors = ButtonDefaults.buttonColors(containerColor = Color(0xFF4CAF50))
                     ) {
