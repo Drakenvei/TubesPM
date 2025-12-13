@@ -175,8 +175,10 @@ class EditSectionViewModel : ViewModel() {
 
             }.addOnSuccessListener {
                 if (isIdChanged && subtestIdToEdit != null) {
-                    migrateQuestions(tryoutId, subtestIdToEdit, newSubtestId, onSuccess, onError)                }
-                onSuccess()
+                    migrateQuestions(tryoutId, subtestIdToEdit, newSubtestId, onSuccess, onError)
+                } else {
+                    onSuccess()
+                }
             }.addOnFailureListener { e ->
                 onError(e.message ?: "Gagal menyimpan subtest")
             }

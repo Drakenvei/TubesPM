@@ -77,9 +77,9 @@ fun LatihanSoalTabContent(
                 },
                 shape = RoundedCornerShape(12.dp), // Lebih rounded seperti siswa
                 colors = OutlinedTextFieldDefaults.colors(
-                    focusedContainerColor = Color.White,
-                    unfocusedContainerColor = Color.White,
-                    focusedBorderColor = Color(0xFFE0E0E0),
+                    focusedContainerColor = Color(0xFFE0E0E0),
+                    unfocusedContainerColor = Color(0xFFE0E0E0),
+                    focusedBorderColor = Color.Transparent,
                     unfocusedBorderColor = Color.Transparent
                 ),
                 singleLine = true
@@ -98,7 +98,7 @@ fun LatihanSoalTabContent(
                     contentPadding = PaddingValues(
                         start = 16.dp,
                         end = 16.dp,
-                        top = 16.dp,
+                        top = 8.dp,
                         bottom = 100.dp
                     ),
                     verticalArrangement = Arrangement.spacedBy(16.dp)

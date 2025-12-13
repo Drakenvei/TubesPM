@@ -223,11 +223,15 @@ fun AdminNavGraph(
                             // DEBUG LOG (Cek di Logcat)
                             android.util.Log.d("AdminNav", "Raw: $questionId, Parsed ID: $actualSubtestId")
 
+                            // Kita manfaatkan parameter 'questionNumber' (Int) untuk membawa 'targetCount'
+                            // karena saat membuka LIST, nomor soal tidak dibutuhkan.
+                            val targetCount = questionNumber
+
                             val route = if (actualSubtestId != null && actualSubtestId.isNotBlank()) {
                                 // Pastikan formatnya benar
-                                "admin_list_soal/$type/$parentId/$paketName?subtestId=$actualSubtestId"
+                                "admin_list_soal/$type/$parentId/$paketName?subtestId=$actualSubtestId&targetCount=$targetCount"
                             } else {
-                                "admin_list_soal/$type/$parentId/$paketName"
+                                "admin_list_soal/$type/$parentId/$paketName?targetCount=$targetCount"
                             }
                             navController.navigate(route)
                         }
@@ -344,7 +348,7 @@ fun AdminNavGraph(
 
         // ------------ List Soal ------------
         composable(
-            route = "admin_list_soal/{type}/{parentId}/{paketName}?subtestId={subtestId}",
+            route = "admin_list_soal/{type}/{parentId}/{paketName}?subtestId={subtestId}&targetCount={targetCount}",
             arguments = listOf(
                 navArgument("type") { type = NavType.StringType },
                 navArgument("parentId") { type = NavType.StringType },
@@ -354,6 +358,10 @@ fun AdminNavGraph(
                     type = NavType.StringType
                     nullable = true
                     defaultValue = null
+                },
+                navArgument("targetCount") {
+                    type = NavType.IntType
+                    defaultValue = 0 // 0 artinya tidak dibatasi (default)
                 }
             )
         ) { backStackEntry ->
@@ -362,6 +370,8 @@ fun AdminNavGraph(
             val paketName = backStackEntry.arguments?.getString("paketName") ?: ""
             // CHANGE 3: Capture the subtestId
             val subtestId = backStackEntry.arguments?.getString("subtestId")
+
+            val targetCount = backStackEntry.arguments?.getInt("targetCount") ?: 0
 
             // Extract section name dari paketName jika format "Paket - Section"
             val sectionName = if (paketName.contains(" - ")) {
@@ -383,6 +393,7 @@ fun AdminNavGraph(
                 subtestId = subtestId,
                 sectionId = null,
                 paketName = paketName,
+                targetQuestionCount = targetCount,
                 onBackClick = { navController.popBackStack() },
                 onEditQuestion = { t, pId, qId, pName, qNum ->
                     navController.navigate("admin_edit_question/$t/$pId/$qId/$pName/$qNum")

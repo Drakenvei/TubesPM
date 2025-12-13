@@ -87,11 +87,13 @@ fun AdminMainScreen(
                                 // parts[1] = "subtest_123" (jika ada)
                                 val actualSubtestId = if (parts.size > 1) parts[1] else null
 
+                                val targetCount = questionNumber
+
                                 // Bangun Route String
                                 val route = if (actualSubtestId != null) {
-                                    "admin_list_soal/$type/$parentId/$paketName?subtestId=$actualSubtestId"
+                                    "admin_list_soal/$type/$parentId/$paketName?subtestId=$actualSubtestId&targetCount=$targetCount"
                                 } else {
-                                    "admin_list_soal/$type/$parentId/$paketName"
+                                    "admin_list_soal/$type/$parentId/$paketName?targetCount=$targetCount"
                                 }
                                 adminNavController.navigate(route)
                             }
@@ -226,7 +228,7 @@ fun AdminMainScreen(
 
             // Rute 9: List Soal
             composable(
-                route = "admin_list_soal/{type}/{parentId}/{paketName}?subtestId={subtestId}",
+                route = "admin_list_soal/{type}/{parentId}/{paketName}?subtestId={subtestId}&targetCount={targetCount}",
                 arguments = listOf(
                     navArgument("type") { type = NavType.StringType },
                     navArgument("parentId") { type = NavType.StringType },
@@ -235,6 +237,10 @@ fun AdminMainScreen(
                         type = NavType.StringType
                         nullable = true
                         defaultValue = null
+                    },
+                    navArgument("targetCount") {
+                        type = NavType.IntType
+                        defaultValue = 0
                     }
                 )
             ) { backStackEntry ->
@@ -243,6 +249,8 @@ fun AdminMainScreen(
                 val paketName = backStackEntry.arguments?.getString("paketName") ?: ""
 
                 val subtestId = backStackEntry.arguments?.getString("subtestId")
+
+                val targetCount = backStackEntry.arguments?.getInt("targetCount") ?: 0
 
                 // Extract section name dari paketName jika format "Paket - Section"
                 val sectionName = if (paketName.contains(" - ")) {
@@ -268,6 +276,7 @@ fun AdminMainScreen(
                     subtestId = subtestId,
                     sectionId = null,
                     paketName = paketName,
+                    targetQuestionCount = targetCount,
                     onBackClick = { adminNavController.popBackStack() },
                     onEditQuestion = { t, pId, qId, pName, qNum ->
                         adminNavController.navigate("admin_edit_question/$t/$pId/$qId/$pName/$qNum")
@@ -297,7 +306,7 @@ fun AdminMainScreen(
                     },
                     onGoToListSoal = { type, parentId, paketName, subtestId ->
                         // Navigate ke list soal dengan nama latihan yang benar
-                        adminNavController.navigate("admin_list_soal/$type/$parentId/$paketName?subtestId={subtestId}")
+                        adminNavController.navigate("admin_list_soal/$type/$parentId/$paketName?subtestId={subtestId}&targetCount=0")
                     }
                 )
             }

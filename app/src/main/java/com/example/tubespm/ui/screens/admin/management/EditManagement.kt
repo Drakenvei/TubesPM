@@ -147,7 +147,7 @@ private fun EditManagementContent(
                                 paket.id,      // parentId (tryoutId)
                                 "list_soal|$subtestId",   // Pass ID here separated by pipe |
                                 paket.name,    // paketName
-                                0              // questionNumber
+                                section.questionCount              // questionNumber
                                 // PENTING: Anda perlu memodifikasi Navigasi Anda
                                 // agar bisa menerima parameter 'subtestId' tambahan
                                 // atau selipkan di parameter yang ada jika malas ubah route.
