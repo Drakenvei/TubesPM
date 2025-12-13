@@ -252,13 +252,17 @@ fun AdminNavGraph(
         // ------------ Edit Question (DIPERBAIKI) ------------
         composable(
             // Tambahkan argumen di route
-            route = "admin_edit_question/{type}/{tryoutId}/{questionId}/{paketName}/{questionNumber}",
+            route = "admin_edit_question/{type}/{tryoutId}/{questionId}/{paketName}/{questionNumber}?displayNumber={displayNumber}",
             arguments = listOf(
                 navArgument("type") { type = NavType.StringType },
                 navArgument("tryoutId") { type = NavType.StringType },
                 navArgument("questionId") { type = NavType.StringType },
                 navArgument("paketName") { type = NavType.StringType },
-                navArgument("questionNumber") { type = NavType.IntType }
+                navArgument("questionNumber") { type = NavType.IntType },
+                navArgument("displayNumber") {
+                    type = NavType.IntType
+                    defaultValue = 0 // Default 0 jika tidak dikirim
+                }
             )
         ) { backStackEntry ->
             // Ambil data dari argument
@@ -267,13 +271,17 @@ fun AdminNavGraph(
             val questionId = backStackEntry.arguments?.getString("questionId") ?: ""
             val paketName = backStackEntry.arguments?.getString("paketName") ?: ""
             val questionNumber = backStackEntry.arguments?.getInt("questionNumber") ?: 1
+            val displayNumberArg = backStackEntry.arguments?.getInt("displayNumber") ?: 0
+            // Logika Fallback: Jika displayNumber 0 (tidak dikirim), pakai questionNumber lama
+            val finalDisplayNumber = if (displayNumberArg > 0) displayNumberArg else questionNumber
 
             // Panggil Screen dengan parameter lengkap
             EditQuestionScreen(
                 tryoutId = tryoutId,
                 questionId = questionId,
                 paketName = paketName,
-                questionNumber = questionNumber,
+                questionNumber = questionNumber, // Tetap kirim ID Database ke ViewModel
+                displayNumber = finalDisplayNumber, // [BARU] Kirim ID Visual ke UI
                 paddingValuesFromNavHost = paddingValues,
                 onBackClick = { navController.popBackStack() },
                 type = type
@@ -282,7 +290,7 @@ fun AdminNavGraph(
 
         // ------------ Create Question ------------
         composable(
-            route = "admin_create_question/{type}/{parentId}/{paketName}/{questionNumber}?subtestId={subtestId}",
+            route = "admin_create_question/{type}/{parentId}/{paketName}/{questionNumber}?subtestId={subtestId}&displayNumber={displayNumber}",
             arguments = listOf(
                 navArgument("type") { type = NavType.StringType },
                 navArgument("parentId") { type = NavType.StringType },
@@ -292,6 +300,10 @@ fun AdminNavGraph(
                     type = NavType.StringType
                     defaultValue = ""
                     nullable = true
+                },
+                navArgument("displayNumber") {
+                    type = NavType.IntType
+                    defaultValue = 0
                 }
             )
         ) { backStackEntry ->
@@ -300,12 +312,15 @@ fun AdminNavGraph(
             val paketName = backStackEntry.arguments?.getString("paketName") ?: ""
             val questionNumber = backStackEntry.arguments?.getInt("questionNumber") ?: 1
             val subtestId = backStackEntry.arguments?.getString("subtestId")?.takeIf { it.isNotEmpty() }
+            val displayNumberArg = backStackEntry.arguments?.getInt("displayNumber") ?: 0
+            val finalDisplayNumber = if (displayNumberArg > 0) displayNumberArg else questionNumber
 
             CreateQuestionScreen(
                 parentId = parentId,
                 type = type,
                 paketName = paketName,
-                questionNumber = questionNumber,
+                questionNumber = questionNumber, // ID Database (misal 5)
+                displayNumber = finalDisplayNumber, // ID Visual (misal 4)
                 subtestId = subtestId,
                 paddingValuesFromNavHost = paddingValues,
                 onBackClick = { navController.popBackStack() },
@@ -395,13 +410,25 @@ fun AdminNavGraph(
                 paketName = paketName,
                 targetQuestionCount = targetCount,
                 onBackClick = { navController.popBackStack() },
-                onEditQuestion = { t, pId, qId, pName, qNum ->
-                    navController.navigate("admin_edit_question/$t/$pId/$qId/$pName/$qNum")
+                onEditQuestion = { t, pId, qId, pName, qNum, dNum ->
+                    navController.navigate("admin_edit_question/$t/$pId/$qId/$pName/$qNum?displayNumber=$dNum")
                 },
-                onAddQuestion = { t, pId, pName, qNum, sId ->
+                onAddQuestion = { t, pId, pName, qNum, sId, dNum ->
                     // CHANGE 4: Construct navigation with subtestId parameter
                     val subtestParam = if (sId != null) "?subtestId=$sId" else ""
-                    navController.navigate("admin_create_question/$t/$pId/$pName/$qNum$subtestParam")
+                    // Tambahkan query param &displayNumber=$dNum
+                    // Perhatikan penggunaan '&' karena subtestParam mungkin kosong atau sudah pakai '?'
+                    // Logika aman: url?param1&param2
+
+                    // Cara paling aman menyusun string URL:
+                    val baseUrl = "admin_create_question/$t/$pId/$pName/$qNum"
+                    val params = mutableListOf<String>()
+                    if (sId != null) params.add("subtestId=$sId")
+                    params.add("displayNumber=$dNum")
+
+                    val fullRoute = if (params.isEmpty()) baseUrl else "$baseUrl?${params.joinToString("&")}"
+
+                    navController.navigate(fullRoute)
                 }
             )
         }

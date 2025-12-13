@@ -43,7 +43,8 @@ fun EditQuestionScreen(
     tryoutId: String,           // <-- Perlu ID Tryout/Latihan untuk database
     questionId: String,         // <-- Perlu ID Soal untuk database
     paketName: String,
-    questionNumber: Int,
+    questionNumber: Int = 1,      // Ini ID Database (misal 5)
+    displayNumber: Int = 1,       // [BARU] Ini ID Visual (misal 4)
     paddingValuesFromNavHost: PaddingValues,
     onBackClick: () -> Unit,
     type: String = "tryout",    // <-- "tryout" atau "latihan_soal"
@@ -115,7 +116,7 @@ fun EditQuestionScreen(
                         .padding(horizontal = 16.dp, vertical = 12.dp)
                 ) {
 
-                    Text(text = "Question $questionNumber", fontSize = 22.sp, fontWeight = FontWeight.Bold, color = Color(0xFF212121))
+                    Text(text = "Soal $displayNumber", fontSize = 22.sp, fontWeight = FontWeight.Bold, color = Color(0xFF212121))
                     Spacer(modifier = Modifier.height(16.dp))
 
                     // ------------------ TULIS SOAL ------------------

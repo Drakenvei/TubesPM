@@ -136,13 +136,17 @@ fun AdminMainScreen(
 
             // Rute 5: Edit Question
             composable(
-                route = "admin_edit_question/{type}/{tryoutId}/{questionId}/{paketName}/{questionNumber}",
+                route = "admin_edit_question/{type}/{tryoutId}/{questionId}/{paketName}/{questionNumber}?displayNumber={displayNumber}",
                 arguments = listOf(
                     navArgument("type") { type = NavType.StringType },
                     navArgument("tryoutId") { type = NavType.StringType },
                     navArgument("questionId") { type = NavType.StringType },
                     navArgument("paketName") { type = NavType.StringType },
-                    navArgument("questionNumber") { type = NavType.IntType }
+                    navArgument("questionNumber") { type = NavType.IntType },
+                    navArgument("displayNumber") {
+                        type = NavType.IntType
+                        defaultValue = 0
+                    }
                 )
             ) { backStackEntry ->
                 val type = backStackEntry.arguments?.getString("type") ?: "tryout"
@@ -151,11 +155,16 @@ fun AdminMainScreen(
                 val paketName = backStackEntry.arguments?.getString("paketName") ?: ""
                 val questionNumber = backStackEntry.arguments?.getInt("questionNumber") ?: 1
 
+                // Ambil Display Number
+                val displayNumberArg = backStackEntry.arguments?.getInt("displayNumber") ?: 0
+                val finalDisplayNumber = if (displayNumberArg > 0) displayNumberArg else questionNumber
+
                 EditQuestionScreen(
                     tryoutId = tryoutId,
                     questionId = questionId,
                     paketName = paketName,
-                    questionNumber = questionNumber,
+                    questionNumber = questionNumber, // ID Database
+                    displayNumber = finalDisplayNumber, // Visual UI
                     paddingValuesFromNavHost = paddingValues,
                     onBackClick = { adminNavController.popBackStack() },
                     type = type
@@ -183,7 +192,7 @@ fun AdminMainScreen(
                     onBackClick = { adminNavController.popBackStack() },
                     onLatihanCreated = { latihanId, subtestId ->
                         // Navigasi ke Create Question Screen
-                        adminNavController.navigate("admin_create_question/latihan_soal/$latihanId/Latihan Soal Baru/1?subtestId=$subtestId") {
+                        adminNavController.navigate("admin_create_question/latihan_soal/$latihanId/Latihan Soal Baru/1?subtestId=$subtestId&displayNumber=1") {
                             popUpTo("admin_management") { inclusive = false }
                         }
                     }
@@ -192,7 +201,7 @@ fun AdminMainScreen(
 
             // Rute 8: Create Question
             composable(
-                route = "admin_create_question/{type}/{parentId}/{paketName}/{questionNumber}?subtestId={subtestId}",
+                route = "admin_create_question/{type}/{parentId}/{paketName}/{questionNumber}?subtestId={subtestId}&displayNumber={displayNumber}",
                 arguments = listOf(
                     navArgument("type") { type = NavType.StringType },
                     navArgument("parentId") { type = NavType.StringType },
@@ -202,6 +211,10 @@ fun AdminMainScreen(
                         type = NavType.StringType
                         defaultValue = ""
                         nullable = true
+                    },
+                    navArgument("displayNumber") {
+                        type = NavType.IntType
+                        defaultValue = 0
                     }
                 )
             ) { backStackEntry ->
@@ -211,11 +224,16 @@ fun AdminMainScreen(
                 val questionNumber = backStackEntry.arguments?.getInt("questionNumber") ?: 1
                 val subtestId = backStackEntry.arguments?.getString("subtestId")?.takeIf { it.isNotEmpty() }
 
+                // Ambil Display Number
+                val displayNumberArg = backStackEntry.arguments?.getInt("displayNumber") ?: 0
+                val finalDisplayNumber = if (displayNumberArg > 0) displayNumberArg else questionNumber
+
                 CreateQuestionScreen(
                     parentId = parentId,
                     type = type,
                     paketName = paketName,
-                    questionNumber = questionNumber,
+                    questionNumber = questionNumber, // ID Database
+                    displayNumber = finalDisplayNumber, // Visual UI
                     subtestId = subtestId,
                     paddingValuesFromNavHost = paddingValues,
                     onBackClick = { adminNavController.popBackStack() },
@@ -278,12 +296,19 @@ fun AdminMainScreen(
                     paketName = paketName,
                     targetQuestionCount = targetCount,
                     onBackClick = { adminNavController.popBackStack() },
-                    onEditQuestion = { t, pId, qId, pName, qNum ->
-                        adminNavController.navigate("admin_edit_question/$t/$pId/$qId/$pName/$qNum")
+                    onEditQuestion = { t, pId, qId, pName, qNum, dNum ->
+                        // Sertakan ?displayNumber=$dNum di URL
+                        adminNavController.navigate("admin_edit_question/$t/$pId/$qId/$pName/$qNum?displayNumber=$dNum")
                     },
-                    onAddQuestion = { t, pId, pName, qNum, sId ->
-                        val subtestParam = if (sId != null) "?subtestId=$sId" else ""
-                        adminNavController.navigate("admin_create_question/$t/$pId/$pName/$qNum$subtestParam")
+                    onAddQuestion = { t, pId, pName, qNum, sId, dNum ->
+                        // Sertakan &displayNumber=$dNum di URL
+                        val baseUrl = "admin_create_question/$t/$pId/$pName/$qNum"
+                        val params = mutableListOf<String>()
+                        if (sId != null) params.add("subtestId=$sId")
+                        params.add("displayNumber=$dNum")
+
+                        val fullRoute = if (params.isEmpty()) baseUrl else "$baseUrl?${params.joinToString("&")}"
+                        adminNavController.navigate(fullRoute)
                     }
                 )
             }

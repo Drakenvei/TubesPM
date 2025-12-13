@@ -39,7 +39,8 @@ fun CreateQuestionScreen(
     parentId: String,           // tryoutId atau latihanId
     type: String,                // "tryout" atau "latihan_soal"
     paketName: String,
-    questionNumber: Int = 1,
+    questionNumber: Int = 1,      // Ini ID Database (misal 5)
+    displayNumber: Int = 1,       // [BARU] Ini ID Visual (misal 4)
     subtestId: String? = null,   // SubtestId untuk section tryout (optional)
     paddingValuesFromNavHost: androidx.compose.foundation.layout.PaddingValues,
     onBackClick: () -> Unit,
@@ -63,11 +64,12 @@ fun CreateQuestionScreen(
     var showAddAnotherDialog by remember { mutableStateOf(false) }
     var currentQuestionNum by remember { mutableStateOf(questionNumber) }
 
-    // Handle success
-    LaunchedEffect(uiState.isSavedSuccess) {
-        if (uiState.isSavedSuccess && !showAddAnotherDialog) {
-            showAddAnotherDialog = true
-        }
+    // Inisialisasi Data ViewModel saat pertama kali dibuka
+    LaunchedEffect(Unit) {
+        viewModel.initData(
+            questionNumber = questionNumber,
+            subtestId = subtestId
+        )
     }
 
     val options = remember {
@@ -80,15 +82,22 @@ fun CreateQuestionScreen(
         )
     }
 
-    // Set initial question number and subtestId
-    LaunchedEffect(subtestId) {
-        // Log untuk debugging (Cek di Logcat)
-        android.util.Log.d("CreateQuestion", "Received SubtestID: $subtestId")
-
-        if (!subtestId.isNullOrBlank()) {
-            viewModel.updateSubtestId(subtestId)
+    // Handle success
+    LaunchedEffect(uiState.isSavedSuccess) {
+        if (uiState.isSavedSuccess && !showAddAnotherDialog) {
+            showAddAnotherDialog = true
         }
     }
+
+    // Set initial question number and subtestId
+//    LaunchedEffect(subtestId) {
+//        // Log untuk debugging (Cek di Logcat)
+//        android.util.Log.d("CreateQuestion", "Received SubtestID: $subtestId")
+//
+//        if (!subtestId.isNullOrBlank()) {
+//            viewModel.updateSubtestId(subtestId)
+//        }
+//    }
 
     Scaffold(
         topBar = {
@@ -186,7 +195,7 @@ fun CreateQuestionScreen(
                         .padding(horizontal = 16.dp, vertical = 12.dp)
                 ) {
                     Text(
-                        text = "Soal ${currentQuestionNum}",
+                        text = "Soal $displayNumber",
                         fontSize = 22.sp,
                         fontWeight = FontWeight.Bold,
                         color = Color(0xFF212121)
@@ -433,9 +442,12 @@ fun CreateQuestionScreen(
                     Button(
                         onClick = {
                             showAddAnotherDialog = false
-                            viewModel.resetState()
+
+                            // [PERBAIKAN] Update nomor soal
                             currentQuestionNum++
-                            viewModel.updateQuestionNumber(currentQuestionNum)
+
+                            // Reset state tapi pertahankan subtestId dan update nomor baru
+                            viewModel.resetStateForNextQuestion(currentQuestionNum)
                         },
                         colors = ButtonDefaults.buttonColors(containerColor = Color(0xFF4CAF50))
                     ) {

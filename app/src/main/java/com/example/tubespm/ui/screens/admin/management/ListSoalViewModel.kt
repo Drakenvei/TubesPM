@@ -4,6 +4,7 @@ import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import com.example.tubespm.data.model.QuizQuestion
 import com.google.firebase.Firebase
+import com.google.firebase.firestore.FieldValue
 import com.google.firebase.firestore.firestore
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
@@ -168,6 +169,56 @@ class ListSoalViewModel : ViewModel() {
                 }
             } catch (e: Exception) {
                 _uiState.update { it.copy(isLoading = false, error = e.message) }
+            }
+        }
+    }
+
+    fun deleteQuestionSingle(
+        parentId: String,
+        type: String,
+        questionId: String,
+        currentSubtestId: String?
+    ) {
+        viewModelScope.launch {
+            _uiState.update { it.copy(isLoading = true) }
+            try {
+                val collectionName = if (type == "tryout") "tryouts" else "latihan_soal"
+                val parentRef = db.collection(collectionName).document(parentId)
+
+                // HANYA HAPUS 1 DOKUMEN (Hemat Biaya & Cepat)
+                db.collection(collectionName)
+                    .document(parentId)
+                    .collection("questions")
+                    .document(questionId)
+                    .delete()
+                    .await()
+
+                if (type == "latihan_soal") {
+                    parentRef.update("questionCount", FieldValue.increment(-1))
+                }
+
+                // 2. [PENTING] REFRESH DATA AGAR UI UPDATE
+                // Cek state: apakah kita sedang melihat subtest tertentu atau semua?
+                val currentSubtest = _uiState.value.currentSubtestId
+
+                if (type == "latihan_soal") {
+                    loadLatihanSoalQuestions(parentId)
+                } else if (currentSubtestId != null && currentSubtestId.isNotBlank()) {
+                    // JIKA SUBTEST ID ADA -> LOAD PER SUBTEST (Filter)
+                    loadQuestionsBySubtest(parentId, type, currentSubtestId)
+                } else {
+                    loadQuestions(parentId, type)
+                }
+
+                // ... (Update total question count di parent jika perlu) ...
+
+            } catch (e: Exception) {
+                _uiState.update {
+                    it.copy(
+                        isLoading = false, // Matikan loading
+                        error = "Gagal menghapus: ${e.message}"
+                    )
+                }
             }
         }
     }

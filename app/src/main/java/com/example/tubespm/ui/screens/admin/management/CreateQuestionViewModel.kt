@@ -45,6 +45,16 @@ class CreateQuestionViewModel @Inject constructor(
     private val _uiState = MutableStateFlow(CreateQuestionUiState())
     val uiState: StateFlow<CreateQuestionUiState> = _uiState.asStateFlow()
 
+    // Fungsi inisialisasi data dari Navigasi
+    fun initData(questionNumber: Int, subtestId: String?) {
+        _uiState.update {
+            it.copy(
+                questionNumber = questionNumber,
+                subtestId = subtestId ?: it.subtestId // Jangan timpa jika null
+            )
+        }
+    }
+
     fun updateQuestionText(text: String) {
         _uiState.update { it.copy(questionText = text) }
     }
@@ -186,6 +196,19 @@ class CreateQuestionViewModel @Inject constructor(
         // TODO: Query actual count dari subcollection
         // Untuk sekarang return 0, akan di-increment
         return 0
+    }
+
+
+
+    // Reset form tapi pertahankan ID penting untuk soal berikutnya
+    fun resetStateForNextQuestion(nextQuestionNumber: Int) {
+        _uiState.update { current ->
+            CreateQuestionUiState(
+                subtestId = current.subtestId,
+                topicId = current.topicId,
+                questionNumber = nextQuestionNumber
+            )
+        }
     }
 
     fun resetState() {

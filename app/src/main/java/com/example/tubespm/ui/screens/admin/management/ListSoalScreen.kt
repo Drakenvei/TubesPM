@@ -20,11 +20,12 @@ import androidx.compose.ui.unit.sp
 import androidx.lifecycle.viewmodel.compose.viewModel
 import androidx.compose.material3.FabPosition
 import androidx.compose.foundation.layout.WindowInsets
+import androidx.compose.foundation.lazy.itemsIndexed
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.material.icons.automirrored.filled.ArrowBack
 import androidx.compose.material.icons.filled.CheckCircle
+import androidx.compose.material.icons.filled.Delete
 import androidx.compose.material.icons.filled.Info
-import com.example.tubespm.ui.theme.TubesPMTheme
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
@@ -38,8 +39,8 @@ fun ListSoalScreen(
     targetQuestionCount: Int, // Parameter ini sekarang sudah terisi angka (misal: 20)
     currentQuestionCount: Int = 0, // Ini tidak dipakai dari parameter, kita ambil dari viewModel.uiState.questions.size
     onBackClick: () -> Unit,
-    onEditQuestion: (String, String, String, String, Int) -> Unit,
-    onAddQuestion: (String, String, String, Int, String?) -> Unit,
+    onEditQuestion: (String, String, String, String, Int, Int) -> Unit,
+    onAddQuestion: (String, String, String, Int, String?, Int) -> Unit,
     viewModel: ListSoalViewModel = viewModel()
 ) {
     // Extract section name dari paketName jika format "Paket - Section"
@@ -138,7 +139,13 @@ fun ListSoalScreen(
             if (targetQuestionCount == 0 || realQuestionCount < targetQuestionCount) {
                 FloatingActionButton(
                     onClick = {
-                        val nextQuestionNumber = (uiState.questions.maxOfOrNull { it.questionNumber } ?: 0) + 1
+                        // Cari angka questionNumber terbesar yang ada di list saat ini
+                        val maxSortNumber = uiState.questions.maxOfOrNull { it.questionNumber } ?: 0
+
+                        // Soal baru pasti lebih besar dari yang paling besar
+                        val nextSortNumber = maxSortNumber + 1
+
+                        val nextVisualNumber = uiState.questions.size + 1
 
                         // LOGIKA UTAMA PERBAIKAN:
                         // Prioritaskan 'subtestId' dari parameter Navigasi.
@@ -154,7 +161,7 @@ fun ListSoalScreen(
                                 android.widget.Toast.LENGTH_SHORT
                             ).show()
                         } else {
-                            onAddQuestion(type, parentId, paketName, nextQuestionNumber, targetSubtestId)
+                            onAddQuestion(type, parentId, paketName, nextSortNumber, targetSubtestId, nextVisualNumber)
                         }
                     },
                     modifier = Modifier.offset(x = 0.dp, y = (-80).dp),
@@ -279,16 +286,30 @@ fun ListSoalScreen(
                         ),
                         verticalArrangement = Arrangement.spacedBy(12.dp)
                     ) {
-                        items(uiState.questions) { question ->
+                        itemsIndexed(uiState.questions) { index, question ->
+                            // Hitung nomor urut tampilan (selalu rapi: 1, 2, 3...)
+                            val displayQuestionNumber = index + 1
+
                             QuestionCard(
                                 question = question,
+                                displayNumber = displayQuestionNumber, // <-- Kirim nomor visual ini
                                 onClick = {
-                                    onEditQuestion(
-                                        type,
-                                        parentId,
-                                        question.id,
-                                        paketName,
-                                        question.questionNumber
+                                    // Panggil Navigasi dengan format URL baru
+                                    // Kita kirim questionNumber ASLI (untuk DB) dan displayQuestionNumber (untuk Judul)
+                                    val route = "admin_edit_question/$type/$parentId/${question.id}/$paketName/${question.questionNumber}?displayNumber=$displayQuestionNumber"
+                                    onEditQuestion(type, parentId, question.id, paketName, question.questionNumber, displayQuestionNumber)
+                                },
+                                onDeleteClick = {
+                                    // Tentukan Subtest ID mana yang sedang aktif
+                                    // Prioritas: Parameter Navigasi -> State -> Null
+                                    val activeSubtestId = subtestId ?: uiState.currentSubtestId
+
+                                    // Panggil fungsi delete dengan parameter baru
+                                    viewModel.deleteQuestionSingle(
+                                        parentId = parentId,
+                                        type = type,
+                                        questionId = question.id,
+                                        currentSubtestId = activeSubtestId // <--- KIRIM ID INI
                                     )
                                 }
                             )
@@ -303,7 +324,9 @@ fun ListSoalScreen(
 @Composable
 fun QuestionCard(
     question: com.example.tubespm.data.model.QuizQuestion,
-    onClick: () -> Unit
+    displayNumber: Int, // Terima parameter baru ini
+    onClick: () -> Unit,
+    onDeleteClick: () -> Unit
 ) {
     Card(
         modifier = Modifier
@@ -322,7 +345,7 @@ fun QuestionCard(
         ) {
             Column(modifier = Modifier.weight(1f)) {
                 Text(
-                    text = "Soal ${question.questionNumber}",
+                    text = "Soal $displayNumber", // (Client side numbering)
                     fontSize = 16.sp,
                     fontWeight = FontWeight.Bold,
                     color = Color(0xFF212121)
@@ -335,12 +358,25 @@ fun QuestionCard(
                     maxLines = 2
                 )
             }
-            Icon(
-                Icons.Default.Edit,
-                contentDescription = "Edit",
-                tint = Color(0xFF757575),
-                modifier = Modifier.size(24.dp)
-            )
+            Row (
+                verticalAlignment = Alignment.CenterVertically
+            ) {
+                IconButton(onClick = onDeleteClick) {
+                    Icon(
+                        imageVector = Icons.Default.Delete,
+                        contentDescription = "Hapus Soal",
+                        tint = Color(0xFFE53935),
+                        modifier = Modifier.size(24.dp)
+                    )
+                }
+                Icon(
+                    Icons.Default.Edit,
+                    contentDescription = "Edit",
+                    tint = Color(0xFF757575),
+                    modifier = Modifier.size(24.dp)
+                )
+            }
+
         }
     }
 }
