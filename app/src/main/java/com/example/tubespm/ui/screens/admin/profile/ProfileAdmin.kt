@@ -27,7 +27,6 @@ import androidx.compose.ui.graphics.asImageBitmap
 import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.text.font.FontWeight
-import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.lifecycle.viewmodel.compose.viewModel
@@ -36,7 +35,7 @@ import androidx.lifecycle.viewmodel.compose.viewModel
 @Composable
 fun AdminProfileImage(
     base64String: String,
-    isLoading: Boolean, // Tambah parameter loading
+    isLoading: Boolean,
     onClick: () -> Unit
 ) {
     val decodedBitmap = remember(base64String) {
@@ -50,7 +49,7 @@ fun AdminProfileImage(
 
     Box(
         modifier = Modifier
-            .size(110.dp) // Sedikit diperbesar
+            .size(110.dp)
             .clip(CircleShape)
             .background(Color.White)
             .border(3.dp, Color.White, CircleShape)
@@ -58,7 +57,6 @@ fun AdminProfileImage(
         contentAlignment = Alignment.Center
     ) {
         if (isLoading) {
-            // Tampilkan loading kecil di dalam lingkaran foto saat upload
             CircularProgressIndicator(modifier = Modifier.size(40.dp), color = Color(0xFFFF6F61))
         } else if (decodedBitmap != null) {
             Image(
@@ -76,7 +74,6 @@ fun AdminProfileImage(
             )
         }
 
-        // Ikon edit kecil (opsional)
         if(!isLoading){
             Box(modifier = Modifier.align(Alignment.BottomEnd).padding(8.dp).size(12.dp).background(Color.Green, CircleShape))
         }
@@ -92,6 +89,9 @@ fun AdminProfileScreen(
     val uiState by viewModel.uiState.collectAsState()
     val context = LocalContext.current
 
+    // State untuk mengontrol visibilitas dialog logout
+    var showLogoutDialog by remember { mutableStateOf(false) }
+
     val photoPickerLauncher = rememberLauncherForActivityResult(
         contract = ActivityResultContracts.PickVisualMedia(),
         onResult = { uri ->
@@ -101,8 +101,37 @@ fun AdminProfileScreen(
         }
     )
 
-    // Jangan block seluruh layar dengan loading, cukup disable interaksi
-    // Loading hanya ditampilkan di dalam lingkaran foto (handled by AdminProfileImage)
+    // --- LOGIC DIALOG LOGOUT ---
+    if (showLogoutDialog) {
+        AlertDialog(
+            onDismissRequest = { showLogoutDialog = false },
+            title = {
+                Text(text = "Konfirmasi Logout", fontWeight = FontWeight.Bold)
+            },
+            text = {
+                Text(text = "Apakah Anda yakin ingin keluar dari akun ini?")
+            },
+            confirmButton = {
+                TextButton(
+                    onClick = {
+                        showLogoutDialog = false
+                        onLogoutClick() // Panggil fungsi logout asli jika user pilih "Ya"
+                    }
+                ) {
+                    Text(text = "Ya, Keluar", color = Color(0xFFFF6F61), fontWeight = FontWeight.Bold)
+                }
+            },
+            dismissButton = {
+                TextButton(
+                    onClick = { showLogoutDialog = false }
+                ) {
+                    Text(text = "Batal", color = Color.Gray)
+                }
+            },
+            containerColor = Color.White,
+            shape = RoundedCornerShape(16.dp)
+        )
+    }
 
     Column(
         modifier = Modifier
@@ -159,7 +188,7 @@ fun AdminProfileScreen(
         Column(
             modifier = Modifier
                 .fillMaxWidth()
-                .offset(y = (-50).dp) // Efek overlap ke atas
+                .offset(y = (-50).dp)
                 .padding(horizontal = 20.dp)
         ) {
             // Grid Stats
@@ -201,7 +230,10 @@ fun AdminProfileScreen(
             Spacer(modifier = Modifier.height(32.dp))
 
             Button(
-                onClick = onLogoutClick,
+                onClick = {
+                    // Ubah onClick menjadi memunculkan dialog, bukan langsung logout
+                    showLogoutDialog = true
+                },
                 colors = ButtonDefaults.buttonColors(containerColor = Color(0xFFFF6F61)),
                 shape = RoundedCornerShape(12.dp),
                 modifier = Modifier.fillMaxWidth().height(50.dp)
