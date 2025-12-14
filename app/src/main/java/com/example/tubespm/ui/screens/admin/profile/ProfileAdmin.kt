@@ -80,6 +80,102 @@ fun AdminProfileImage(
     }
 }
 
+// --- FUNGSI BARU: DIALOG GANTI PASSWORD (Sudah Diperbaiki) ---
+@Composable
+fun ChangePasswordDialog(
+    onDismiss: () -> Unit,
+    onConfirm: (String, String) -> Unit,
+    isLoading: Boolean
+) {
+    var newPassword by remember { mutableStateOf("") }
+    var confirmPassword by remember { mutableStateOf("") }
+    var passwordError by remember { mutableStateOf<String?>(null) }
+    var confirmError by remember { mutableStateOf<String?>(null) }
+
+    val isPasswordValid = newPassword.length >= 6
+    val passwordsMatch = newPassword == confirmPassword
+
+    // Perbaikan: Gunakan LaunchedEffect untuk sinkronisasi validasi confirmPassword.
+    // Ini menjamin confirmError diperbarui segera setelah newPassword atau confirmPassword berubah.
+    LaunchedEffect(newPassword, confirmPassword) {
+        confirmError = when {
+            confirmPassword.isEmpty() -> null
+            !passwordsMatch -> "Password tidak cocok"
+            else -> null
+        }
+    }
+
+    AlertDialog(
+        onDismissRequest = onDismiss,
+        title = {
+            Text(text = "Ganti Password", fontWeight = FontWeight.Bold)
+        },
+        text = {
+            Column(horizontalAlignment = Alignment.CenterHorizontally) {
+                // Input Password Baru
+                OutlinedTextField(
+                    value = newPassword,
+                    onValueChange = {
+                        newPassword = it
+                        passwordError = if (it.length < 6 && it.isNotEmpty()) "Min. 6 karakter" else null
+                    },
+                    label = { Text("Password Baru") },
+                    isError = passwordError != null,
+                    supportingText = { if (passwordError != null) Text(passwordError!!, color = MaterialTheme.colorScheme.error) },
+                    singleLine = true,
+                    enabled = !isLoading
+                )
+                Spacer(modifier = Modifier.height(8.dp))
+                // Input Konfirmasi Password
+                OutlinedTextField(
+                    value = confirmPassword,
+                    onValueChange = {
+                        confirmPassword = it
+                        // Validasi sekarang ditangani oleh LaunchedEffect
+                    },
+                    label = { Text("Konfirmasi Password") },
+                    isError = confirmError != null,
+                    supportingText = { if (confirmError != null) Text(confirmError!!, color = MaterialTheme.colorScheme.error) },
+                    singleLine = true,
+                    enabled = !isLoading
+                )
+            }
+        },
+        confirmButton = {
+            Button(
+                onClick = {
+                    if (isPasswordValid && passwordsMatch) {
+                        onConfirm(newPassword, confirmPassword)
+                    } else {
+                        // Tampilkan error jika tombol ditekan dalam kondisi tidak valid
+                        if (!isPasswordValid) passwordError = "Min. 6 karakter"
+                        if (!passwordsMatch) confirmError = "Password tidak cocok"
+                    }
+                },
+                enabled = isPasswordValid && passwordsMatch && !isLoading,
+                colors = ButtonDefaults.buttonColors(containerColor = Color(0xFFFF6F61))
+            ) {
+                if (isLoading) {
+                    CircularProgressIndicator(Modifier.size(20.dp), color = Color.White)
+                } else {
+                    Text("Konfirmasi")
+                }
+            }
+        },
+        dismissButton = {
+            TextButton(
+                onClick = onDismiss,
+                enabled = !isLoading
+            ) {
+                Text("Batal", color = Color.Gray)
+            }
+        },
+        containerColor = Color.White,
+        shape = RoundedCornerShape(16.dp)
+    )
+}
+
+
 @Composable
 fun AdminProfileScreen(
     paddingValues: PaddingValues,
@@ -89,8 +185,10 @@ fun AdminProfileScreen(
     val uiState by viewModel.uiState.collectAsState()
     val context = LocalContext.current
 
-    // State untuk mengontrol visibilitas dialog logout
+    // State untuk mengontrol visibilitas dialog
     var showLogoutDialog by remember { mutableStateOf(false) }
+    // BARU: State untuk dialog ganti password
+    var showChangePasswordDialog by remember { mutableStateOf(false) }
 
     val photoPickerLauncher = rememberLauncherForActivityResult(
         contract = ActivityResultContracts.PickVisualMedia(),
@@ -131,6 +229,28 @@ fun AdminProfileScreen(
             containerColor = Color.White,
             shape = RoundedCornerShape(16.dp)
         )
+    }
+
+    // --- LOGIC DIALOG GANTI PASSWORD ---
+    if (showChangePasswordDialog) {
+        ChangePasswordDialog(
+            onDismiss = {
+                showChangePasswordDialog = false
+                viewModel.clearError() // Bersihkan error state
+            },
+            onConfirm = { newPass, _ ->
+                viewModel.changePassword(context, newPass)
+            },
+            isLoading = uiState.isLoading // Gunakan isLoading dari UI State
+        )
+    }
+
+    // BARU: Menutup dialog jika password berhasil diganti
+    LaunchedEffect(uiState.passwordChangeSuccess) {
+        if (uiState.passwordChangeSuccess) {
+            showChangePasswordDialog = false
+            viewModel.clearError() // Membersihkan state sukses setelah dialog ditutup
+        }
     }
 
     Column(
@@ -224,6 +344,14 @@ fun AdminProfileScreen(
                             )
                         }
                     )
+                    CustomDivider()
+                    // BARU: Ganti Password
+                    ProfileInfoRow(
+                        label = "Password",
+                        value = "Change",
+                        isActionable = true,
+                        onClick = { showChangePasswordDialog = true } // Tampilkan dialog
+                    )
                 }
             }
 
@@ -231,7 +359,6 @@ fun AdminProfileScreen(
 
             Button(
                 onClick = {
-                    // Ubah onClick menjadi memunculkan dialog, bukan langsung logout
                     showLogoutDialog = true
                 },
                 colors = ButtonDefaults.buttonColors(containerColor = Color(0xFFFF6F61)),
