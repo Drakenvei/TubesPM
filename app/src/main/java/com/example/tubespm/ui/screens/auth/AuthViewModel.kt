@@ -6,6 +6,7 @@ import com.google.firebase.auth.FirebaseAuth
 import com.google.firebase.firestore.FirebaseFirestore
 import dagger.hilt.android.lifecycle.HiltViewModel
 import kotlinx.coroutines.channels.Channel
+import kotlinx.coroutines.delay
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.flow.receiveAsFlow
@@ -32,7 +33,10 @@ data class AuthUiState(
 
     // State untuk Forgot Password
     val resetEmail: String = "",
-    val isResettingPassword: Boolean = false
+    val isResettingPassword: Boolean = false,
+
+    // Cooldown untuk Kirim Ulang Email (dalam detik)
+    val resendCooldown: Int = 0
 )
 
 // Event untuk navigasi (satu kali)
@@ -40,7 +44,6 @@ sealed class AuthEvent {
     data class NavigateWithRole(val role: String) : AuthEvent()
     data class ShowToast(val message: String) : AuthEvent()
     object RegistrationSuccess : AuthEvent()
-    // Event baru: pemicu verifikasi email saat login
     data class VerifyEmailPrompt(val email: String) : AuthEvent()
 }
 
@@ -55,6 +58,33 @@ class AuthViewModel @Inject constructor(
 
     private val _authEvent = Channel<AuthEvent>()
     val authEvent = _authEvent.receiveAsFlow()
+
+    // Variable internal untuk melacak waktu terakhir kirim (ms)
+    private var lastResendTime: Long = 0
+    private val COOLDOWN_SECONDS = 60L // ✅ PERUBAHAN: 30L -> 60L
+
+    init {
+        // Mulai timer hitung mundur saat ViewModel dibuat
+        startResendTimer()
+    }
+
+    // FUNGSI BARU: Logika Cooldown Timer
+    private fun startResendTimer() {
+        viewModelScope.launch {
+            while (true) {
+                val timeElapsed = System.currentTimeMillis() - lastResendTime
+                val timeLeft = COOLDOWN_SECONDS - (timeElapsed / 1000)
+
+                if (timeLeft > 0) {
+                    _uiState.update { it.copy(resendCooldown = timeLeft.toInt()) }
+                } else {
+                    _uiState.update { it.copy(resendCooldown = 0) }
+                }
+                delay(1000) // Update setiap 1 detik
+            }
+        }
+    }
+
 
     fun onLoginEmailChanged(email: String) {
         _uiState.update { it.copy(loginEmail = email, loginError = null) }
@@ -74,21 +104,26 @@ class AuthViewModel @Inject constructor(
 
     fun onRegPassChanged(pass: String) {
         _uiState.update { it.copy(regPass = pass, regError = null) }
+
+        if (pass.isNotEmpty()) {
+            val validationError = isPasswordValid(pass)
+            if (validationError != null) {
+                _uiState.update { it.copy(regError = validationError) }
+            }
+        }
     }
 
     fun onRegConfirmChanged(confirm: String) {
         _uiState.update { it.copy(regConfirm = confirm, regError = null) }
     }
 
-    // Fungsi Pengubah State untuk Reset Password
     fun onResetEmailChanged(email: String) {
         _uiState.update { it.copy(resetEmail = email) }
     }
 
-    // Fungsi Reset Password
     fun sendPasswordReset(email: String) {
         if (email.isBlank()) {
-            sendToast("Please enter your email address.")
+            sendToast("Masukkan alamat email Anda.")
             return
         }
 
@@ -96,9 +131,9 @@ class AuthViewModel @Inject constructor(
             _uiState.update { it.copy(isResettingPassword = true) }
             try {
                 auth.sendPasswordResetEmail(email).await()
-                sendToast("Password reset link sent to $email. Please check your inbox.")
+                sendToast("Tautan atur ulang kata sandi telah dikirim ke $email. Silakan cek kotak masuk Anda.")
             } catch (e: Exception) {
-                val error = e.localizedMessage ?: "Failed to send reset email."
+                val error = e.localizedMessage ?: "Gagal mengirim email atur ulang."
                 sendToast(error)
             } finally {
                 _uiState.update { it.copy(isResettingPassword = false, resetEmail = "") }
@@ -106,55 +141,77 @@ class AuthViewModel @Inject constructor(
         }
     }
 
-    // FUNGSI GABUNGAN: Kirim Ulang Email Verifikasi
+    // FUNGSI Kirim Ulang Email Verifikasi
     fun resendVerificationEmail() {
+        if (_uiState.value.resendCooldown > 0) {
+            sendToast("Harap tunggu ${_uiState.value.resendCooldown} detik sebelum mencoba lagi.")
+            return
+        }
+
         val user = auth.currentUser
         val state = _uiState.value
 
         viewModelScope.launch {
             _uiState.update { it.copy(isLoading = true) }
             try {
-                // 1. Coba kirim menggunakan current user (kasus setelah Register)
-                if (user != null && user.email != null) {
-                    user.sendEmailVerification().await()
-                    sendToast("Verification email sent again to ${user.email}")
+
+                // Panggil fungsi kirim verifikasi dan update timestamp
+                fun sendVerificationAndUpdateTime(targetUserEmail: String?) {
+                    user?.sendEmailVerification()?.addOnCompleteListener { task ->
+                        if (task.isSuccessful) {
+                            lastResendTime = System.currentTimeMillis() // Update waktu kirim sukses
+                            sendToast("Email verifikasi telah dikirim ulang ke $targetUserEmail")
+                        } else {
+                            val error = task.exception?.localizedMessage ?: "Gagal mengirim ulang email verifikasi."
+                            sendToast(error)
+                        }
+                        _uiState.update { it.copy(isLoading = false) }
+                    } ?: run {
+                        _uiState.update { it.copy(isLoading = false) }
+                        sendToast("Error: Objek pengguna tidak valid.")
+                    }
                 }
-                // 2. Jika tidak ada current user (kasus setelah Gagal Login, user sudah di-sign out)
+
+                // 1. Kasus setelah Register (user masih logged in)
+                if (user != null && user.email != null) {
+                    sendVerificationAndUpdateTime(user.email)
+                }
+                // 2. Kasus setelah Gagal Login (user sudah di-sign out)
                 else if (state.loginEmail.isNotBlank() && state.loginPass.isNotBlank()) {
-                    // Coba sign in ulang secara diam-diam hanya untuk mendapatkan user object
+                    // Coba sign in ulang secara diam-diam
                     val authResult = auth.signInWithEmailAndPassword(state.loginEmail, state.loginPass).await()
                     val tempUser = authResult.user
 
                     if (tempUser?.isEmailVerified == false) {
                         tempUser.sendEmailVerification().await()
-                        sendToast("Verification email sent again to ${tempUser.email}")
+                        lastResendTime = System.currentTimeMillis() // Update waktu kirim sukses
+                        sendToast("Email verifikasi telah dikirim ulang ke ${tempUser.email}")
                         auth.signOut() // Sign out lagi setelah kirim
                     } else {
-                        // User sudah terverifikasi, kirim toast dan kembali ke login
-                        sendToast("Email is already verified. Please sign in now.")
+                        sendToast("Email sudah terverifikasi. Silakan masuk sekarang.")
                         auth.signOut()
                     }
+                    _uiState.update { it.copy(isLoading = false) }
                 } else {
-                    sendToast("Error: User information missing for resend. Please try signing in again.")
+                    _uiState.update { it.copy(isLoading = false) }
+                    sendToast("Error: Informasi pengguna tidak ditemukan untuk kirim ulang. Coba masuk kembali.")
                 }
             } catch (e: Exception) {
-                val error = e.localizedMessage ?: "Failed to resend verification email."
-                sendToast(error)
-            } finally {
+                val error = e.localizedMessage ?: "Gagal mengirim ulang email verifikasi."
                 _uiState.update { it.copy(isLoading = false) }
+                sendToast(error)
             }
         }
     }
 
-    // MODIFIKASI FUNGSI LOGIN
     fun login() {
         val state = _uiState.value
         val email = state.loginEmail.trim()
         val pass = state.loginPass
 
         if (email.isBlank() || pass.isBlank()) {
-            _uiState.update { it.copy(loginError = "Email and Password must be filled") }
-            sendToast("Email and Password must be filled")
+            _uiState.update { it.copy(loginError = "Email dan Kata Sandi harus diisi") }
+            sendToast("Email dan Kata Sandi harus diisi")
             return
         }
 
@@ -164,51 +221,69 @@ class AuthViewModel @Inject constructor(
                 val authResult = auth.signInWithEmailAndPassword(email, pass).await()
                 val user = authResult.user
 
-                // CHECK VERIFIKASI EMAIL
                 if (user?.isEmailVerified == false) {
-                    // Jika belum terverifikasi:
                     auth.signOut()
                     _uiState.update { it.copy(isLoading = false) }
-                    // Kirim event untuk memicu UI verifikasi
                     _authEvent.send(AuthEvent.VerifyEmailPrompt(email))
-                    return@launch // Hentikan fungsi login di sini
+                    return@launch
                 }
 
-                // Lanjutkan ke Firestore dan navigasi jika terverifikasi
-                val uid = user?.uid ?: throw Exception("User UID is missing")
+                val uid = user?.uid ?: throw Exception("User UID hilang")
 
-                // Ambil role dari Firestore dan navigasi
                 val userDoc = db.collection("users").document(uid).get().await()
                 val role = userDoc.getString("role") ?: "siswa"
 
                 _uiState.update { it.copy(isLoading = false) }
-                sendToast("Signed in as $role")
+                sendToast("Berhasil masuk sebagai $role")
                 _authEvent.send(AuthEvent.NavigateWithRole(role))
 
             } catch (e: Exception) {
-                val error = e.localizedMessage ?: "Login failed"
+                val error = e.localizedMessage ?: "Gagal masuk"
                 _uiState.update { it.copy(isLoading = false, loginError = error) }
                 sendToast(error)
             }
         }
     }
 
+    private fun isPasswordValid(password: String): String? {
+        if (password.length < 8) {
+            return "Kata sandi harus minimal 8 karakter."
+        }
+        if (!password.contains(Regex("[A-Z]"))) {
+            return "Kata sandi harus mengandung setidaknya satu huruf besar."
+        }
+        if (!password.contains(Regex("[0-9]"))) {
+            return "Kata sandi harus mengandung setidaknya satu angka (0-9)."
+        }
+        return null
+    }
+
+    // MODIFIKASI FUNGSI REGISTER: Tambahkan lastResendTime = System.currentTimeMillis()
     fun register() {
-        //ambil data dari state
         val state = _uiState.value
         val name = state.regName.trim()
         val email = state.regEmail.trim()
         val pass = state.regPass
         val confirm = state.regConfirm
 
-        if (name.isBlank() || email.isBlank() || pass.isBlank()) {
-            _uiState.update { it.copy(regError = "All fields must be filled") }
-            sendToast("All fields must be filled")
+        if (name.isBlank() || email.isBlank() || pass.isBlank() || confirm.isBlank()) {
+            val error = "Semua kolom harus diisi"
+            _uiState.update { it.copy(regError = error) }
+            sendToast(error)
             return
         }
+
         if (pass != confirm) {
-            _uiState.update { it.copy(regError = "Password is not the same") }
-            sendToast("Password is not the same")
+            val error = "Konfirmasi Kata Sandi tidak sama"
+            _uiState.update { it.copy(regError = error) }
+            sendToast(error)
+            return
+        }
+
+        val passwordValidationError = isPasswordValid(pass)
+        if (passwordValidationError != null) {
+            _uiState.update { it.copy(regError = passwordValidationError) }
+            sendToast(passwordValidationError)
             return
         }
 
@@ -217,10 +292,12 @@ class AuthViewModel @Inject constructor(
             try {
                 val authResult = auth.createUserWithEmailAndPassword(email.trim(), pass).await()
                 val user = authResult.user
-                val uid = user?.uid ?: throw Exception("User UID is missing")
+                val uid = user?.uid ?: throw Exception("User UID hilang")
 
-                // KIRIM EMAIL VERIFIKASI
                 user.sendEmailVerification().await()
+
+                // AKTIFKAN COOLDOWN SEGERA SETELAH PENGIRIMAN EMAIL SUKSES
+                lastResendTime = System.currentTimeMillis()
 
                 val userMap = mapOf(
                     "name" to name,
@@ -235,11 +312,10 @@ class AuthViewModel @Inject constructor(
 
                 _uiState.update { it.copy(isLoading = false) }
 
-                // Kirim event sukses registrasi
                 _authEvent.send(AuthEvent.RegistrationSuccess)
 
             } catch (e: Exception) {
-                val error = e.localizedMessage ?: "Register failed"
+                val error = e.localizedMessage ?: "Gagal mendaftar"
                 _uiState.update { it.copy(isLoading = false, regError = error) }
                 sendToast(error)
             }

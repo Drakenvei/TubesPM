@@ -6,8 +6,8 @@ import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Email
 import androidx.compose.material3.*
 import androidx.compose.runtime.Composable
-import androidx.compose.runtime.collectAsState // ✅ IMPORT YANG HILANG
-import androidx.compose.runtime.getValue // ✅ IMPORT YANG HILANG
+import androidx.compose.runtime.collectAsState
+import androidx.compose.runtime.getValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
@@ -22,9 +22,13 @@ fun VerificationSentScreen(
     onBackToLogin: () -> Unit,
     viewModel: AuthViewModel = hiltViewModel(),
     displayEmail: String,
-    isLoginAttempt: Boolean = false // Flag untuk membedakan alur
+    isLoginAttempt: Boolean = false
 ) {
     val uiState by viewModel.uiState.collectAsState()
+    val cooldown = uiState.resendCooldown // ✅ Ambil nilai cooldown
+
+    // Tentukan apakah tombol harus dinonaktifkan
+    val isResendDisabled = uiState.isLoading || cooldown > 0
 
     Column(
         modifier = Modifier
@@ -53,7 +57,6 @@ fun VerificationSentScreen(
                 Spacer(modifier = Modifier.height(16.dp))
 
                 Text(
-                    // UBAH JUDUL BERDASARKAN KONTEKS
                     text = if (isLoginAttempt)
                         "Verify Your Email!"
                     else
@@ -66,7 +69,6 @@ fun VerificationSentScreen(
                 Spacer(modifier = Modifier.height(8.dp))
 
                 Text(
-                    // UBAH DESKRIPSI BERDASARKAN KONTEKS
                     text = if (isLoginAttempt)
                         "Akun Anda ($displayEmail) belum terverifikasi. Silakan cek kotak masuk Anda atau klik 'Kirim Ulang Email' di bawah ini untuk mengirim ulang verifikasi."
                     else
@@ -92,16 +94,21 @@ fun VerificationSentScreen(
 
                 Spacer(modifier = Modifier.height(8.dp))
 
+                // Tombol Kirim Ulang
                 TextButton(
                     onClick = viewModel::resendVerificationEmail,
-                    enabled = !uiState.isLoading
+                    enabled = !isResendDisabled // Gunakan isResendDisabled
                 ) {
                     if (uiState.isLoading) {
                         CircularProgressIndicator(
                             modifier = Modifier.size(16.dp),
                             strokeWidth = 2.dp
                         )
+                    } else if (cooldown > 0) {
+                        // ✅ Tampilkan hitungan mundur
+                        Text("Kirim Ulang Email dalam (${cooldown}s)")
                     } else {
+                        // ✅ Tampilkan tombol normal
                         Text("Kirim Ulang Email")
                     }
                 }
