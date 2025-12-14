@@ -30,6 +30,7 @@ import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.lifecycle.viewmodel.compose.viewModel
 import androidx.compose.foundation.layout.PaddingValues
+import androidx.compose.material.icons.filled.Lock
 import coil.compose.AsyncImage
 
 data class AnswerOption(
@@ -48,6 +49,7 @@ fun EditQuestionScreen(
     paddingValuesFromNavHost: PaddingValues,
     onBackClick: () -> Unit,
     type: String = "tryout",    // <-- "tryout" atau "latihan_soal"
+    isReadOnly: Boolean = false, // [BARU] Parameter
     // Inject ViewModel
     viewModel: EditQuestionViewModel = viewModel()
 ) {
@@ -74,7 +76,7 @@ fun EditQuestionScreen(
             TopAppBar(
                 title = {
                     Column {
-                        Text(text = "Edit Question", color = Color.White, fontSize = 20.sp, fontWeight = FontWeight.SemiBold)
+                        Text(text = if (isReadOnly) "Detail Soal (Lihat)" else "Edit Soal", color = Color.White, fontSize = 20.sp, fontWeight = FontWeight.SemiBold)
                         Text(text = paketName, color = Color.White.copy(alpha = 0.85f), fontSize = 12.sp)
                     }
                 },
@@ -84,16 +86,21 @@ fun EditQuestionScreen(
                     }
                 },
                 actions = {
-                    // Tombol Save
-                    IconButton(onClick = { viewModel.saveQuestion(tryoutId, questionId, type) }) {
-                        if (uiState.isSaving) {
-                            CircularProgressIndicator(color = Color.White, modifier = Modifier.size(24.dp))
-                        } else {
-                            Icon(Icons.Default.Save, contentDescription = "Save", tint = Color.White)
+                    // Sembunyikan Tombol Save jika Read Only
+                    if (!isReadOnly) {
+                        IconButton(onClick = { viewModel.saveQuestion(tryoutId, questionId, type) }) {
+                            if (uiState.isSaving) CircularProgressIndicator(color = Color.White, modifier = Modifier.size(24.dp))
+                            else Icon(Icons.Default.Save, contentDescription = "Save", tint = Color.White)
                         }
+                    } else {
+                        // Icon Gembok penanda terkunci
+                        Icon(Icons.Default.Lock, contentDescription = null, tint = Color.White.copy(alpha = 0.7f), modifier = Modifier.padding(end = 8.dp))
                     }
                 },
-                colors = TopAppBarDefaults.topAppBarColors(containerColor = Color(0xFFFF9966), titleContentColor = Color.White)
+                colors = TopAppBarDefaults.topAppBarColors(
+                    containerColor = if (isReadOnly) Color.Gray else Color(0xFFFF9966),
+                    titleContentColor = Color.White
+                )
             )
         }
     ) { innerPadding ->
@@ -127,6 +134,7 @@ fun EditQuestionScreen(
                         value = uiState.questionData.questionText,
                         onValueChange = { viewModel.updateQuestionText(it) },
                         modifier = Modifier.fillMaxWidth(),
+                        enabled = !isReadOnly,
                         placeholder = { Text("Tulis Soal Di Sini", color = Color(0xFF9E9E9E)) },
                         shape = RoundedCornerShape(6.dp),
                         colors = OutlinedTextFieldDefaults.colors(
@@ -157,7 +165,9 @@ fun EditQuestionScreen(
                             .size(120.dp)
                             .background(Color(0xFFE0E0E0), RoundedCornerShape(6.dp))
                             .border(1.dp, Color(0xFFBDBDBD), RoundedCornerShape(6.dp))
-                            .clickable { imagePickerLauncher.launch("image/*") },
+                            .clickable(enabled = !isReadOnly) { // Disable Click
+                                imagePickerLauncher.launch("image/*")
+                            },
                         contentAlignment = Alignment.Center
                     ) {
                         when {
@@ -204,6 +214,7 @@ fun EditQuestionScreen(
                                     value = uiState.answerMap[labelStr] ?: "",
                                     onValueChange = { viewModel.updateAnswerOption(labelStr, it) },
                                     modifier = Modifier.weight(1f),
+                                    enabled = !isReadOnly,
                                     placeholder = { Text(option.placeholder, color = Color(0xFFB0B0B0), fontSize = 13.sp) },
                                     singleLine = true,
                                     textStyle = TextStyle(
@@ -231,7 +242,7 @@ fun EditQuestionScreen(
                                 ) {
                                     Box(
                                         modifier = Modifier.fillMaxSize().noRippleClickable {
-                                            viewModel.setCorrectAnswer(labelStr)
+                                            if (!isReadOnly) viewModel.setCorrectAnswer(option.label.toString()) // Disable click
                                         },
                                         contentAlignment = Alignment.Center
                                     ) {
@@ -252,6 +263,7 @@ fun EditQuestionScreen(
                         value = uiState.questionData.discussion,
                         onValueChange = { viewModel.updateDiscussionText(it) },
                         modifier = Modifier.fillMaxWidth().height(120.dp),
+                        enabled = !isReadOnly,
                         placeholder = { Text("Tulis Pembahasan Di Sini", color = Color(0xFF9E9E9E)) },
                         colors = OutlinedTextFieldDefaults.colors(
                             focusedContainerColor = Color(0xFFE0E0E0),

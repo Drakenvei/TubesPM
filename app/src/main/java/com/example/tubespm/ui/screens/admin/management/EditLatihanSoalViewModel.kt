@@ -16,6 +16,7 @@ import kotlinx.coroutines.tasks.await
 data class EditLatihanSoalUiState(
     val isLoading: Boolean = true,
     val isSaving: Boolean = false,
+    val isStatusUpdating: Boolean = false,
     val code: String = "",
     val title: String = "",
     val subtest: String = "",
@@ -99,8 +100,35 @@ class EditLatihanSoalViewModel : ViewModel() {
         _uiState.update { it.copy(topicsString = text) }
     }
 
-    fun updateStatus(status: String) {
-        _uiState.update { it.copy(status = status) }
+    fun toggleLatihanStatus(latihanId: String) {
+        val currentStatus = _uiState.value.status
+        val newStatus = if (currentStatus == "active") "inactive" else "active"
+
+        _uiState.update { it.copy(isStatusUpdating = true) }
+
+        viewModelScope.launch {
+            try {
+                // Update langsung ke Firestore
+                db.collection("latihan_soal").document(latihanId)
+                    .update("status", newStatus)
+                    .await()
+
+                // Jika sukses, baru update UI
+                _uiState.update {
+                    it.copy(
+                        status = newStatus,
+                        isStatusUpdating = false
+                    )
+                }
+            } catch (e: Exception) {
+                _uiState.update {
+                    it.copy(
+                        isStatusUpdating = false,
+                        error = "Gagal mengubah status: ${e.message}"
+                    )
+                }
+            }
+        }
     }
 
     fun saveLatihanSoal(latihanId: String, onSuccess: () -> Unit, onError: (String) -> Unit) {

@@ -136,7 +136,7 @@ fun AdminMainScreen(
 
             // Rute 5: Edit Question
             composable(
-                route = "admin_edit_question/{type}/{tryoutId}/{questionId}/{paketName}/{questionNumber}?displayNumber={displayNumber}",
+                route = "admin_edit_question/{type}/{tryoutId}/{questionId}/{paketName}/{questionNumber}?displayNumber={displayNumber}&isReadOnly={isReadOnly}",
                 arguments = listOf(
                     navArgument("type") { type = NavType.StringType },
                     navArgument("tryoutId") { type = NavType.StringType },
@@ -146,7 +146,8 @@ fun AdminMainScreen(
                     navArgument("displayNumber") {
                         type = NavType.IntType
                         defaultValue = 0
-                    }
+                    },
+                    navArgument("isReadOnly") { type = NavType.BoolType; defaultValue = false }
                 )
             ) { backStackEntry ->
                 val type = backStackEntry.arguments?.getString("type") ?: "tryout"
@@ -159,12 +160,15 @@ fun AdminMainScreen(
                 val displayNumberArg = backStackEntry.arguments?.getInt("displayNumber") ?: 0
                 val finalDisplayNumber = if (displayNumberArg > 0) displayNumberArg else questionNumber
 
+                val isReadOnly = backStackEntry.arguments?.getBoolean("isReadOnly") ?: false
+
                 EditQuestionScreen(
                     tryoutId = tryoutId,
                     questionId = questionId,
                     paketName = paketName,
                     questionNumber = questionNumber, // ID Database
                     displayNumber = finalDisplayNumber, // Visual UI
+                    isReadOnly = isReadOnly,
                     paddingValuesFromNavHost = paddingValues,
                     onBackClick = { adminNavController.popBackStack() },
                     type = type
@@ -303,9 +307,9 @@ fun AdminMainScreen(
                     paketName = paketName,
                     targetQuestionCount = targetCount,
                     onBackClick = { adminNavController.popBackStack() },
-                    onEditQuestion = { t, pId, qId, pName, qNum, dNum ->
+                    onEditQuestion = { t, pId, qId, pName, qNum, dNum, readOnly ->
                         // Sertakan ?displayNumber=$dNum di URL
-                        adminNavController.navigate("admin_edit_question/$t/$pId/$qId/$pName/$qNum?displayNumber=$dNum")
+                        adminNavController.navigate("admin_edit_question/$t/$pId/$qId/$pName/$qNum?displayNumber=$dNum&isReadOnly=$readOnly")
                     },
                     onAddQuestion = { t, pId, pName, qNum, sId, dNum, tCount ->
                         // Sertakan &displayNumber=$dNum di URL

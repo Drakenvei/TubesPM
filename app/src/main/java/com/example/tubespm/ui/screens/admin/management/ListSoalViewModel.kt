@@ -17,7 +17,8 @@ data class ListSoalUiState(
     val isLoading: Boolean = true,
     val questions: List<QuizQuestion> = emptyList(),
     val error: String? = null,
-    val currentSubtestId: String? = null // SubtestId untuk section yang sedang dilihat
+    val currentSubtestId: String? = null, // SubtestId untuk section yang sedang dilihat
+    val isEditable: Boolean = true
 )
 
 class ListSoalViewModel : ViewModel() {
@@ -26,6 +27,18 @@ class ListSoalViewModel : ViewModel() {
 
     private val db = Firebase.firestore
 
+    // Helper untuk cek status parent
+    private suspend fun checkIsEditable(parentId: String, type: String): Boolean {
+        return try {
+            val collection = if (type == "tryout") "tryouts" else "latihan_soal"
+            val doc = db.collection(collection).document(parentId).get().await()
+            val status = doc.getString("status") ?: "inactive"
+            status != "active" // Editable jika TIDAK active
+        } catch (e: Exception) {
+            true // Default aman
+        }
+    }
+
     /**
      * Load semua soal dari parent (tryout atau latihan_soal)
      */
@@ -33,6 +46,7 @@ class ListSoalViewModel : ViewModel() {
         _uiState.update { it.copy(isLoading = true) }
         viewModelScope.launch {
             try {
+                val editable = checkIsEditable(parentId, type)
                 val collectionName = if (type == "tryout") "tryouts" else "latihan_soal"
                 val snapshot = db.collection(collectionName)
                     .document(parentId)
@@ -46,6 +60,7 @@ class ListSoalViewModel : ViewModel() {
                     it.copy(
                         isLoading = false,
                         questions = questions,
+                        isEditable = editable,
                         error = null
                     )
                 }
@@ -71,6 +86,8 @@ class ListSoalViewModel : ViewModel() {
             try {
                 android.util.Log.d("DEBUG_SOAL", "Mencari soal di Parent: $parentId")
                 android.util.Log.d("DEBUG_SOAL", "Dengan Subtest ID: '$subtestId'") // Pakai tanda kutip untuk cek spasi
+
+                val editable = checkIsEditable(parentId, type)
                 val collectionName = if (type == "tryout") "tryouts" else "latihan_soal"
                 val snapshot = db.collection(collectionName)
                     .document(parentId)
@@ -85,7 +102,9 @@ class ListSoalViewModel : ViewModel() {
                     it.copy(
                         isLoading = false,
                         questions = questions,
-                        error = null
+                        isEditable = editable,
+                        error = null,
+                        currentSubtestId = subtestId
                     )
                 }
             } catch (e: Exception) {
@@ -103,38 +122,39 @@ class ListSoalViewModel : ViewModel() {
      * Load soal berdasarkan section (load semua soal, filter di UI berdasarkan subtestId di section)
      */
     fun loadQuestionsBySection(parentId: String, type: String, subtestId: String) {
-        _uiState.update { it.copy(isLoading = true) }
-        viewModelScope.launch {
-            try {
-                val collectionName = if (type == "tryout") "tryouts" else "latihan_soal"
-                val snapshot = db.collection(collectionName)
-                    .document(parentId)
-                    .collection("questions")
-                    .whereEqualTo("subtestId", subtestId)
-                    .orderBy("questionNumber")
-                    .get()
-                    .await()
-
-                val questions = snapshot.toObjects(QuizQuestion::class.java)
-
-                // UPDATE DISINI: Simpan currentSubtestId ke state!
-                _uiState.update {
-                    it.copy(
-                        isLoading = false,
-                        questions = questions,
-                        error = null,
-                        currentSubtestId = subtestId // <--- PENTING!
-                    )
-                }
-            } catch (e: Exception) {
-                _uiState.update {
-                    it.copy(
-                        isLoading = false,
-                        error = "Gagal memuat soal: ${e.message}"
-                    )
-                }
-            }
-        }
+//        _uiState.update { it.copy(isLoading = true) }
+//        viewModelScope.launch {
+//            try {
+//                val collectionName = if (type == "tryout") "tryouts" else "latihan_soal"
+//                val snapshot = db.collection(collectionName)
+//                    .document(parentId)
+//                    .collection("questions")
+//                    .whereEqualTo("subtestId", subtestId)
+//                    .orderBy("questionNumber")
+//                    .get()
+//                    .await()
+//
+//                val questions = snapshot.toObjects(QuizQuestion::class.java)
+//
+//                // UPDATE DISINI: Simpan currentSubtestId ke state!
+//                _uiState.update {
+//                    it.copy(
+//                        isLoading = false,
+//                        questions = questions,
+//                        error = null,
+//                        currentSubtestId = subtestId // <--- PENTING!
+//                    )
+//                }
+//            } catch (e: Exception) {
+//                _uiState.update {
+//                    it.copy(
+//                        isLoading = false,
+//                        error = "Gagal memuat soal: ${e.message}"
+//                    )
+//                }
+//            }
+//        }
+        loadQuestionsBySubtest(parentId, type, subtestId)
     }
 
     /**
@@ -148,6 +168,9 @@ class ListSoalViewModel : ViewModel() {
                 val latihanDoc = db.collection("latihan_soal").document(latihanId).get().await()
                 val latihan = latihanDoc.toObject(com.example.tubespm.data.model.LatihanSoal::class.java)
                 val parentSubtestId = latihan?.subtestId // e.g., "pu"
+                val status = latihanDoc.getString("status") ?: "inactive"
+
+                val editable = status != "active"
 
                 // 2. Fetch Questions
                 val snapshot = db.collection("latihan_soal")
@@ -163,6 +186,7 @@ class ListSoalViewModel : ViewModel() {
                     it.copy(
                         isLoading = false,
                         questions = questions,
+                        isEditable = editable,
                         error = null,
                         currentSubtestId = parentSubtestId // <--- STORE THIS IN STATE
                     )

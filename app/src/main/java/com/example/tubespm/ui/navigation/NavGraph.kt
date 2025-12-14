@@ -252,7 +252,7 @@ fun AdminNavGraph(
         // ------------ Edit Question (DIPERBAIKI) ------------
         composable(
             // Tambahkan argumen di route
-            route = "admin_edit_question/{type}/{tryoutId}/{questionId}/{paketName}/{questionNumber}?displayNumber={displayNumber}",
+            route = "admin_edit_question/{type}/{tryoutId}/{questionId}/{paketName}/{questionNumber}?displayNumber={displayNumber}&isReadOnly={isReadOnly}",
             arguments = listOf(
                 navArgument("type") { type = NavType.StringType },
                 navArgument("tryoutId") { type = NavType.StringType },
@@ -262,6 +262,10 @@ fun AdminNavGraph(
                 navArgument("displayNumber") {
                     type = NavType.IntType
                     defaultValue = 0 // Default 0 jika tidak dikirim
+                },
+                navArgument("isReadOnly") {
+                    type = NavType.BoolType
+                    defaultValue = false
                 }
             )
         ) { backStackEntry ->
@@ -274,6 +278,7 @@ fun AdminNavGraph(
             val displayNumberArg = backStackEntry.arguments?.getInt("displayNumber") ?: 0
             // Logika Fallback: Jika displayNumber 0 (tidak dikirim), pakai questionNumber lama
             val finalDisplayNumber = if (displayNumberArg > 0) displayNumberArg else questionNumber
+            val isReadOnly = backStackEntry.arguments?.getBoolean("isReadOnly") ?: false
 
             // Panggil Screen dengan parameter lengkap
             EditQuestionScreen(
@@ -284,7 +289,8 @@ fun AdminNavGraph(
                 displayNumber = finalDisplayNumber, // [BARU] Kirim ID Visual ke UI
                 paddingValuesFromNavHost = paddingValues,
                 onBackClick = { navController.popBackStack() },
-                type = type
+                type = type,
+                isReadOnly = isReadOnly
             )
         }
 
@@ -416,8 +422,8 @@ fun AdminNavGraph(
                 paketName = paketName,
                 targetQuestionCount = targetCount,
                 onBackClick = { navController.popBackStack() },
-                onEditQuestion = { t, pId, qId, pName, qNum, dNum ->
-                    navController.navigate("admin_edit_question/$t/$pId/$qId/$pName/$qNum?displayNumber=$dNum")
+                onEditQuestion = { t, pId, qId, pName, qNum, dNum, readOnly ->
+                    navController.navigate("admin_edit_question/$t/$pId/$qId/$pName/$qNum?displayNumber=$dNum&isReadOnly=$readOnly")
                 },
                 onAddQuestion = { t, pId, pName, qNum, sId, dNum, tCount ->
                     // CHANGE 4: Construct navigation with subtestId parameter

@@ -5,12 +5,14 @@ import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import com.example.tubespm.data.model.Tryout
 import com.google.firebase.Firebase
+import com.google.firebase.firestore.AggregateSource
 import com.google.firebase.firestore.firestore
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.flow.update
 import kotlinx.coroutines.launch
+import kotlinx.coroutines.tasks.await
 
 // Model UI khusus untuk list di dalam Dialog
 data class TryoutSectionUiModel(
@@ -20,7 +22,8 @@ data class TryoutSectionUiModel(
     val timeMinutes: Int, // duration
     val questionCount: Int, // questionCount
     val parentSectionId: String, // "tps" atau "literasi" (Penting untuk referensi)
-    val topicsString: String = "" //untuk menampung kisi-kisi
+    val topicsString: String = "", //untuk menampung kisi-kisi
+    val actualCount: Int = 0
 )
 
 data class EditManagementUiState(
@@ -50,45 +53,58 @@ class EditManagementViewModel : ViewModel() {
                 }
 
                 if (snapshot != null && snapshot.exists()) {
-                    try {
-                        val tryout = snapshot.toObject(Tryout::class.java)
+                    viewModelScope.launch {
+                        try {
+                            val tryout = snapshot.toObject(Tryout::class.java)
 
-                        // --- FLATTEING DATA ---
-                        // Mengubah struktur nested (Section -> Subtests) menjadi satu list datar
-                        val flatList = mutableListOf<TryoutSectionUiModel>()
+                            // --- FLATTEING DATA ---
+                            // Mengubah struktur nested (Section -> Subtests) menjadi satu list datar
+                            val flatList = mutableListOf<TryoutSectionUiModel>()
 
-                        tryout?.sections?.forEach { section ->
-                            // Logic to determine type label (TPS/Literasi)
-                            val typeLabel = if (section.sectionId.equals("tps", ignoreCase = true)) "TPS" else "Literasi"
+                            tryout?.sections?.forEach { section ->
+                                // Logic to determine type label (TPS/Literasi)
+                                val typeLabel = if (section.sectionId.equals("tps", ignoreCase = true)) "TPS" else "Literasi"
 
-                            section.subtests.forEach { subtest ->
+                                section.subtests.forEach { subtest ->
 
-                                // Proses Mapping Topics ke String
-                                // Mengubah List<Topic> menjadi String "Aljabar, Geometri"
-                                val topicsStr = subtest.topics.joinToString(", ") { it.name }
+                                    // Proses Mapping Topics ke String
+                                    // Mengubah List<Topic> menjadi String "Aljabar, Geometri"
+                                    val topicsStr = subtest.topics.joinToString(", ") { it.name }
 
-                                flatList.add(
-                                    TryoutSectionUiModel(
-                                        // ERROR IS LIKELY HERE:
-                                        // Ensure you are using 'subtest.subtestId' (e.g., "pu"), NOT 'section.sectionId' (e.g., "tps")
-                                        id = subtest.subtestId,
-                                        title = subtest.subtestName,
-                                        type = typeLabel,
-                                        timeMinutes = subtest.duration,
-                                        questionCount = subtest.questionCount,
-                                        parentSectionId = section.sectionId,
-                                        topicsString = topicsStr
+                                    val countSnapshot = db.collection("tryouts")
+                                        .document(tryoutId)
+                                        .collection("questions")
+                                        .whereEqualTo("subtestId", subtest.subtestId)
+                                        .count()
+                                        .get(AggregateSource.SERVER)
+                                        .await()
+
+                                    val realCount = countSnapshot.count.toInt()
+
+                                    flatList.add(
+                                        TryoutSectionUiModel(
+                                            // ERROR IS LIKELY HERE:
+                                            // Ensure you are using 'subtest.subtestId' (e.g., "pu"), NOT 'section.sectionId' (e.g., "tps")
+                                            id = subtest.subtestId,
+                                            title = subtest.subtestName,
+                                            type = typeLabel,
+                                            timeMinutes = subtest.duration,
+                                            questionCount = subtest.questionCount,
+                                            parentSectionId = section.sectionId,
+                                            topicsString = topicsStr,
+                                            actualCount = realCount
+                                        )
                                     )
-                                )
+                                }
                             }
-                        }
 
-                        _uiState.update {
-                            it.copy(isLoading = false, sections = flatList, error = null)
+                            _uiState.update {
+                                it.copy(isLoading = false, sections = flatList, error = null)
+                            }
+                        } catch (err: Exception) {
+                            Log.e("EditManagementVM", "Error parsing data", err)
+                            _uiState.update { it.copy(isLoading = false, error = "Data corrupt") }
                         }
-                    } catch (err: Exception) {
-                        Log.e("EditManagementVM", "Error parsing data", err)
-                        _uiState.update { it.copy(isLoading = false, error = "Data corrupt") }
                     }
                 } else {
                     _uiState.update { it.copy(isLoading = false, error = "Dokumen tidak ditemukan") }
@@ -115,7 +131,25 @@ class EditManagementViewModel : ViewModel() {
     /**
      * Mengubah status tryout menjadi active
      */
-    fun activatePackage(tryoutId: String, onSuccess: () -> Unit) {
+    fun activatePackage(tryoutId: String, onSuccess: () -> Unit, onError: (String) -> Unit) {
+        val currentSections = _uiState.value.sections
+
+        // Validasi: Pastikan data sudah termuat
+        if (currentSections.isEmpty()) {
+            onError("Data subtest belum dimuat. Harap tunggu.")
+            return
+        }
+
+        // Validasi: Cek apakah ada subtest yang jumlah soalnya KURANG dari target
+        val incompleteSections = currentSections.filter { it.actualCount < it.questionCount }
+
+        if (incompleteSections.isNotEmpty()) {
+            // Jika ada yang belum target, tolak aktivasi
+            val names = incompleteSections.joinToString(", ") { it.title }
+            onError("Gagal: Subtest berikut belum memenuhi target soal: $names")
+            return
+        }
+
         viewModelScope.launch {
             db.collection("tryouts").document(tryoutId)
                 .update("status", "active")

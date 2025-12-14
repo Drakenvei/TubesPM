@@ -26,6 +26,8 @@ import androidx.compose.material.icons.automirrored.filled.ArrowBack
 import androidx.compose.material.icons.filled.CheckCircle
 import androidx.compose.material.icons.filled.Delete
 import androidx.compose.material.icons.filled.Info
+import androidx.compose.material.icons.filled.Lock
+import androidx.compose.material.icons.filled.Visibility
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
@@ -39,7 +41,7 @@ fun ListSoalScreen(
     targetQuestionCount: Int, // Parameter ini sekarang sudah terisi angka (misal: 20)
     currentQuestionCount: Int = 0, // Ini tidak dipakai dari parameter, kita ambil dari viewModel.uiState.questions.size
     onBackClick: () -> Unit,
-    onEditQuestion: (String, String, String, String, Int, Int) -> Unit,
+    onEditQuestion: (String, String, String, String, Int, Int, Boolean) -> Unit,
     onAddQuestion: (String, String, String, Int, String?, Int, Int) -> Unit,
     viewModel: ListSoalViewModel = viewModel()
 ) {
@@ -99,6 +101,8 @@ fun ListSoalScreen(
     // Hitung realisasi jumlah soal saat ini
     val realQuestionCount = uiState.questions.size
 
+    val isEditable = uiState.isEditable
+
     Scaffold(
         topBar = {
             TopAppBar(
@@ -136,7 +140,7 @@ fun ListSoalScreen(
             // Tampilkan tombol HANYA JIKA:
             // 1. Target Count = 0 (Unlimited/Latihan Soal mode lama), ATAU
             // 2. Jumlah soal saat ini MASIH KURANG dari Target
-            if (targetQuestionCount == 0 || realQuestionCount < targetQuestionCount) {
+            if (isEditable && (targetQuestionCount == 0 || realQuestionCount < targetQuestionCount)) {
                 FloatingActionButton(
                     onClick = {
                         // Cari angka questionNumber terbesar yang ada di list saat ini
@@ -185,6 +189,17 @@ fun ListSoalScreen(
                 .background(Color(0xFFF5F5F5))
         ) {
             Column (modifier = Modifier.fillMaxSize()) {
+                // [BARU] Banner Info Read Only
+                if (!isEditable) {
+                    Surface(color = Color(0xFFE3F2FD), modifier = Modifier.fillMaxWidth()) {
+                        Row(modifier = Modifier.padding(12.dp), verticalAlignment = Alignment.CenterVertically) {
+                            Icon(Icons.Default.Lock, contentDescription = null, tint = Color(0xFF1976D2), modifier = Modifier.size(16.dp))
+                            Spacer(modifier = Modifier.width(8.dp))
+                            Text("Mode Lihat (Paket Aktif). Nonaktifkan untuk mengedit.", color = Color(0xFF0D47A1), fontSize = 12.sp)
+                        }
+                    }
+                }
+
                 if (targetQuestionCount > 0) {
                     val isComplete = realQuestionCount >= targetQuestionCount
                     Card(
@@ -269,10 +284,10 @@ fun ListSoalScreen(
                                 color = Color.Gray,
                                 fontSize = 12.sp
                             )
-                            Spacer(modifier = Modifier.height(8.dp))
-                            Text(
-                                text = "${subtestId}, ${sectionId}, ${sectionName}"
-                            )
+//                            Spacer(modifier = Modifier.height(8.dp))
+//                            Text(
+//                                text = "${subtestId}, ${sectionId}, ${sectionName}"
+//                            )
                         }
                     }
                 } else {
@@ -293,24 +308,28 @@ fun ListSoalScreen(
                             QuestionCard(
                                 question = question,
                                 displayNumber = displayQuestionNumber, // <-- Kirim nomor visual ini
+                                isEditable = isEditable,
                                 onClick = {
                                     // Panggil Navigasi dengan format URL baru
                                     // Kita kirim questionNumber ASLI (untuk DB) dan displayQuestionNumber (untuk Judul)
                                     val route = "admin_edit_question/$type/$parentId/${question.id}/$paketName/${question.questionNumber}?displayNumber=$displayQuestionNumber"
-                                    onEditQuestion(type, parentId, question.id, paketName, question.questionNumber, displayQuestionNumber)
+                                    onEditQuestion(type, parentId, question.id, paketName, question.questionNumber, displayQuestionNumber, !isEditable)
                                 },
                                 onDeleteClick = {
-                                    // Tentukan Subtest ID mana yang sedang aktif
-                                    // Prioritas: Parameter Navigasi -> State -> Null
-                                    val activeSubtestId = subtestId ?: uiState.currentSubtestId
+                                    if (isEditable) {
+                                        // Tentukan Subtest ID mana yang sedang aktif
+                                        // Prioritas: Parameter Navigasi -> State -> Null
+                                        val activeSubtestId = subtestId ?: uiState.currentSubtestId
 
-                                    // Panggil fungsi delete dengan parameter baru
-                                    viewModel.deleteQuestionSingle(
-                                        parentId = parentId,
-                                        type = type,
-                                        questionId = question.id,
-                                        currentSubtestId = activeSubtestId // <--- KIRIM ID INI
-                                    )
+                                        // Panggil fungsi delete dengan parameter baru
+                                        viewModel.deleteQuestionSingle(
+                                            parentId = parentId,
+                                            type = type,
+                                            questionId = question.id,
+                                            currentSubtestId = activeSubtestId // <--- KIRIM ID INI
+                                        )
+                                    }
+
                                 }
                             )
                         }
@@ -325,6 +344,7 @@ fun ListSoalScreen(
 fun QuestionCard(
     question: com.example.tubespm.data.model.QuizQuestion,
     displayNumber: Int, // Terima parameter baru ini
+    isEditable: Boolean, // Parameter baru
     onClick: () -> Unit,
     onDeleteClick: () -> Unit
 ) {
@@ -361,20 +381,14 @@ fun QuestionCard(
             Row (
                 verticalAlignment = Alignment.CenterVertically
             ) {
-                IconButton(onClick = onDeleteClick) {
-                    Icon(
-                        imageVector = Icons.Default.Delete,
-                        contentDescription = "Hapus Soal",
-                        tint = Color(0xFFE53935),
-                        modifier = Modifier.size(24.dp)
-                    )
+                if (isEditable) {
+                    // Mode Edit: Tampilkan Hapus & Edit Icon
+                    IconButton(onClick = onDeleteClick) { Icon(Icons.Default.Delete, contentDescription = "Hapus", tint = Color(0xFFE53935)) }
+                    Icon(Icons.Default.Edit, contentDescription = "Edit", tint = Color(0xFF757575), modifier = Modifier.size(24.dp))
+                } else {
+                    // Mode View: Tampilkan Mata (Lihat) atau Gembok
+                    Icon(Icons.Default.Visibility, contentDescription = "Lihat Detail", tint = Color.LightGray, modifier = Modifier.size(24.dp))
                 }
-                Icon(
-                    Icons.Default.Edit,
-                    contentDescription = "Edit",
-                    tint = Color(0xFF757575),
-                    modifier = Modifier.size(24.dp)
-                )
             }
 
         }

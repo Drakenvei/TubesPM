@@ -40,6 +40,22 @@ class EditSectionViewModel : ViewModel() {
         onSuccess: () -> Unit,
         onError: (String) -> Unit
     ) {
+        // --- [BARU] VALIDASI INPUT ---
+        if (data.timeMinutes <= 0) {
+            onError("Durasi waktu tidak boleh 0 menit atau kurang.")
+            return
+        }
+
+        if (data.questionCount <= 0) {
+            onError("Jumlah soal tidak boleh 0 atau kurang.")
+            return
+        }
+
+        if (data.subtest.isBlank()) {
+            onError("Jenis subtest harus dipilih.")
+            return
+        }
+
         viewModelScope.launch {
             val tryoutRef = db.collection("tryouts").document(tryoutId)
 

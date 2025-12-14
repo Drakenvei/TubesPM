@@ -1,5 +1,6 @@
 package com.example.tubespm.ui.screens.admin.management
 
+import android.widget.Toast
 import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.lazy.LazyColumn
@@ -9,11 +10,13 @@ import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.ArrowBack
 import androidx.compose.material.icons.filled.List
 import androidx.compose.material.icons.filled.Settings
+import androidx.compose.material.icons.filled.Visibility
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
@@ -50,20 +53,7 @@ fun EditManagementDialog(
                 paket = paket,
                 viewModel = viewModel, // Pass VM ke konten
                 onClose = onDismiss,
-                onDeactivatePackage = {
-                    // Panggil logika di VM, lalu tutup dialog/refresh parent
-                    if (paket.isActive) {
-                        viewModel.deactivatePackage(paket.id) {
-                            onDeactivatePackage() // trigger refresh di parent jika perlu
-                            onDismiss()
-                        }
-                    } else {
-                        viewModel.activatePackage(paket.id) {
-                            onDeactivatePackage() // trigger refresh di parent jika perlu
-                            onDismiss()
-                        }
-                    }
-                },
+                onDeactivatePackage = onDeactivatePackage,
                 onAddMoreSection = onAddMoreSection,
                 onGoToEditQuestion = onGoToEditQuestion
             )
@@ -85,6 +75,7 @@ private fun EditManagementContent(
 ) {
     // Observasi State dari ViewModel
     val uiState by viewModel.uiState.collectAsState()
+    val context = LocalContext.current // [BARU] Untuk Toast
 
     // STATE popup edit section (UI State Lokal)
     var showEditSectionDialog by remember { mutableStateOf(false) }
@@ -136,9 +127,14 @@ private fun EditManagementContent(
                 items(uiState.sections) { section ->
                     SectionCard(
                         section = section,
+                        isEditable = !paket.isActive, // [BARU] Kirim status editable
                         onEditClick = { clicked ->
-                            selectedSectionForEdit = clicked
-                            showEditSectionDialog = true
+                            if (paket.isActive) {
+                                Toast.makeText(context, "Nonaktifkan paket terlebih dahulu untuk mengedit.", Toast.LENGTH_SHORT).show()
+                            } else {
+                                selectedSectionForEdit = clicked
+                                showEditSectionDialog = true
+                            }
                         },
                         onManageQuestionClick = { subtestId ->
                             // NAVIGASI KE LIST SOAL DENGAN MEMBAWA SUBTEST ID
@@ -185,11 +181,16 @@ private fun EditManagementContent(
         // Tombol Add More Section
         OutlinedButton(
             onClick = {
-                showAddSectionDialog = true
-                // onAddMoreSection() // Optional external callback
+                if (paket.isActive) {
+                    Toast.makeText(context, "Nonaktifkan paket terlebih dahulu untuk menambah subtest.", Toast.LENGTH_SHORT).show()
+                } else {
+                    showAddSectionDialog = true
+                }
             },
             modifier = Modifier.align(Alignment.End),
-            colors = ButtonDefaults.outlinedButtonColors(contentColor = Color.Gray)
+            colors = ButtonDefaults.outlinedButtonColors(
+                contentColor = if (paket.isActive) Color.LightGray else Color.Gray
+            )
         ) {
             Text("Tambah Subtest")
         }
@@ -198,7 +199,27 @@ private fun EditManagementContent(
 
         // Tombol Aktifkan/Nonaktifkan Paket
         Button(
-            onClick = onDeactivatePackage,
+            onClick = {
+                if (paket.isActive) {
+                    // Nonaktifkan (Langsung)
+                    viewModel.deactivatePackage(paket.id) {
+                        onDeactivatePackage() // Refresh parent
+                        Toast.makeText(context, "Tryout Dinonaktifkan", Toast.LENGTH_SHORT).show()
+                    }
+                } else {
+                    // Aktifkan (Pakai Validasi Target)
+                    viewModel.activatePackage(
+                        tryoutId = paket.id,
+                        onSuccess = {
+                            onDeactivatePackage() // Refresh parent
+                            Toast.makeText(context, "Tryout Berhasil Diaktifkan", Toast.LENGTH_SHORT).show()
+                        },
+                        onError = { errorMsg ->
+                            Toast.makeText(context, errorMsg, Toast.LENGTH_LONG).show()
+                        }
+                    )
+                }
+            },
             modifier = Modifier
                 .fillMaxWidth()
                 .height(48.dp),
@@ -266,9 +287,14 @@ private fun EditManagementContent(
 @Composable
 private fun SectionCard(
     section: TryoutSectionUiModel,
+    isEditable: Boolean, // Parameter status
     onEditClick: (TryoutSectionUiModel) -> Unit,
     onManageQuestionClick: (String) -> Unit // Callback baru: ID Subtest
 ) {
+    // Tentukan warna icon berdasarkan status editable
+    val settingColor = if (isEditable) Color.Gray else Color.LightGray
+    val listIconColor = Color(0xFF2196F3) // Selalu biru (Material Blue)
+
     Surface(
         modifier = Modifier.fillMaxWidth(),
         color = Color(0xFFE0E0E0),
@@ -293,7 +319,12 @@ private fun SectionCard(
                         onClick = {onManageQuestionClick(section.id)}, //// section.id disini adalah subtestId
                         modifier = Modifier.size(24.dp)
                     ) {
-                        Icon(Icons.Default.List, contentDescription = "Kelola Soal", tint = Color.Blue)
+                        // Ubah icon jika tidak editable agar user tau ini "View Mode"
+                        if (isEditable) {
+                            Icon(Icons.Default.List, contentDescription = "Kelola Soal", tint = listIconColor)
+                        } else {
+                            Icon(Icons.Default.Visibility, contentDescription = "Lihat Soal", tint = listIconColor)
+                        }
                     }
 
                     Spacer(modifier = Modifier.width(8.dp))
@@ -303,7 +334,7 @@ private fun SectionCard(
                         onClick = { onEditClick(section) },
                         modifier = Modifier.size(24.dp)
                     ) {
-                        Icon(Icons.Default.Settings, contentDescription = "Edit Section", tint = Color.Gray)
+                        Icon(Icons.Default.Settings, contentDescription = "Edit Section", tint = settingColor)
                     }
                 }
             }
@@ -312,11 +343,51 @@ private fun SectionCard(
             Spacer(modifier = Modifier.height(4.dp))
             InfoRow(label = "Waktu", value = "${section.timeMinutes} menit")
             Spacer(modifier = Modifier.height(4.dp))
-            InfoRow(label = "Jumlah Soal", value = "${section.questionCount} soal")
+
+            val isTargetMet = section.actualCount >= section.questionCount
+            val progressColor = if (isTargetMet) Color(0xFF4CAF50) else Color(0xFFE53935)
+
+            Row(
+                modifier = Modifier.fillMaxWidth(),
+                horizontalArrangement = Arrangement.spacedBy(8.dp),
+                verticalAlignment = Alignment.CenterVertically
+            ) {
+                Text(
+                    text = "Progress Soal",
+                    fontSize = 13.sp,
+                    color = Color(0xFF616161),
+                    modifier = Modifier.width(90.dp)
+                )
+
+                Surface(
+                    color = progressColor,
+                    shape = RoundedCornerShape(10.dp)
+                ) {
+                    Text(
+                        // Format: "5 / 20"
+                        text = "${section.actualCount} / ${section.questionCount}",
+                        fontSize = 12.sp,
+                        fontWeight = FontWeight.Bold,
+                        color = Color.White,
+                        modifier = Modifier.padding(horizontal = 8.dp, vertical = 2.dp),
+                        textAlign = TextAlign.Center
+                    )
+                }
+
+                // Opsional: Tambahkan teks status kecil
+//                if (!isTargetMet) {
+//                    Text(
+//                        text = "(Belum Penuh)",
+//                        fontSize = 11.sp,
+//                        color = Color(0xFFE53935)
+//                    )
+//                }
+            }
+
+            Spacer(modifier = Modifier.height(4.dp))
 
             val kisiKisiText = if (section.topicsString.isNotBlank()) section.topicsString else "-"
 
-            Spacer(modifier = Modifier.height(4.dp))
             Row(
                 modifier = Modifier.fillMaxWidth(),
                 verticalAlignment = Alignment.Top

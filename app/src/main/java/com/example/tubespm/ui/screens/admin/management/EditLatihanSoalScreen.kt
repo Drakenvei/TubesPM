@@ -31,6 +31,9 @@ fun EditLatihanSoalScreen(
     val uiState by viewModel.uiState.collectAsState()
     val context = LocalContext.current
 
+    // [BARU] Logika Kunci: Hanya bisa edit jika inactive
+    val isEditable = uiState.status != "active"
+
     // State Dropdown
     var expandedSubtest by remember { mutableStateOf(false) }
     var expandedStatus by remember { mutableStateOf(false) }
@@ -117,6 +120,7 @@ fun EditLatihanSoalScreen(
                         value = uiState.code,
                         onValueChange = { viewModel.updateCode(it) },
                         modifier = Modifier.fillMaxWidth(),
+                        enabled = isEditable,
                         placeholder = { Text("Contoh: LAT-ALG-01", color = Color(0xFF9E9E9E)) },
                         shape = RoundedCornerShape(6.dp),
                         colors = OutlinedTextFieldDefaults.colors(
@@ -144,6 +148,7 @@ fun EditLatihanSoalScreen(
                         value = uiState.title,
                         onValueChange = { viewModel.updateTitle(it) },
                         modifier = Modifier.fillMaxWidth(),
+                        enabled = isEditable,
                         placeholder = { Text("Contoh: Latihan Aljabar", color = Color(0xFF9E9E9E)) },
                         shape = RoundedCornerShape(6.dp),
                         colors = OutlinedTextFieldDefaults.colors(
@@ -168,13 +173,14 @@ fun EditLatihanSoalScreen(
                     )
                     Spacer(modifier = Modifier.height(4.dp))
                     ExposedDropdownMenuBox(
-                        expanded = expandedSubtest,
-                        onExpandedChange = { expandedSubtest = !expandedSubtest }
+                        expanded = expandedSubtest && isEditable,
+                        onExpandedChange = { if (isEditable) expandedSubtest = !expandedSubtest }
                     ) {
                         OutlinedTextField(
                             value = uiState.subtest,
                             onValueChange = {},
                             readOnly = true,
+                            enabled = isEditable,
                             modifier = Modifier.fillMaxWidth().menuAnchor(),
                             placeholder = { Text("Pilih Subtest", color = Color(0xFF9E9E9E)) },
                             trailingIcon = { ExposedDropdownMenuDefaults.TrailingIcon(expanded = expandedSubtest) },
@@ -213,6 +219,7 @@ fun EditLatihanSoalScreen(
                         value = uiState.topicsString,
                         onValueChange = { viewModel.updateTopicsString(it) },
                         modifier = Modifier.fillMaxWidth(),
+                        enabled = isEditable,
                         placeholder = { Text("Contoh: Aljabar, Geometri") },
                         colors = OutlinedTextFieldDefaults.colors(
                             focusedContainerColor = Color(0xFFE0E0E0),
@@ -227,33 +234,35 @@ fun EditLatihanSoalScreen(
                     Spacer(modifier = Modifier.height(16.dp))
 
                     // Status
-                    Text(
-                        text = "Status",
-                        fontSize = 14.sp,
-                        fontWeight = FontWeight.SemiBold,
-                        color = Color(0xFF757575)
-                    )
-                    Spacer(modifier = Modifier.height(8.dp))
                     Button(
                         onClick = {
                             // Toggle status di UI State
-                            val newStatus = if (uiState.status == "active") "inactive" else "active"
-                            viewModel.updateStatus(newStatus)
+                            viewModel.toggleLatihanStatus(latihanId)
                         },
                         modifier = Modifier
                             .fillMaxWidth()
                             .height(48.dp),
                         shape = RoundedCornerShape(8.dp),
+                        enabled = !uiState.isStatusUpdating,
                         colors = ButtonDefaults.buttonColors(
                             // Merah jika mau Nonaktifkan (sedang active), Hijau jika mau Aktifkan (sedang inactive)
                             containerColor = if (uiState.status == "active") Color(0xFFE53935) else Color(0xFF4CAF50),
                             contentColor = Color.White
                         )
                     ) {
-                        Text(
-                            text = if (uiState.status == "active") "Nonaktifkan Latihan" else "Aktifkan Latihan",
-                            fontWeight = FontWeight.Bold
-                        )
+                        if (uiState.isStatusUpdating) {
+                            // Tampilkan loading kecil di dalam tombol status jika sedang proses
+                            CircularProgressIndicator(
+                                color = Color.White,
+                                modifier = Modifier.size(24.dp),
+                                strokeWidth = 2.dp
+                            )
+                        } else {
+                            Text(
+                                text = if (uiState.status == "active") "Nonaktifkan Latihan" else "Aktifkan Latihan",
+                                fontWeight = FontWeight.Bold
+                            )
+                        }
                     }
 
                     Spacer(modifier = Modifier.height(24.dp))
@@ -286,7 +295,7 @@ fun EditLatihanSoalScreen(
                         modifier = Modifier
                             .fillMaxWidth()
                             .height(48.dp),
-                        enabled = !uiState.isSaving,
+                        enabled = !uiState.isSaving && isEditable,
                         colors = ButtonDefaults.buttonColors(
                             containerColor = Color(0xFF4CAF50),
                             contentColor = Color.White
@@ -304,6 +313,17 @@ fun EditLatihanSoalScreen(
                                 fontWeight = FontWeight.SemiBold
                             )
                         }
+                    }
+
+                    // Pesan peringatan jika terkunci
+                    if (!isEditable) {
+                        Spacer(modifier = Modifier.height(8.dp))
+                        Text(
+                            text = "*Nonaktifkan latihan soal terlebih dahulu untuk mengedit data.",
+                            color = Color(0xFFE53935),
+                            fontSize = 12.sp,
+                            modifier = Modifier.align(Alignment.CenterHorizontally)
+                        )
                     }
                 }
             }
