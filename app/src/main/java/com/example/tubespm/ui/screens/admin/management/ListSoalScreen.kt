@@ -40,7 +40,7 @@ fun ListSoalScreen(
     currentQuestionCount: Int = 0, // Ini tidak dipakai dari parameter, kita ambil dari viewModel.uiState.questions.size
     onBackClick: () -> Unit,
     onEditQuestion: (String, String, String, String, Int, Int) -> Unit,
-    onAddQuestion: (String, String, String, Int, String?, Int) -> Unit,
+    onAddQuestion: (String, String, String, Int, String?, Int, Int) -> Unit,
     viewModel: ListSoalViewModel = viewModel()
 ) {
     // Extract section name dari paketName jika format "Paket - Section"
@@ -161,7 +161,7 @@ fun ListSoalScreen(
                                 android.widget.Toast.LENGTH_SHORT
                             ).show()
                         } else {
-                            onAddQuestion(type, parentId, paketName, nextSortNumber, targetSubtestId, nextVisualNumber)
+                            onAddQuestion(type, parentId, paketName, nextSortNumber, targetSubtestId, nextVisualNumber, targetQuestionCount)
                         }
                     },
                     modifier = Modifier.offset(x = 0.dp, y = (-80).dp),

@@ -201,7 +201,7 @@ fun AdminMainScreen(
 
             // Rute 8: Create Question
             composable(
-                route = "admin_create_question/{type}/{parentId}/{paketName}/{questionNumber}?subtestId={subtestId}&displayNumber={displayNumber}",
+                route = "admin_create_question/{type}/{parentId}/{paketName}/{questionNumber}?subtestId={subtestId}&displayNumber={displayNumber}&targetCount={targetCount}",
                 arguments = listOf(
                     navArgument("type") { type = NavType.StringType },
                     navArgument("parentId") { type = NavType.StringType },
@@ -213,6 +213,10 @@ fun AdminMainScreen(
                         nullable = true
                     },
                     navArgument("displayNumber") {
+                        type = NavType.IntType
+                        defaultValue = 0
+                    },
+                    navArgument("targetCount") {
                         type = NavType.IntType
                         defaultValue = 0
                     }
@@ -228,6 +232,8 @@ fun AdminMainScreen(
                 val displayNumberArg = backStackEntry.arguments?.getInt("displayNumber") ?: 0
                 val finalDisplayNumber = if (displayNumberArg > 0) displayNumberArg else questionNumber
 
+                val targetCount = backStackEntry.arguments?.getInt("targetCount") ?: 0
+
                 CreateQuestionScreen(
                     parentId = parentId,
                     type = type,
@@ -235,6 +241,7 @@ fun AdminMainScreen(
                     questionNumber = questionNumber, // ID Database
                     displayNumber = finalDisplayNumber, // Visual UI
                     subtestId = subtestId,
+                    targetCount = targetCount,
                     paddingValuesFromNavHost = paddingValues,
                     onBackClick = { adminNavController.popBackStack() },
                     onQuestionCreated = {
@@ -300,12 +307,13 @@ fun AdminMainScreen(
                         // Sertakan ?displayNumber=$dNum di URL
                         adminNavController.navigate("admin_edit_question/$t/$pId/$qId/$pName/$qNum?displayNumber=$dNum")
                     },
-                    onAddQuestion = { t, pId, pName, qNum, sId, dNum ->
+                    onAddQuestion = { t, pId, pName, qNum, sId, dNum, tCount ->
                         // Sertakan &displayNumber=$dNum di URL
                         val baseUrl = "admin_create_question/$t/$pId/$pName/$qNum"
                         val params = mutableListOf<String>()
                         if (sId != null) params.add("subtestId=$sId")
                         params.add("displayNumber=$dNum")
+                        params.add("targetCount=$tCount")
 
                         val fullRoute = if (params.isEmpty()) baseUrl else "$baseUrl?${params.joinToString("&")}"
                         adminNavController.navigate(fullRoute)

@@ -42,6 +42,7 @@ fun CreateQuestionScreen(
     questionNumber: Int = 1,      // Ini ID Database (misal 5)
     displayNumber: Int = 1,       // [BARU] Ini ID Visual (misal 4)
     subtestId: String? = null,   // SubtestId untuk section tryout (optional)
+    targetCount: Int = 0,
     paddingValuesFromNavHost: androidx.compose.foundation.layout.PaddingValues,
     onBackClick: () -> Unit,
     onQuestionCreated: () -> Unit, // Callback setelah soal berhasil dibuat
@@ -60,9 +61,11 @@ fun CreateQuestionScreen(
     val uiState by viewModel.uiState.collectAsState()
     val context = LocalContext.current
 
-    // State untuk dialog "Add Another Question"
-    var showAddAnotherDialog by remember { mutableStateOf(false) }
-    var currentQuestionNum by remember { mutableStateOf(questionNumber) }
+    // Gunakan Mutable State untuk nomor agar bisa di-update real-time
+    var currentDbNum by remember { mutableIntStateOf(questionNumber) }
+    var currentDisplayNum by remember { mutableIntStateOf(displayNumber) }
+
+    var showSuccessDialog by remember { mutableStateOf(false) }
 
     // Inisialisasi Data ViewModel saat pertama kali dibuka
     LaunchedEffect(Unit) {
@@ -84,8 +87,8 @@ fun CreateQuestionScreen(
 
     // Handle success
     LaunchedEffect(uiState.isSavedSuccess) {
-        if (uiState.isSavedSuccess && !showAddAnotherDialog) {
-            showAddAnotherDialog = true
+        if (uiState.isSavedSuccess && !showSuccessDialog) {
+            showSuccessDialog = true
         }
     }
 
@@ -195,7 +198,7 @@ fun CreateQuestionScreen(
                         .padding(horizontal = 16.dp, vertical = 12.dp)
                 ) {
                     Text(
-                        text = "Soal $displayNumber",
+                        text = "Soal $currentDisplayNum",
                         fontSize = 22.sp,
                         fontWeight = FontWeight.Bold,
                         color = Color(0xFF212121)
@@ -430,38 +433,38 @@ fun CreateQuestionScreen(
         }
 
         // Dialog untuk menambah soal lagi
-        if (showAddAnotherDialog) {
+        if (showSuccessDialog) {
+            // Cek apakah target sudah tercapai?
+            val isTargetReached = targetCount > 0 && currentDisplayNum >= targetCount
             AlertDialog(
                 onDismissRequest = {
-                    showAddAnotherDialog = false
-                    onQuestionCreated()
+//                    showSuccessDialog = false
+//                    onQuestionCreated()
                 },
-                title = { Text("Soal Berhasil Ditambahkan", fontWeight = FontWeight.Bold) },
-                text = { Text("Apakah Anda ingin menambahkan soal lagi?") },
+                title = { Text(if (isTargetReached) "Target Tercapai!" else "Berhasil Ditambahkan", fontWeight = FontWeight.Bold) },
+                text = {
+                    if (isTargetReached) Text("Anda telah mencapai target $targetCount soal. Silakan kembali.")
+                    else Text("Apakah Anda ingin menambahkan soal lagi?")
+                },
                 confirmButton = {
-                    Button(
-                        onClick = {
-                            showAddAnotherDialog = false
-
-                            // [PERBAIKAN] Update nomor soal
-                            currentQuestionNum++
-
-                            // Reset state tapi pertahankan subtestId dan update nomor baru
-                            viewModel.resetStateForNextQuestion(currentQuestionNum)
-                        },
-                        colors = ButtonDefaults.buttonColors(containerColor = Color(0xFF4CAF50))
-                    ) {
-                        Text("Tambah Soal Lagi")
+                    if (!isTargetReached) {
+                        Button(
+                            onClick = {
+                                showSuccessDialog = false
+                                // [PENTING] Increment nomor soal
+                                currentDbNum++
+                                currentDisplayNum++
+                                viewModel.resetStateForNextQuestion(currentDbNum)
+                            },
+                            colors = ButtonDefaults.buttonColors(containerColor = Color(0xFF4CAF50))
+                        ) { Text("Tambah Lagi") }
+                    } else {
+                        Button(onClick = { showSuccessDialog = false; onQuestionCreated() }) { Text("Selesai") }
                     }
                 },
                 dismissButton = {
-                    TextButton(
-                        onClick = {
-                            showAddAnotherDialog = false
-                            onQuestionCreated()
-                        }
-                    ) {
-                        Text("Selesai")
+                    if (!isTargetReached) {
+                        TextButton(onClick = { showSuccessDialog = false; onQuestionCreated() }) { Text("Selesai") }
                     }
                 }
             )

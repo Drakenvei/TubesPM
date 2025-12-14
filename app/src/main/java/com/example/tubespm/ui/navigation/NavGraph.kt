@@ -290,7 +290,7 @@ fun AdminNavGraph(
 
         // ------------ Create Question ------------
         composable(
-            route = "admin_create_question/{type}/{parentId}/{paketName}/{questionNumber}?subtestId={subtestId}&displayNumber={displayNumber}",
+            route = "admin_create_question/{type}/{parentId}/{paketName}/{questionNumber}?subtestId={subtestId}&displayNumber={displayNumber}&targetCount={targetCount}",
             arguments = listOf(
                 navArgument("type") { type = NavType.StringType },
                 navArgument("parentId") { type = NavType.StringType },
@@ -304,6 +304,10 @@ fun AdminNavGraph(
                 navArgument("displayNumber") {
                     type = NavType.IntType
                     defaultValue = 0
+                },
+                navArgument("targetCount") {
+                    type = NavType.IntType
+                    defaultValue = 0 // 0 = Unlimited
                 }
             )
         ) { backStackEntry ->
@@ -314,6 +318,7 @@ fun AdminNavGraph(
             val subtestId = backStackEntry.arguments?.getString("subtestId")?.takeIf { it.isNotEmpty() }
             val displayNumberArg = backStackEntry.arguments?.getInt("displayNumber") ?: 0
             val finalDisplayNumber = if (displayNumberArg > 0) displayNumberArg else questionNumber
+            val targetCount = backStackEntry.arguments?.getInt("targetCount") ?: 0
 
             CreateQuestionScreen(
                 parentId = parentId,
@@ -322,6 +327,7 @@ fun AdminNavGraph(
                 questionNumber = questionNumber, // ID Database (misal 5)
                 displayNumber = finalDisplayNumber, // ID Visual (misal 4)
                 subtestId = subtestId,
+                targetCount = targetCount,
                 paddingValuesFromNavHost = paddingValues,
                 onBackClick = { navController.popBackStack() },
                 onQuestionCreated = {
@@ -413,9 +419,9 @@ fun AdminNavGraph(
                 onEditQuestion = { t, pId, qId, pName, qNum, dNum ->
                     navController.navigate("admin_edit_question/$t/$pId/$qId/$pName/$qNum?displayNumber=$dNum")
                 },
-                onAddQuestion = { t, pId, pName, qNum, sId, dNum ->
+                onAddQuestion = { t, pId, pName, qNum, sId, dNum, tCount ->
                     // CHANGE 4: Construct navigation with subtestId parameter
-                    val subtestParam = if (sId != null) "?subtestId=$sId" else ""
+//                    val subtestParam = if (sId != null) "?subtestId=$sId" else ""
                     // Tambahkan query param &displayNumber=$dNum
                     // Perhatikan penggunaan '&' karena subtestParam mungkin kosong atau sudah pakai '?'
                     // Logika aman: url?param1&param2
@@ -425,6 +431,7 @@ fun AdminNavGraph(
                     val params = mutableListOf<String>()
                     if (sId != null) params.add("subtestId=$sId")
                     params.add("displayNumber=$dNum")
+                    params.add("targetCount=$tCount")
 
                     val fullRoute = if (params.isEmpty()) baseUrl else "$baseUrl?${params.joinToString("&")}"
 
