@@ -40,21 +40,21 @@ fun LoginContent(
     onEmailChanged: (String) -> Unit,
     onPassChanged: (String) -> Unit,
     onLoginClicked: () -> Unit,
-    onForgotPasswordClicked: (String) -> Unit // ✅ BARU
+    onForgotPasswordClicked: (String) -> Unit
 ) {
     var passwordVisible by remember { mutableStateOf(false) }
     var emailFocused by remember { mutableStateOf(false) }
     var passwordFocused by remember { mutableStateOf(false) }
 
-    // ✅ BARU: State untuk menampilkan Dialog Reset Password
+    // State untuk menampilkan Dialog Atur Ulang Kata Sandi
     var showResetDialog by remember { mutableStateOf(false) }
 
     Column(
         horizontalAlignment = Alignment.CenterHorizontally
     ) {
         Spacer(modifier = Modifier.height(16.dp))
-        Text("Welcome back,", color = Color.White, fontSize = 24.sp, fontWeight = FontWeight.Bold)
-        Text("Good to see you again!", color = Color.White, fontSize = 14.sp)
+        Text("Selamat datang kembali,", color = Color.White, fontSize = 24.sp, fontWeight = FontWeight.Bold)
+        Text("Senang melihat Anda lagi!", color = Color.White, fontSize = 14.sp)
         Spacer(modifier = Modifier.height(32.dp))
 
         // Email TextField
@@ -94,12 +94,10 @@ fun LoginContent(
                 unfocusedTextColor = Color.Black,
                 focusedLabelColor = Color.White,
                 unfocusedLabelColor = Color.White,
-
-                // -- WARNA SAAT ERROR (KUNCI UTAMANYA DI SINI) --
-                errorContainerColor = Color.White.copy(alpha = 0.95f), // Background tetap putih
-                errorBorderColor = Color.White, // Border PUTIH saat error
-                errorLabelColor = Color.White, // Label "Email" tetap putih
-                errorTextColor = Color.Black // Teks yang diketik tetap hitam
+                errorContainerColor = Color.White.copy(alpha = 0.95f),
+                errorBorderColor = Color.White,
+                errorLabelColor = Color.White,
+                errorTextColor = Color.Black
             )
         )
 
@@ -117,7 +115,7 @@ fun LoginContent(
             onValueChange = onPassChanged,
             label = {
                 Text(
-                    "Password",
+                    "Kata Sandi", // Perubahan: Password -> Kata Sandi
                     color = if (pass.isNotEmpty() || passwordFocused) Color.White else Color.Gray.copy(alpha = 0.6f),
                     fontWeight = if (pass.isNotEmpty() || passwordFocused) FontWeight.Medium else FontWeight.Normal
                 )
@@ -138,7 +136,7 @@ fun LoginContent(
                 IconButton(onClick = { passwordVisible = !passwordVisible }) {
                     Icon(
                         if (passwordVisible) Icons.Default.Visibility else Icons.Default.VisibilityOff,
-                        contentDescription = "Toggle password visibility",
+                        contentDescription = "Toggle password visibility", // Biarkan ini dalam Bahasa Inggris (deskripsi aksesibilitas) atau ganti ke "Tampilkan/Sembunyikan Kata Sandi"
                         tint = Color.Gray
                     )
                 }
@@ -152,19 +150,17 @@ fun LoginContent(
                 unfocusedTextColor = Color.Black,
                 focusedLabelColor = Color.White,
                 unfocusedLabelColor = Color.White,
-
-                // -- WARNA SAAT ERROR (KUNCI UTAMANYA DI SINI) --
-                errorContainerColor = Color.White.copy(alpha = 0.95f), // Background tetap putih
-                errorBorderColor = Color.White, // Border PUTIH saat error
-                errorLabelColor = Color.White, // Label "Email" tetap putih
-                errorTextColor = Color.Black // Teks yang diketik tetap hitam
+                errorContainerColor = Color.White.copy(alpha = 0.95f),
+                errorBorderColor = Color.White,
+                errorLabelColor = Color.White,
+                errorTextColor = Color.Black
             )
         )
 
         if (error != null){
             Text(
                 text = error,
-                color = MaterialTheme.colorScheme.error, // Gunakan warna error dari tema
+                color = MaterialTheme.colorScheme.error,
                 modifier = Modifier
                     .padding(top = 8.dp)
                     .align(Alignment.Start)
@@ -173,9 +169,9 @@ fun LoginContent(
             Spacer(modifier = Modifier.height(8.dp))
         }
 
-        // ✅ BARU: Tombol Forgot Password
+        // Tombol Lupa Kata Sandi
         Text(
-            "Forgot password?",
+            "Lupa kata sandi?", // Perubahan: Forgot password? -> Lupa kata sandi?
             color = Color.White,
             fontSize = 12.sp,
             modifier = Modifier
@@ -197,12 +193,12 @@ fun LoginContent(
             if (isLoading) {
                 CircularProgressIndicator(color = Color.White, modifier = Modifier.size(24.dp))
             } else {
-                Text("Sign in", fontSize = 16.sp, color = Color.White)
+                Text("Masuk", fontSize = 16.sp, color = Color.White) // Perubahan: Sign in -> Masuk
             }
         }
     }
 
-    // ✅ BARU: Reset Password Dialog
+    // Reset Password Dialog
     if (showResetDialog) {
         ResetPasswordDialog(
             initialEmail = email,
@@ -215,7 +211,7 @@ fun LoginContent(
     }
 }
 
-// ✅ BARU: Reset Password Dialog Composable
+// Reset Password Dialog Composable
 @Composable
 fun ResetPasswordDialog(
     initialEmail: String,
@@ -226,15 +222,15 @@ fun ResetPasswordDialog(
 
     AlertDialog(
         onDismissRequest = onDismiss,
-        title = { Text("Reset Password", fontWeight = FontWeight.Bold) },
+        title = { Text("Atur Ulang Kata Sandi", fontWeight = FontWeight.Bold) }, // Perubahan: Reset Password -> Atur Ulang Kata Sandi
         text = {
             Column {
-                Text("Enter the email address associated with your account.")
+                Text("Masukkan alamat email yang terhubung dengan akun Anda.") // Perubahan: Enter the email...
                 Spacer(modifier = Modifier.height(16.dp))
                 OutlinedTextField(
                     value = email,
                     onValueChange = { email = it },
-                    label = { Text("Email Address") },
+                    label = { Text("Alamat Email") }, // Perubahan: Email Address -> Alamat Email
                     singleLine = true,
                     modifier = Modifier.fillMaxWidth()
                 )
@@ -245,12 +241,12 @@ fun ResetPasswordDialog(
                 onClick = { onSendClicked(email.trim()) },
                 enabled = email.isNotBlank()
             ) {
-                Text("Send Reset Link")
+                Text("Kirim Tautan Atur Ulang") // Perubahan: Send Reset Link -> Kirim Tautan Atur Ulang
             }
         },
         dismissButton = {
             TextButton(onClick = onDismiss) {
-                Text("Cancel")
+                Text("Batal") // Perubahan: Cancel -> Batal
             }
         }
     )

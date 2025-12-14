@@ -142,7 +142,7 @@ fun AuthenticationScreen(
                                 label = "signInColor"
                             )
                             Text(
-                                "Sign In",
+                                "Masuk", // Perubahan: Sign In -> Masuk
                                 color = textColor,
                                 style = androidx.compose.material3.MaterialTheme.typography.bodyLarge.copy(
                                     fontWeight = if (currentView == AuthView.SIGN_IN)
@@ -170,7 +170,7 @@ fun AuthenticationScreen(
                                 label = "signUpColor"
                             )
                             Text(
-                                "Sign Up",
+                                "Daftar", // Perubahan: Sign Up -> Daftar
                                 color = textColor,
                                 style = androidx.compose.material3.MaterialTheme.typography.bodyLarge.copy(
                                     fontWeight = if (currentView == AuthView.SIGN_UP)
