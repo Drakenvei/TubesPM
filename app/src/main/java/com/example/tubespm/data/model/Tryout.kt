@@ -1,6 +1,7 @@
 package com.example.tubespm.data.model
 
 import com.google.firebase.firestore.DocumentId
+import com.google.firebase.firestore.Exclude
 import com.google.firebase.firestore.ServerTimestamp
 import java.util.Date
 
@@ -59,16 +60,21 @@ data class Tryout(
     val createdAt: Date? = null, // Bisa null jika data lama belum punya field ini
 
     // List of sections (nama field 'sections' sudah cocok dengan DB)
-    val sections: List<Section> = emptyList()
-) {
-    // Properti ini akan dihitung otomatis setiap kali data Tryout dimuat.
-    // Firestore akan MENGABAIKAN ini saat mapping (karena bukan di constructor).
-    val totalDuration: Int
-        get() = sections.sumOf { it.sectionDuration }
-
-    val totalQuestionCount: Int
-        get() = sections.sumOf { section ->
-            section.subtests.sumOf { it.questionCount }
-        }
-}
+    val sections: List<Section> = emptyList(),
+    val totalDuration: Int = 0,
+    val totalQuestionCount: Int = 0
+)
+//{
+//    // Properti ini akan dihitung otomatis setiap kali data Tryout dimuat.
+//    // Firestore akan MENGABAIKAN ini saat mapping (karena bukan di constructor).
+//    @get:Exclude
+//    val totalDuration: Int
+//        get() = sections.sumOf { it.sectionDuration }
+//
+//    @get:Exclude
+//    val totalQuestionCount: Int
+//        get() = sections.sumOf { section ->
+//            section.subtests.sumOf { it.questionCount }
+//        }
+//}
 

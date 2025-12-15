@@ -7,6 +7,7 @@ import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.ArrowBack
+import androidx.compose.material.icons.filled.DeleteForever
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
@@ -25,11 +26,28 @@ fun EditLatihanSoalScreen(
     paddingValuesFromNavHost: androidx.compose.foundation.layout.PaddingValues,
     onBackClick: () -> Unit,
     onLatihanUpdated: () -> Unit,
-    onGoToListSoal: (String, String, String) -> Unit = { _, _, _ -> }, // (type, parentId, paketName)
+    onGoToListSoal: (String, String, String, String) -> Unit = { _, _, _, _ -> }, // (type, parentId, paketName, subtestId)
     viewModel: EditLatihanSoalViewModel = viewModel()
 ) {
     val uiState by viewModel.uiState.collectAsState()
     val context = LocalContext.current
+
+    // [BARU] Logika Kunci: Hanya bisa edit jika inactive
+    val isEditable = uiState.status != "active"
+
+    // State Dropdown
+    var expandedSubtest by remember { mutableStateOf(false) }
+    var expandedStatus by remember { mutableStateOf(false) }
+
+    val subtestOptions = listOf(
+        "Penalaran Umum",
+        "Pengetahuan Kuantitatif",
+        "Pengetahuan dan Pemahaman Umum",
+        "Pemahaman Bacaan dan Menulis",
+        "Literasi dalam Bahasa Indonesia",
+        "Literasi dalam Bahasa Inggris",
+        "Penalaran Matematika"
+    )
 
     LaunchedEffect(latihanId) {
         viewModel.loadLatihanSoal(latihanId)
@@ -43,7 +61,7 @@ fun EditLatihanSoalScreen(
         }
     }
 
-    var expandedStatus by remember { mutableStateOf(false) }
+    var showDeleteDialog by remember { mutableStateOf(false) }
 
     Scaffold(
         topBar = {
@@ -62,6 +80,27 @@ fun EditLatihanSoalScreen(
                             Icons.Default.ArrowBack,
                             contentDescription = "Kembali",
                             tint = Color.White
+                        )
+                    }
+                },
+                actions = {
+                    // Hanya tampilkan tombol hapus jika status Inactive (agar aman)
+                    // Atau boleh selalu tampil, tapi best practice harus inactive dulu
+                    val isInactive = uiState.status != "active"
+
+                    IconButton(
+                        onClick = {
+                            if (isInactive) {
+                                showDeleteDialog = true
+                            } else {
+                                android.widget.Toast.makeText(context, "Nonaktifkan latihan terlebih dahulu untuk menghapus.", android.widget.Toast.LENGTH_SHORT).show()
+                            }
+                        }
+                    ) {
+                        Icon(
+                            imageVector = Icons.Default.DeleteForever,
+                            contentDescription = "Hapus Latihan",
+                            tint = if (isInactive) Color.White else Color.White.copy(alpha = 0.5f)
                         )
                     }
                 },
@@ -105,6 +144,7 @@ fun EditLatihanSoalScreen(
                         value = uiState.code,
                         onValueChange = { viewModel.updateCode(it) },
                         modifier = Modifier.fillMaxWidth(),
+                        enabled = isEditable,
                         placeholder = { Text("Contoh: LAT-ALG-01", color = Color(0xFF9E9E9E)) },
                         shape = RoundedCornerShape(6.dp),
                         colors = OutlinedTextFieldDefaults.colors(
@@ -132,6 +172,7 @@ fun EditLatihanSoalScreen(
                         value = uiState.title,
                         onValueChange = { viewModel.updateTitle(it) },
                         modifier = Modifier.fillMaxWidth(),
+                        enabled = isEditable,
                         placeholder = { Text("Contoh: Latihan Aljabar", color = Color(0xFF9E9E9E)) },
                         shape = RoundedCornerShape(6.dp),
                         colors = OutlinedTextFieldDefaults.colors(
@@ -155,46 +196,18 @@ fun EditLatihanSoalScreen(
                         color = Color(0xFF757575)
                     )
                     Spacer(modifier = Modifier.height(4.dp))
-                    OutlinedTextField(
-                        value = uiState.subtest,
-                        onValueChange = { viewModel.updateSubtest(it) },
-                        modifier = Modifier.fillMaxWidth(),
-                        placeholder = { Text("Contoh: Matematika", color = Color(0xFF9E9E9E)) },
-                        shape = RoundedCornerShape(6.dp),
-                        colors = OutlinedTextFieldDefaults.colors(
-                            focusedContainerColor = Color(0xFFE0E0E0),
-                            unfocusedContainerColor = Color(0xFFE0E0E0),
-                            focusedBorderColor = Color.Transparent,
-                            unfocusedBorderColor = Color.Transparent,
-                            focusedTextColor = Color(0xFF212121),
-                            unfocusedTextColor = Color(0xFF212121),
-                            cursorColor = Color(0xFF212121)
-                        )
-                    )
-
-                    Spacer(modifier = Modifier.height(16.dp))
-
-                    // Status
-                    Text(
-                        text = "Status",
-                        fontSize = 14.sp,
-                        fontWeight = FontWeight.SemiBold,
-                        color = Color(0xFF757575)
-                    )
-                    Spacer(modifier = Modifier.height(4.dp))
                     ExposedDropdownMenuBox(
-                        expanded = expandedStatus,
-                        onExpandedChange = { expandedStatus = !expandedStatus }
+                        expanded = expandedSubtest && isEditable,
+                        onExpandedChange = { if (isEditable) expandedSubtest = !expandedSubtest }
                     ) {
                         OutlinedTextField(
-                            value = if (uiState.status == "active") "Aktif" else "Nonaktif",
+                            value = uiState.subtest,
                             onValueChange = {},
                             readOnly = true,
-                            modifier = Modifier
-                                .fillMaxWidth()
-                                .menuAnchor(),
-                            placeholder = { Text("Pilih Status", color = Color(0xFF9E9E9E)) },
-                            shape = RoundedCornerShape(6.dp),
+                            enabled = isEditable,
+                            modifier = Modifier.fillMaxWidth().menuAnchor(),
+                            placeholder = { Text("Pilih Subtest", color = Color(0xFF9E9E9E)) },
+                            trailingIcon = { ExposedDropdownMenuDefaults.TrailingIcon(expanded = expandedSubtest) },
                             colors = OutlinedTextFieldDefaults.colors(
                                 focusedContainerColor = Color(0xFFE0E0E0),
                                 unfocusedContainerColor = Color(0xFFE0E0E0),
@@ -203,25 +216,75 @@ fun EditLatihanSoalScreen(
                                 focusedTextColor = Color(0xFF212121),
                                 unfocusedTextColor = Color(0xFF212121)
                             ),
-                            trailingIcon = { ExposedDropdownMenuDefaults.TrailingIcon(expanded = expandedStatus) }
+                            shape = RoundedCornerShape(6.dp)
                         )
                         ExposedDropdownMenu(
-                            expanded = expandedStatus,
-                            onDismissRequest = { expandedStatus = false }
+                            expanded = expandedSubtest,
+                            onDismissRequest = { expandedSubtest = false }
                         ) {
-                            DropdownMenuItem(
-                                text = { Text("Aktif") },
-                                onClick = {
-                                    viewModel.updateStatus("active")
-                                    expandedStatus = false
-                                }
+                            subtestOptions.forEach { option ->
+                                DropdownMenuItem(
+                                    text = { Text(option) },
+                                    onClick = {
+                                        viewModel.updateSubtest(option)
+                                        expandedSubtest = false
+                                    }
+                                )
+                            }
+                        }
+                    }
+
+                    Spacer(modifier = Modifier.height(16.dp))
+
+                    // Kisi-kisi
+                    Text("Kisi-kisi (Pisahkan dengan koma)", fontWeight = FontWeight.SemiBold, color = Color(0xFF757575))
+                    Spacer(modifier = Modifier.height(4.dp))
+                    OutlinedTextField(
+                        value = uiState.topicsString,
+                        onValueChange = { viewModel.updateTopicsString(it) },
+                        modifier = Modifier.fillMaxWidth(),
+                        enabled = isEditable,
+                        placeholder = { Text("Contoh: Aljabar, Geometri") },
+                        colors = OutlinedTextFieldDefaults.colors(
+                            focusedContainerColor = Color(0xFFE0E0E0),
+                            unfocusedContainerColor = Color(0xFFE0E0E0),
+                            focusedBorderColor = Color.Transparent,
+                            unfocusedBorderColor = Color.Transparent
+                        ),
+                        shape = RoundedCornerShape(6.dp),
+                        minLines = 2
+                    )
+
+                    Spacer(modifier = Modifier.height(16.dp))
+
+                    // Status
+                    Button(
+                        onClick = {
+                            // Toggle status di UI State
+                            viewModel.toggleLatihanStatus(latihanId)
+                        },
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .height(48.dp),
+                        shape = RoundedCornerShape(8.dp),
+                        enabled = !uiState.isStatusUpdating,
+                        colors = ButtonDefaults.buttonColors(
+                            // Merah jika mau Nonaktifkan (sedang active), Hijau jika mau Aktifkan (sedang inactive)
+                            containerColor = if (uiState.status == "active") Color(0xFFE53935) else Color(0xFF4CAF50),
+                            contentColor = Color.White
+                        )
+                    ) {
+                        if (uiState.isStatusUpdating) {
+                            // Tampilkan loading kecil di dalam tombol status jika sedang proses
+                            CircularProgressIndicator(
+                                color = Color.White,
+                                modifier = Modifier.size(24.dp),
+                                strokeWidth = 2.dp
                             )
-                            DropdownMenuItem(
-                                text = { Text("Nonaktif") },
-                                onClick = {
-                                    viewModel.updateStatus("inactive")
-                                    expandedStatus = false
-                                }
+                        } else {
+                            Text(
+                                text = if (uiState.status == "active") "Nonaktifkan Latihan" else "Aktifkan Latihan",
+                                fontWeight = FontWeight.Bold
                             )
                         }
                     }
@@ -256,7 +319,7 @@ fun EditLatihanSoalScreen(
                         modifier = Modifier
                             .fillMaxWidth()
                             .height(48.dp),
-                        enabled = !uiState.isSaving,
+                        enabled = !uiState.isSaving && isEditable,
                         colors = ButtonDefaults.buttonColors(
                             containerColor = Color(0xFF4CAF50),
                             contentColor = Color.White
@@ -275,6 +338,17 @@ fun EditLatihanSoalScreen(
                             )
                         }
                     }
+
+                    // Pesan peringatan jika terkunci
+                    if (!isEditable) {
+                        Spacer(modifier = Modifier.height(8.dp))
+                        Text(
+                            text = "*Nonaktifkan latihan soal terlebih dahulu untuk mengedit data.",
+                            color = Color(0xFFE53935),
+                            fontSize = 12.sp,
+                            modifier = Modifier.align(Alignment.CenterHorizontally)
+                        )
+                    }
                 }
             }
         }
@@ -291,7 +365,7 @@ fun EditLatihanSoalScreen(
                             showSuccessDialog = false
                             // Pass nama latihan dari state
                             val latihanName = uiState.title.ifEmpty { "Latihan Soal" }
-                            onGoToListSoal("latihan_soal", latihanId, latihanName)
+                            onGoToListSoal("latihan_soal", latihanId, latihanName, uiState.subtestId)
                         },
                         colors = ButtonDefaults.buttonColors(containerColor = Color(0xFF4CAF50))
                     ) {
@@ -308,6 +382,47 @@ fun EditLatihanSoalScreen(
                         Text("Kembali")
                     }
                 }
+            )
+        }
+
+        // Dialog Konfirmasi Hapus
+        if (showDeleteDialog) {
+            AlertDialog(
+                onDismissRequest = { showDeleteDialog = false },
+                title = { Text("Hapus Latihan Soal?", fontWeight = FontWeight.Bold, color = Color(0xFFE53935)) },
+                text = {
+                    Column {
+                        Text("Anda yakin ingin menghapus latihan '${uiState.title}'?")
+                        Spacer(modifier = Modifier.height(8.dp))
+                        Text("Data akan dipindahkan ke sampah dan hilang dari daftar.", fontSize = 13.sp)
+                    }
+                },
+                confirmButton = {
+                    Button(
+                        onClick = {
+                            viewModel.deleteLatihanSoal(
+                                latihanId = latihanId,
+                                onSuccess = {
+                                    showDeleteDialog = false
+                                    onLatihanUpdated() // Kembali ke list
+                                    android.widget.Toast.makeText(context, "Latihan berhasil dihapus", android.widget.Toast.LENGTH_SHORT).show()
+                                },
+                                onError = { msg ->
+                                    android.widget.Toast.makeText(context, msg, android.widget.Toast.LENGTH_SHORT).show()
+                                }
+                            )
+                        },
+                        colors = ButtonDefaults.buttonColors(containerColor = Color(0xFFE53935))
+                    ) {
+                        Text("Hapus")
+                    }
+                },
+                dismissButton = {
+                    TextButton(onClick = { showDeleteDialog = false }) {
+                        Text("Batal")
+                    }
+                },
+                containerColor = Color(0xFFFFEBEE)
             )
         }
     }

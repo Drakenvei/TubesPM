@@ -18,11 +18,13 @@ data class CreateLatihanSoalUiState(
     val code: String = "",
     val title: String = "",
     val subtest: String = "",
-    val status: String = "active",
-    val topics: List<Topic> = emptyList(),
+    val subtestId: String = "",
+    val status: String = "inactive",
+    val topics: List<Topic> = emptyList(), // Ini untuk hasil jadi (opsional di UI state create)
     val error: String? = null,
     val isSavedSuccess: Boolean = false,
-    val createdLatihanId: String? = null
+    val createdLatihanId: String? = null,
+    val topicsString: String = ""
 )
 
 class CreateLatihanSoalViewModel @Inject constructor(
@@ -32,6 +34,23 @@ class CreateLatihanSoalViewModel @Inject constructor(
     private val _uiState = MutableStateFlow(CreateLatihanSoalUiState())
     val uiState: StateFlow<CreateLatihanSoalUiState> = _uiState.asStateFlow()
 
+    // Map Nama Subtest -> ID
+    private val subtestMap = mapOf(
+        "Penalaran Umum" to "pu",
+        "Pengetahuan Kuantitatif" to "pk",
+        "Pengetahuan dan Pemahaman Umum" to "ppu",
+        "Pemahaman Bacaan dan Menulis" to "pbm",
+        "Literasi dalam Bahasa Indonesia" to "lbi",
+        "Literasi dalam Bahasa Inggris" to "lbing",
+        "Penalaran Matematika" to "pm"
+    )
+
+    fun updateSubtest(subtestName: String) {
+        // Otomatis cari ID berdasarkan nama
+        val id = subtestMap[subtestName] ?: "umum"
+        _uiState.update { it.copy(subtest = subtestName, subtestId = id) }
+    }
+
     fun updateCode(code: String) {
         _uiState.update { it.copy(code = code) }
     }
@@ -40,12 +59,12 @@ class CreateLatihanSoalViewModel @Inject constructor(
         _uiState.update { it.copy(title = title) }
     }
 
-    fun updateSubtest(subtest: String) {
-        _uiState.update { it.copy(subtest = subtest) }
-    }
+//    fun updateStatus(status: String) {
+//        _uiState.update { it.copy(status = status) }
+//    }
 
-    fun updateStatus(status: String) {
-        _uiState.update { it.copy(status = status) }
+    fun updateTopicsString(text: String) {
+        _uiState.update { it.copy(topicsString = text) }
     }
 
     fun createLatihanSoal(
@@ -74,14 +93,26 @@ class CreateLatihanSoalViewModel @Inject constructor(
 
         viewModelScope.launch {
             try {
+
+                val topicList = currentState.topicsString.split(",")
+                    .map { it.trim() }
+                    .filter { it.isNotEmpty() }
+                    .map { name ->
+                        Topic(topicId = name.lowercase().replace(" ", "_"), name = name)
+                    }
+
+                // Ensure the map exists or use a fallback logic
+                val mappedSubtestId = subtestMap[currentState.subtest] ?: "umum"
+
                 val newLatihan = LatihanSoal(
                     id = "", // Akan di-generate oleh repository
                     code = currentState.code,
                     title = currentState.title,
                     subtest = currentState.subtest,
+                    subtestId = mappedSubtestId,
                     questionCount = 0, // Awal 0, akan di-update setelah soal ditambahkan
                     status = currentState.status,
-                    topics = currentState.topics
+                    topics = topicList
                 )
 
                 val latihanId = repository.createLatihanSoal(newLatihan)

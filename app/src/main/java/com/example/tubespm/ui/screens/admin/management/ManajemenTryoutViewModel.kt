@@ -79,6 +79,9 @@ class ManajemenTryoutViewModel : ViewModel() {
     private fun getTryoutsFromFirestore(): Flow<List<TryoutPackage>> = callbackFlow {
         val db = Firebase.firestore
         val listener = db.collection("tryouts")
+            // [QUERY FILTER] Hanya ambil yang statusnya BUKAN 'deleted'
+            // Kita bisa menggunakan whereIn atau whereNotEqualTo (jika field pasti ada)
+            // Cara paling aman & kompatibel dengan data lama (field null): Ambil semua, filter di client
             .addSnapshotListener { snapshot, e ->
                 if (e != null) {
                     close(e) // Jika error koneksi, tutup flow dengan error
@@ -90,6 +93,9 @@ class ManajemenTryoutViewModel : ViewModel() {
                         try {
                             // Coba convert, handle error jika tipe data 'id' salah
                             val tryout = doc.toObject(Tryout::class.java)
+
+                            // Skip jika status == "deleted"
+                            if (tryout?.status == "deleted") return@mapNotNull null
 
                             tryout?.let {
                                 // Logic Mapping: Tryout (Domain) -> TryoutPackage (UI)

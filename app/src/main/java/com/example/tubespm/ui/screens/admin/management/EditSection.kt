@@ -26,7 +26,7 @@ import androidx.lifecycle.viewmodel.compose.viewModel
 
 
 // ======================================
-// DIALOG EDIT SECTION
+// DIALOG EDIT SECTION (Sebenarnya Edit Subtest)
 // ======================================
 @Composable
 fun EditSectionDialog(
@@ -44,20 +44,21 @@ fun EditSectionDialog(
     var isSaving by remember { mutableStateOf(false) }
 
     SectionFormDialog(
-        title = "Edit Section",
-        primaryButtonText = if (isSaving) "Saving..." else "Edit Section",
+        title = "Edit Subtest",
+        primaryButtonText = if (isSaving) "Saving..." else "Edit Subtest",
         paketName = paketName,
         initialState = initialState,
         onDismiss = onDismiss,
         onConfirm = { data ->
             if (isSaving) return@SectionFormDialog
             isSaving = true
-            viewModel.updateSection(
+            // PANGGIL FUNGSI SAVE BARU
+            viewModel.saveSubtest(
                 tryoutId = tryoutId,
-                oldSectionId = sectionId,
-                sectionData = data,
+                subtestIdToEdit = sectionId, // Kirim ID untuk diedit
+                data = data,
                 onSuccess = {
-                    Toast.makeText(context, "Section Updated", Toast.LENGTH_SHORT).show()
+                    Toast.makeText(context, "Subtest Updated", Toast.LENGTH_SHORT).show()
                     onDismiss()
                 },
                 onError = { msg ->
@@ -87,19 +88,20 @@ fun AddSectionDialog(
     var isSaving by remember { mutableStateOf(false) }
 
     SectionFormDialog(
-        title = "Add Section",
-        primaryButtonText = if (isSaving) "Saving..." else "Tambah Section",
+        title = "Tambah Subtest",
+        primaryButtonText = if (isSaving) "Saving..." else "Tambah Subtest",
         paketName = paketName,
         initialState = initialState,
         onDismiss = onDismiss,
         onConfirm = { data ->
             if (isSaving) return@SectionFormDialog
             isSaving = true
-            viewModel.addSection(
+            viewModel.saveSubtest(
                 tryoutId = tryoutId,
-                sectionData = data,
+                subtestIdToEdit = null, // Null artinya Add Baru
+                data = data,
                 onSuccess = {
-                    Toast.makeText(context, "Section Added", Toast.LENGTH_SHORT).show()
+                    Toast.makeText(context, "Subtest Added", Toast.LENGTH_SHORT).show()
                     onDismiss()
                 },
                 onError = { msg ->
@@ -131,14 +133,32 @@ private fun SectionFormDialog(
     var expandedSubtest by remember { mutableStateOf(false) }
 
     val typeOptions = listOf("TPS", "Literasi")
-    val subtestOptions = listOf(
+
+    val tpsOptions = listOf(
         "Penalaran Umum",
-        "Penalaran Kuantitatif",
+        "Pengetahuan Kuantitatif",
         "Pengetahuan dan Pemahaman Umum",
-        "Pemahaman Membaca dan Menulis",
-        "Literasi dalam Bahasa Indonesia",
-        "Literasi dalam Bahasa Inggris"
+        "Pemahaman Bacaan dan Menulis"
     )
+
+    val literasiOptions = listOf(
+        "Literasi dalam Bahasa Indonesia",
+        "Literasi dalam Bahasa Inggris",
+        "Penalaran Matematika"
+    )
+
+    // Pilih opsi berdasarkan Tipe yang sedang dipilih
+    val currentSubtestOptions = if (uiState.type == "TPS") tpsOptions else literasiOptions
+
+    // Reset subtest ONLY if the current subtest is invalid for the selected type
+    LaunchedEffect(uiState.type) {
+        // Check if the current subtest is in the valid list for this type
+        if (uiState.subtest !in currentSubtestOptions) {
+            // Only then reset to the first option
+            uiState = uiState.copy(subtest = currentSubtestOptions.firstOrNull() ?: "")
+        }
+        // If it IS in the list (which happens on initial load for editing), do nothing.
+    }
 
     Dialog(onDismissRequest = onDismiss) {
         Surface(
@@ -260,7 +280,7 @@ private fun SectionFormDialog(
                         expanded = expandedSubtest,
                         onDismissRequest = { expandedSubtest = false }
                     ) {
-                        subtestOptions.forEach { option ->
+                        currentSubtestOptions.forEach { option ->
                             DropdownMenuItem(
                                 text = { Text(option) },
                                 onClick = {
@@ -330,6 +350,35 @@ private fun SectionFormDialog(
                         cursorColor = Color(0xFF212121)
                     ),
                     shape = RoundedCornerShape(6.dp)
+                )
+
+                Spacer(modifier = Modifier.height(16.dp))
+
+                Text(
+                    "Kisi-kisi (Pisahkan dengan koma)",
+                    fontSize = 14.sp,
+                    fontWeight = FontWeight.SemiBold,
+                    color = Color(0xFF757575)
+                )
+                Spacer(modifier = Modifier.height(4.dp))
+                OutlinedTextField(
+                    value = uiState.topicsString,
+                    onValueChange = { newValue ->
+                        uiState = uiState.copy(topicsString = newValue)
+                    },
+                    modifier = Modifier.fillMaxWidth(),
+                    placeholder = {Text("Contoh: Aljabar, Geometri, Logika", color = Color(0xFF9E9E9E))},
+                    colors = OutlinedTextFieldDefaults.colors(
+                        focusedContainerColor = Color(0xFFE0E0E0),
+                        unfocusedContainerColor = Color(0xFFE0E0E0),
+                        focusedBorderColor = Color.Transparent,
+                        unfocusedBorderColor = Color.Transparent,
+                        focusedTextColor = Color(0xFF212121),
+                        unfocusedTextColor = Color(0xFF212121),
+                        cursorColor = Color(0xFF212121)
+                    ),
+                    shape = RoundedCornerShape(6.dp),
+                    minLines = 2
                 )
 
                 Spacer(modifier = Modifier.height(24.dp))

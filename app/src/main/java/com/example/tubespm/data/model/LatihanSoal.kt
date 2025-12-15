@@ -11,6 +11,7 @@ data class LatihanSoal(
     val code: String = "", // <-- Kode buatan admin (misal: LAT-ALG-01)
     val title: String = "",
     val subtest: String = "",
+    val subtestId: String = "",
     val questionCount: Int = 0,
     val status: String = "",
 

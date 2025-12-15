@@ -64,7 +64,7 @@ class ExerciseCatalogRepositoryImpl @Inject constructor(
         val collectionName = if (type == "tryout") "tryouts" else "latihan_soal"
         db.collection(collectionName)
             .document(parentId)
-            .update("questionCount", count)
+            .update("questionCount", com.google.firebase.firestore.FieldValue.increment(1))
             .await()
     }
 

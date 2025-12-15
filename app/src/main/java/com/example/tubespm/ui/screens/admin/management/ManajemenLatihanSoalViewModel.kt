@@ -84,6 +84,10 @@ class ManajemenLatihanSoalViewModel : ViewModel() {
                     val results = snapshot.documents.mapNotNull { doc ->
                         try {
                             val lat = doc.toObject(LatihanSoal::class.java)
+
+                            // Filter item deleted
+                            if (lat?.status == "deleted") return@mapNotNull null
+
                             lat?.let {
                                 // MAPPING DATA BARU
                                 PaketSoal(
