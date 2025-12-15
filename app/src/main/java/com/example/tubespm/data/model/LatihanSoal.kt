@@ -15,6 +15,12 @@ data class LatihanSoal(
     val questionCount: Int = 0,
     val status: String = "",
 
+    // [BARU] Field Statistik
+    val takenCount: Int = 0,
+    val attemptCount: Int = 0,
+    val averageScore: Double = 0.0,
+    val highestScore: Double = 0.0,
+
     @ServerTimestamp
     val createdAt: Date? = null,
 

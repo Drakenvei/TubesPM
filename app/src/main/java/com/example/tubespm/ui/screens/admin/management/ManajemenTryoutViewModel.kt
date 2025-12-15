@@ -113,7 +113,13 @@ class ManajemenTryoutViewModel : ViewModel() {
                                     tpsSoal = tpsSection?.sectionQuestionCount ?: 0,
                                     tpsMenit = tpsSection?.sectionDuration ?: 0,
                                     literasiSoal = literasiSection?.sectionQuestionCount ?: 0,
-                                    literasiMenit = literasiSection?.sectionDuration ?: 0
+                                    literasiMenit = literasiSection?.sectionDuration ?: 0,
+                                    // [BARU] Mapping Statistik
+                                    takenCount = it.takenCount,
+                                    attemptCount = it.attemptCount,
+                                    highestScore = it.highestScore,
+                                    averageScore = it.averageScore,
+                                    createdAt = it.createdAt?.time ?: 0L
                                 )
                             }
                         } catch (err: Exception) {

@@ -51,6 +51,13 @@ data class Tryout(
     val title: String = "",
     val status: String = "",
 
+    // [BARU] Field Statistik
+    val takenCount: Int = 0,      // Jumlah user yang mengambil (klik start)
+    val attemptCount: Int = 0,    // Jumlah user yang selesai submit
+    val totalScoreSum: Double = 0.0, // (Opsional) Untuk bantu hitung rata-rata
+    val averageScore: Double = 0.0,
+    val highestScore: Double = 0.0,
+
     // --- PERUBAHAN DI SINI: Hapus totalDuration & totalQuestionCount dari sini ---
     // (Field ini tidak lagi diambil dari database)
 //    val totalDuration: Int = 0,

@@ -124,40 +124,64 @@ class QuizRepositoryImpl @Inject constructor(
         val activityRef = db.collection("user_activities").document(activityId)
         val activitySnapshot = activityRef.get().await()
 
-        val userId = activitySnapshot.getString("userId")
-        val type = activitySnapshot.getString("type") // "tryout" atau "latihan_soal"
+        val userId = activitySnapshot.getString("userId")?: return
+        val type = activitySnapshot.getString("type") ?: "tryout" // "tryout" atau "latihan_soal"
         val currentStatus = activitySnapshot.getString("status")
+        val parentId = activitySnapshot.getString("activityRefId") ?: return
 
         // Cek agar tidak double-count kalau user tekan submit berkali-kali
         if (currentStatus == "completed") return
 
-        // 2. Siapkan update untuk user_activities
-        val activityUpdates = mapOf(
-            "status" to "completed",
-            "score" to score,
-            "correctCount" to correctCount,
-            "answeredQuestionCount" to answeredCount, // <-- Update hitungan
-            "subtestScores" to subtestScores,
-            "completedAt" to FieldValue.serverTimestamp()
-        )
+        // Tentukan koleksi induk (tryouts atau latihan_soal)
+        val parentCollection = if (type == "tryout") "tryouts" else "latihan_soal"
+        val parentRef = db.collection(parentCollection).document(parentId)
+        val userRef = db.collection("users").document(userId)
 
-        // 3. Jalankan Batch Write (Atomik) agar aman
-        db.runBatch { batch ->
-            // A. Update status di user_activities
-            batch.update(activityRef, activityUpdates)
+        // 2. GUNAKAN TRANSACTION
+        // Transaction diperlukan agar saat hitung rata-rata, datanya akurat (tidak bentrok dengan user lain yang submit bersamaan)
+        db.runTransaction { transaction ->
 
-            // B. Update counter di users (Hanya jika userId valid)
-            if (userId != null) {
-                val userRef = db.collection("users").document(userId)
+            // A. Baca Data Parent (Tryout/Latihan) saat ini
+            val parentSnapshot = transaction.get(parentRef)
 
-                if (type == "tryout"){
-                    // Increment tryoutCompleted + 1
-                    batch.update(userRef, "tryoutCompleted", FieldValue.increment(1))
-                } else {
-                    // Increment latihanCompleted + 1 (asumsi tipe lain adalah latihan)
-                    batch.update(userRef, "latihanCompleted", FieldValue.increment(1))
-                }
+            // Ambil statistik lama (handle null jika ini orang pertama)
+            val oldAttemptCount = parentSnapshot.getLong("attemptCount") ?: 0L
+            val oldAverage = parentSnapshot.getDouble("averageScore") ?: 0.0
+            val oldHighest = parentSnapshot.getDouble("highestScore") ?: 0.0
+
+            // B. Hitung Statistik Baru
+            val newAttemptCount = oldAttemptCount + 1
+
+            // Rumus Running Average: ((Rata2 Lama * Jumlah Lama) + Skor Baru) / Jumlah Baru
+            val newAverage = ((oldAverage * oldAttemptCount) + score) / newAttemptCount
+
+            // Cek Highest Score
+            val newHighest = if (score.toDouble() > oldHighest) score.toDouble() else oldHighest
+
+            // C. Update Dokumen Parent (Update Statistik Global)
+            transaction.update(parentRef, mapOf(
+                "attemptCount" to newAttemptCount,
+                "averageScore" to newAverage,
+                "highestScore" to newHighest
+            ))
+
+            // D. Update Dokumen User Activity (Tandai Selesai)
+            transaction.update(activityRef, mapOf(
+                "status" to "completed",
+                "score" to score,
+                "correctCount" to correctCount,
+                "answeredQuestionCount" to answeredCount,
+                "subtestScores" to subtestScores,
+                "completedAt" to FieldValue.serverTimestamp()
+            ))
+
+            // E. Update Counter di User Profile (Opsional, tapi bagus)
+            if (type == "tryout") {
+                transaction.update(userRef, "tryoutCompleted", FieldValue.increment(1))
+            } else {
+                transaction.update(userRef, "latihanCompleted", FieldValue.increment(1))
             }
+
         }.await()
     }
 }

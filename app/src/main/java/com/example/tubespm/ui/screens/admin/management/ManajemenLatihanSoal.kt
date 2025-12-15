@@ -7,6 +7,9 @@ import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Add
+import androidx.compose.material.icons.filled.Analytics
+import androidx.compose.material.icons.filled.AssignmentTurnedIn
+import androidx.compose.material.icons.filled.CalendarToday
 import androidx.compose.material.icons.filled.Description
 import androidx.compose.material.icons.filled.Edit
 import androidx.compose.material.icons.filled.Search
@@ -21,6 +24,9 @@ import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.lifecycle.viewmodel.compose.viewModel
 import androidx.compose.foundation.layout.WindowInsets
+import java.text.SimpleDateFormat
+import java.util.Date
+import java.util.Locale
 
 // ======================================================
 // SCREEN UTAMA — TAB "Latihan Soal"
@@ -63,7 +69,7 @@ fun LatihanSoalTabContent(
         ) {
 
             // ===============================
-            // Search Bar (Style diperbarui sedikit agar rounded)
+            // Search Bar
             // ===============================
             OutlinedTextField(
                 value = searchQuery,
@@ -75,7 +81,7 @@ fun LatihanSoalTabContent(
                 leadingIcon = {
                     Icon(Icons.Filled.Search, contentDescription = "Search", tint = Color.Gray)
                 },
-                shape = RoundedCornerShape(12.dp), // Lebih rounded seperti siswa
+                shape = RoundedCornerShape(12.dp),
                 colors = OutlinedTextFieldDefaults.colors(
                     focusedContainerColor = Color(0xFFE0E0E0),
                     unfocusedContainerColor = Color(0xFFE0E0E0),
@@ -121,15 +127,14 @@ fun LatihanSoalTabContent(
                                 onEditClick = {
                                     // Navigate to edit latihan soal (nama dulu)
                                     onEditClick(
-                                        "latihan_soal",  // Type: latihan_soal
+                                        "latihan_soal",
                                         paket.id,
-                                        "edit_nama", // Special ID untuk edit nama
+                                        "edit_nama",
                                         paket.nama,
                                         0
                                     )
                                 },
                                 onGoToListSoal = {
-                                    // Navigate directly to list soal
                                     onGoToListSoal("latihan_soal", paket.id, paket.nama)
                                 }
                             )
@@ -142,7 +147,7 @@ fun LatihanSoalTabContent(
 }
 
 // ======================================================
-// CARD ITEM BARU (Style User + Tombol Edit Admin)
+// CARD ITEM BARU (Dengan Statistik)
 // ======================================================
 @Composable
 fun PaketSoalAdminCard(
@@ -151,36 +156,60 @@ fun PaketSoalAdminCard(
     onGoToListSoal: () -> Unit = {}
 ) {
     Card(
-        modifier = Modifier
-            .fillMaxWidth(),
+        modifier = Modifier.fillMaxWidth(),
         shape = RoundedCornerShape(12.dp),
-        // Warna Pink persis seperti tampilan Siswa (0xFFE61C5D)
-        colors = CardDefaults.cardColors(containerColor = Color(0xFFE61C5D)),
+        colors = CardDefaults.cardColors(containerColor = Color.White), // Background Putih agar bersih
         elevation = CardDefaults.cardElevation(4.dp)
     ) {
-        Column(
-            modifier = Modifier.padding(16.dp)
-        ) {
+        Column(modifier = Modifier.padding(16.dp)) {
 
-            // --- Row Atas: Judul & Tombol Edit ---
+            // --- Row Atas: Header Info & Tombol ---
             Row(
                 modifier = Modifier.fillMaxWidth(),
-                verticalAlignment = Alignment.Top, // Align top jika teks panjang
+                verticalAlignment = Alignment.Top,
                 horizontalArrangement = Arrangement.SpaceBetween
             ) {
-                Text(
-                    text = paket.nama,
-                    style = MaterialTheme.typography.titleMedium.copy(
-                        color = Color.White,
-                        fontSize = 18.sp
-                    ),
-                    fontWeight = FontWeight.Bold,
-                    modifier = Modifier.weight(1f) // Text ambil sisa ruang
-                )
+                Column(modifier = Modifier.weight(1f)) {
+                    // Subtest Tag
+                    Surface(
+                        color = Color(0xFFE3F2FD),
+                        shape = RoundedCornerShape(4.dp)
+                    ) {
+                        Text(
+                            text = paket.subtest,
+                            color = Color(0xFF1565C0),
+                            fontWeight = FontWeight.Bold,
+                            fontSize = 11.sp,
+                            modifier = Modifier.padding(horizontal = 6.dp, vertical = 2.dp)
+                        )
+                    }
+                    Spacer(modifier = Modifier.height(4.dp))
 
-                // Row untuk tombol-tombol
+                    // Judul
+                    Text(
+                        text = paket.nama,
+                        style = MaterialTheme.typography.titleMedium.copy(
+                            color = Color(0xFF212121),
+                            fontSize = 18.sp
+                        ),
+                        fontWeight = FontWeight.Bold
+                    )
+
+                    Spacer(modifier = Modifier.height(4.dp))
+
+                    // Tanggal Pembuatan
+                    Row(verticalAlignment = Alignment.CenterVertically) {
+                        Icon(Icons.Filled.CalendarToday, null, tint = Color.Gray, modifier = Modifier.size(12.dp))
+                        Spacer(modifier = Modifier.width(4.dp))
+                        Text(
+                            text = "Dibuat: ${formatDate(paket.createdAt)}",
+                            fontSize = 11.sp, color = Color.Gray
+                        )
+                    }
+                }
+
+                // Tombol Aksi (Lihat & Edit)
                 Row {
-                    // Tombol Lihat Soal (Baru)
                     IconButton(
                         onClick = onGoToListSoal,
                         modifier = Modifier.size(32.dp)
@@ -188,77 +217,61 @@ fun PaketSoalAdminCard(
                         Icon(
                             imageVector = Icons.Filled.Description,
                             contentDescription = "Lihat Soal",
-                            tint = Color.White
+                            tint = Color(0xFF2196F3)
                         )
                     }
 
-                    // Tombol Edit (Khas Admin)
                     IconButton(
                         onClick = onEditClick,
                         modifier = Modifier.size(32.dp)
                     ) {
                         Icon(
-
                             imageVector = Icons.Filled.Edit,
                             contentDescription = "Edit",
-                            tint = Color.White
+                            tint = Color(0xFF757575)
                         )
                     }
                 }
             }
 
-            Spacer(modifier = Modifier.height(8.dp))
+            HorizontalDivider(modifier = Modifier.padding(vertical = 12.dp), color = Color(0xFFEEEEEE))
 
-            // --- Subtest Tag (Khas Tampilan Siswa) ---
-            Box(
-                modifier = Modifier
-                    .clip(RoundedCornerShape(8.dp))
-                    .background(Color.White.copy(alpha = 0.9f))
-                    .padding(horizontal = 10.dp, vertical = 4.dp)
-            ) {
-                Text(
-                    text = paket.subtest, // Menggunakan data subtest dari VM
-                    color = Color(0xFFE61C5D),
-                    fontWeight = FontWeight.Bold,
-                    fontSize = 14.sp
-                )
-            }
-
-            Spacer(modifier = Modifier.height(12.dp))
-
-            // --- Footer: Jumlah Soal dan Status ---
+            // --- Footer: Statistik & Status ---
             Row(
                 modifier = Modifier.fillMaxWidth(),
                 horizontalArrangement = Arrangement.SpaceBetween,
-                verticalAlignment = Alignment.CenterVertically
+                verticalAlignment = Alignment.CenterVertically // Center vertikal untuk row statistik
             ) {
-                Row(verticalAlignment = Alignment.CenterVertically) {
-                    Icon(
-                        imageVector = Icons.Filled.Description,
-                        contentDescription = "Jumlah Soal",
-                        tint = Color.White,
-                        modifier = Modifier.size(20.dp)
-                    )
-                    Spacer(modifier = Modifier.width(6.dp))
-                    Text(
-                        text = "${paket.totalSoal} soal",
-                        color = Color.White,
-                        style = MaterialTheme.typography.bodyMedium
-                    )
+                // Kolom Kiri: Statistik User & Soal
+                Column {
+                    StatItem(Icons.Filled.AssignmentTurnedIn, "${paket.attemptCount} Selesai")
+                    Spacer(modifier = Modifier.height(4.dp))
+                    StatItem(Icons.Filled.Description, "${paket.totalSoal} Soal")
                 }
 
-                // Status Badge
-                Surface(
-                    color = if (paket.isActive) Color.White else Color(0xFFB0BEC5), // Putih untuk active, abu untuk inactive
-                    shape = RoundedCornerShape(8.dp)
-                ) {
-                    Text(
-                        text = if (paket.isActive) "active" else "inactive", // Ganti dari Aktif/Nonaktif
-                        color = if (paket.isActive) Color(0xFFE61C5D) else Color.White, // Pink untuk active, putih untuk inactive
-                        fontSize = 11.sp,
-                        fontWeight = FontWeight.SemiBold,
-                        modifier = Modifier.padding(horizontal = 8.dp, vertical = 4.dp)
+                // Kolom Kanan: Rata-rata Skor & Status Badge
+                Column(horizontalAlignment = Alignment.End) {
+                    StatItem(
+                        icon = Icons.Filled.Analytics,
+                        value = "Avg: ${"%.1f".format(paket.averageScore)}",
+                        color = Color(0xFF1976D2)
                     )
+
+                    Spacer(modifier = Modifier.height(6.dp))
+
+                    // Status Badge
+                    Surface(
+                        color = if (paket.isActive) Color(0xFFE8F5E9) else Color(0xFFFFEBEE),
+                        shape = RoundedCornerShape(4.dp)
+                    ) {
+                        Text(
+                            text = if (paket.isActive) "Active" else "Inactive",
+                            color = if (paket.isActive) Color(0xFF2E7D32) else Color(0xFFC62828),
+                            fontSize = 10.sp,
+                            fontWeight = FontWeight.Bold,
+                            modifier = Modifier.padding(horizontal = 6.dp, vertical = 2.dp)
+                        )
+                    }
                 }
             }
         }

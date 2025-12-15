@@ -19,7 +19,13 @@ data class PaketSoal(
     val subtest: String,    // Tambahan: Untuk Tag kategori (misal: Penalaran Umum)
     val totalSoal: Int,     // Tambahan: Jumlah total soal langsung
     val code: String,       // Tambahan: Kode paket (opsional, untuk info tambahan)
-    val isActive: Boolean = true  // Status aktif/nonaktif
+    val isActive: Boolean = true,  // Status aktif/nonaktif
+    // [BARU] Field Statistik
+    val takenCount: Int,
+    val attemptCount: Int,
+    val highestScore: Double,
+    val averageScore: Double,
+    val createdAt: Long
 )
 
 data class ManajemenLatihanUiState(
@@ -96,7 +102,13 @@ class ManajemenLatihanSoalViewModel : ViewModel() {
                                     subtest = it.subtest.ifEmpty { "Umum" }, // Ambil subtest
                                     totalSoal = it.questionCount,
                                     code = it.code,
-                                    isActive = it.status == "active"
+                                    isActive = it.status == "active",
+                                    // [BARU] Mapping Statistik
+                                    takenCount = it.takenCount,
+                                    attemptCount = it.attemptCount,
+                                    highestScore = it.highestScore,
+                                    averageScore = it.averageScore,
+                                    createdAt = it.createdAt?.time ?: 0L
                                 )
                             }
                         } catch (err: Exception) {

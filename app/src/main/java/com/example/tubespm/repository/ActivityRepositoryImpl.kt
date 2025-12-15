@@ -86,8 +86,17 @@ class ActivityRepositoryImpl @Inject constructor(
             "startedAt" to FieldValue.serverTimestamp()
         )
 
-        // 2. Simpan ke Firestore
-        db.collection("user_activities").add(newActivity).await()
+        // 2. Jalankan Batch / Transaction
+        // Kita perlu simpan activity DAN update counter di dokumen Tryout induk
+        db.runBatch { batch ->
+            // Simpan activity user
+            val activityRef = db.collection("user_activities").document()
+            batch.set(activityRef, newActivity)
+
+            // [BARU] Increment 'takenCount' di dokumen Tryout
+            val tryoutRef = db.collection("tryouts").document(tryout.id)
+            batch.update(tryoutRef, "takenCount", FieldValue.increment(1))
+        }.await()
     }
 
     override suspend fun addLatihanActivity(latihan: LatihanSoal) {
@@ -107,7 +116,14 @@ class ActivityRepositoryImpl @Inject constructor(
         )
 
         // Simpan ke firestore
-        db.collection("user_activities").add(newActivity).await()
+        db.runBatch { batch ->
+            val activityRef = db.collection("user_activities").document()
+            batch.set(activityRef, newActivity)
+
+            // [BARU] Increment 'takenCount' di dokumen LatihanSoal
+            val latihanRef = db.collection("latihan_soal").document(latihan.id)
+            batch.update(latihanRef, "takenCount", FieldValue.increment(1))
+        }.await()
     }
 
     override suspend fun cancelTryoutActivity(activityId: String) {

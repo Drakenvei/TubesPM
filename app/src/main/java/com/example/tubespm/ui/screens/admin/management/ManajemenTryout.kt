@@ -1,5 +1,6 @@
 package com.example.tubespm.ui.screens.admin.management
 
+import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
@@ -23,7 +24,14 @@ import androidx.compose.ui.unit.sp
 import androidx.lifecycle.viewmodel.compose.viewModel
 import androidx.compose.material3.FabPosition
 import androidx.compose.foundation.layout.WindowInsets
+import androidx.compose.material.icons.filled.Analytics
+import androidx.compose.material.icons.filled.AssignmentTurnedIn
+import androidx.compose.material.icons.filled.EmojiEvents
+import androidx.compose.material.icons.filled.People
 import com.example.tubespm.ui.theme.TubesPMTheme
+import java.text.SimpleDateFormat
+import java.util.Date
+import java.util.Locale
 
 // ======================================================
 // DATA MODEL TRYOUT (UI Helper)
@@ -35,7 +43,13 @@ data class TryoutPackage(
     val tpsSoal: Int,
     val tpsMenit: Int,
     val literasiSoal: Int,
-    val literasiMenit: Int
+    val literasiMenit: Int,
+    // [BARU] Field Statistik
+    val takenCount: Int,
+    val attemptCount: Int,
+    val highestScore: Double,
+    val averageScore: Double,
+    val createdAt: Long
 )
 
 // ======================================================
@@ -249,6 +263,22 @@ fun TryoutTabContent(
     }
 }
 
+// [BARU] Helper Function Date & StatItem
+fun formatDate(timestamp: Long): String {
+    if (timestamp == 0L) return "-"
+    val sdf = SimpleDateFormat("dd MMM yyyy", Locale("id", "ID"))
+    return sdf.format(Date(timestamp))
+}
+
+@Composable
+fun StatItem(icon: androidx.compose.ui.graphics.vector.ImageVector, value: String, color: Color = Color(0xFF757575)) {
+    Row(verticalAlignment = Alignment.CenterVertically) {
+        Icon(imageVector = icon, contentDescription = null, tint = color, modifier = Modifier.size(14.dp))
+        Spacer(modifier = Modifier.width(4.dp))
+        Text(text = value, style = MaterialTheme.typography.bodySmall, color = color, fontSize = 11.sp)
+    }
+}
+
 @Composable
 fun TryoutPackageCard(
     tryoutPackage: TryoutPackage,
@@ -278,13 +308,35 @@ fun TryoutPackageCard(
                 }
             }
 
+            HorizontalDivider(modifier = Modifier.padding(vertical = 12.dp), color = Color(0xFFEEEEEE))
+
+            // --- STATISTIK ---
+            Row(modifier = Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.SpaceBetween) {
+                StatItem(Icons.Default.People, "${tryoutPackage.takenCount} Mengambil")
+                StatItem(Icons.Default.AssignmentTurnedIn, "${tryoutPackage.attemptCount} Selesai")
+            }
+            Spacer(modifier = Modifier.height(8.dp))
+            Row(modifier = Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.SpaceBetween) {
+                StatItem(Icons.Default.EmojiEvents, "Max: ${tryoutPackage.highestScore}", Color(0xFFFB8C00))
+                StatItem(Icons.Default.Analytics, "Avg: ${"%.1f".format(tryoutPackage.averageScore)}", Color(0xFF1976D2))
+            }
+
             Spacer(modifier = Modifier.height(16.dp))
 
-            TryoutSection(title = "TPS", soal = tryoutPackage.tpsSoal, menit = tryoutPackage.tpsMenit)
-            Spacer(modifier = Modifier.height(12.dp))
-            TryoutSection(title = "Literasi", soal = tryoutPackage.literasiSoal, menit = tryoutPackage.literasiMenit)
+            Column(
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .background(Color(0xFFF5F5F5), RoundedCornerShape(8.dp))
+                    .padding(12.dp)
+            ) {
+                TryoutSection(title = "TPS", soal = tryoutPackage.tpsSoal, menit = tryoutPackage.tpsMenit)
+                Spacer(modifier = Modifier.height(12.dp))
+                TryoutSection(title = "Literasi", soal = tryoutPackage.literasiSoal, menit = tryoutPackage.literasiMenit)
+
+            }
 
             Spacer(modifier = Modifier.height(12.dp))
+
             Row(modifier = Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.End) {
                 val (bgColor, textColor, textLabel) = if (tryoutPackage.isActive) {
                     Triple(Color.White, Color(0xFFE91E63), "active")
