@@ -7,6 +7,7 @@ import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.ArrowBack
+import androidx.compose.material.icons.filled.DeleteForever
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
@@ -60,6 +61,8 @@ fun EditLatihanSoalScreen(
         }
     }
 
+    var showDeleteDialog by remember { mutableStateOf(false) }
+
     Scaffold(
         topBar = {
             TopAppBar(
@@ -77,6 +80,27 @@ fun EditLatihanSoalScreen(
                             Icons.Default.ArrowBack,
                             contentDescription = "Kembali",
                             tint = Color.White
+                        )
+                    }
+                },
+                actions = {
+                    // Hanya tampilkan tombol hapus jika status Inactive (agar aman)
+                    // Atau boleh selalu tampil, tapi best practice harus inactive dulu
+                    val isInactive = uiState.status != "active"
+
+                    IconButton(
+                        onClick = {
+                            if (isInactive) {
+                                showDeleteDialog = true
+                            } else {
+                                android.widget.Toast.makeText(context, "Nonaktifkan latihan terlebih dahulu untuk menghapus.", android.widget.Toast.LENGTH_SHORT).show()
+                            }
+                        }
+                    ) {
+                        Icon(
+                            imageVector = Icons.Default.DeleteForever,
+                            contentDescription = "Hapus Latihan",
+                            tint = if (isInactive) Color.White else Color.White.copy(alpha = 0.5f)
                         )
                     }
                 },
@@ -358,6 +382,47 @@ fun EditLatihanSoalScreen(
                         Text("Kembali")
                     }
                 }
+            )
+        }
+
+        // Dialog Konfirmasi Hapus
+        if (showDeleteDialog) {
+            AlertDialog(
+                onDismissRequest = { showDeleteDialog = false },
+                title = { Text("Hapus Latihan Soal?", fontWeight = FontWeight.Bold, color = Color(0xFFE53935)) },
+                text = {
+                    Column {
+                        Text("Anda yakin ingin menghapus latihan '${uiState.title}'?")
+                        Spacer(modifier = Modifier.height(8.dp))
+                        Text("Data akan dipindahkan ke sampah dan hilang dari daftar.", fontSize = 13.sp)
+                    }
+                },
+                confirmButton = {
+                    Button(
+                        onClick = {
+                            viewModel.deleteLatihanSoal(
+                                latihanId = latihanId,
+                                onSuccess = {
+                                    showDeleteDialog = false
+                                    onLatihanUpdated() // Kembali ke list
+                                    android.widget.Toast.makeText(context, "Latihan berhasil dihapus", android.widget.Toast.LENGTH_SHORT).show()
+                                },
+                                onError = { msg ->
+                                    android.widget.Toast.makeText(context, msg, android.widget.Toast.LENGTH_SHORT).show()
+                                }
+                            )
+                        },
+                        colors = ButtonDefaults.buttonColors(containerColor = Color(0xFFE53935))
+                    ) {
+                        Text("Hapus")
+                    }
+                },
+                dismissButton = {
+                    TextButton(onClick = { showDeleteDialog = false }) {
+                        Text("Batal")
+                    }
+                },
+                containerColor = Color(0xFFFFEBEE)
             )
         }
     }

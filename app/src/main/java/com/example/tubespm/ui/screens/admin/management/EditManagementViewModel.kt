@@ -161,4 +161,100 @@ class EditManagementViewModel : ViewModel() {
                 }
         }
     }
+
+    fun deleteSubtest(
+        tryoutId: String,
+        subtestIdToDelete: String,
+        onSuccess: () -> Unit,
+        onError: (String) -> Unit
+    ) {
+        viewModelScope.launch {
+            try {
+                // 1. Hapus Soal-soal Terkait (Batch Delete)
+                // Kita cari dulu semua soal dengan subtestId ini
+                val questionsRef = db.collection("tryouts").document(tryoutId).collection("questions")
+                val querySnapshot = questionsRef.whereEqualTo("subtestId", subtestIdToDelete).get().await()
+
+                // Batch write untuk menghapus banyak dokumen sekaligus
+                val batch = db.batch()
+                for (document in querySnapshot.documents) {
+                    batch.delete(document.reference)
+                }
+                // Eksekusi hapus soal
+                batch.commit().await()
+
+                // 2. Update Dokumen Tryout (Hapus Subtest dari Array)
+                db.runTransaction { transaction ->
+                    val tryoutRef = db.collection("tryouts").document(tryoutId)
+                    val snapshot = transaction.get(tryoutRef)
+                    val tryout = snapshot.toObject(Tryout::class.java) ?: throw Exception("Tryout tidak ditemukan")
+
+                    val currentSections = tryout.sections.toMutableList()
+                    var isChanged = false
+
+                    // Cari section yang berisi subtest ini
+                    for (i in currentSections.indices) {
+                        val section = currentSections[i]
+                        val updatedSubtests = section.subtests.filter { it.subtestId != subtestIdToDelete }
+
+                        if (updatedSubtests.size != section.subtests.size) {
+                            // Ada yang dihapus
+                            currentSections[i] = section.copy(subtests = updatedSubtests)
+                            isChanged = true
+                        }
+                    }
+
+                    // Hapus section jika kosong (Opsional, tapi rapi)
+                    // currentSections.removeAll { it.subtests.isEmpty() }
+
+                    if (isChanged) {
+                        // Hitung ulang total durasi & soal
+                        val newTotalDuration = currentSections.sumOf { sec -> sec.subtests.sumOf { it.duration } }
+                        val newTotalQuestionCount = currentSections.sumOf { sec -> sec.subtests.sumOf { it.questionCount } }
+
+                        transaction.update(tryoutRef, mapOf(
+                            "sections" to currentSections,
+                            "totalDuration" to newTotalDuration,
+                            "totalQuestionCount" to newTotalQuestionCount
+                        ))
+                    }
+                }.await()
+
+                onSuccess()
+            } catch (e: Exception) {
+                Log.e("EditManagementVM", "Gagal hapus subtest", e)
+                onError("Gagal menghapus subtest: ${e.message}")
+            }
+        }
+    }
+
+    /**
+     * SOFT DELETE: Mengubah status paket menjadi 'deleted'.
+     * Data tidak dihapus fisik, tapi hilang dari list utama.
+     */
+    fun deletePackage(
+        packageId: String,
+        type: String, // "tryout" atau "latihan_soal"
+        onSuccess: () -> Unit,
+        onError: (String) -> Unit
+    ) {
+        viewModelScope.launch {
+            _uiState.update { it.copy(isLoading = true) }
+            try {
+                val collectionName = if (type == "tryout") "tryouts" else "latihan_soal"
+
+                // Update status field menjadi 'deleted'
+                db.collection(collectionName).document(packageId)
+                    .update("status", "deleted")
+                    .await()
+
+                onSuccess()
+
+            } catch (e: Exception) {
+                Log.e("EditManagementVM", "Gagal hapus paket (soft delete)", e)
+                _uiState.update { it.copy(isLoading = false, error = e.message) }
+                onError("Gagal menghapus paket: ${e.message}")
+            }
+        }
+    }
 }

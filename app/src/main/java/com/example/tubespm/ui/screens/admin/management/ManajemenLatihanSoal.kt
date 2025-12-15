@@ -181,11 +181,15 @@ fun PaketSoalAdminCard(
                 // Row untuk tombol-tombol
                 Row {
                     // Tombol Lihat Soal (Baru)
-                    TextButton(
+                    IconButton(
                         onClick = onGoToListSoal,
-                        colors = ButtonDefaults.textButtonColors(contentColor = Color.White)
+                        modifier = Modifier.size(32.dp)
                     ) {
-                        Text("Lihat Soal", fontSize = 12.sp)
+                        Icon(
+                            imageVector = Icons.Filled.Description,
+                            contentDescription = "Lihat Soal",
+                            tint = Color.White
+                        )
                     }
 
                     // Tombol Edit (Khas Admin)

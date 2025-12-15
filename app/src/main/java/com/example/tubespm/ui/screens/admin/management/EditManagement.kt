@@ -8,6 +8,8 @@ import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.ArrowBack
+import androidx.compose.material.icons.filled.Delete
+import androidx.compose.material.icons.filled.DeleteForever
 import androidx.compose.material.icons.filled.List
 import androidx.compose.material.icons.filled.Settings
 import androidx.compose.material.icons.filled.Visibility
@@ -30,10 +32,12 @@ import androidx.lifecycle.viewmodel.compose.viewModel
 @Composable
 fun EditManagementDialog(
     paket: TryoutPackage,
+    type: String = "tryout",
     onDismiss: () -> Unit,
     onDeactivatePackage: () -> Unit, // Callback ke parent (opsional, bisa dihandle VM juga)
     onAddMoreSection: () -> Unit,
     onGoToEditQuestion: (String, String, String, String, Int) -> Unit, // (type, parentId, questionId, paketName, questionNumber)
+    onPackageDeleted: () -> Unit,
     // Inject ViewModel
     viewModel: EditManagementViewModel = viewModel()
 ) {
@@ -51,11 +55,13 @@ fun EditManagementDialog(
         ) {
             EditManagementContent(
                 paket = paket,
+                type = type, // Pass type
                 viewModel = viewModel, // Pass VM ke konten
                 onClose = onDismiss,
                 onDeactivatePackage = onDeactivatePackage,
                 onAddMoreSection = onAddMoreSection,
-                onGoToEditQuestion = onGoToEditQuestion
+                onGoToEditQuestion = onGoToEditQuestion,
+                onPackageDeleted = onPackageDeleted // Pass callback
             )
         }
     }
@@ -67,11 +73,13 @@ fun EditManagementDialog(
 @Composable
 private fun EditManagementContent(
     paket: TryoutPackage,
+    type: String,
     viewModel: EditManagementViewModel,
     onClose: () -> Unit,
     onDeactivatePackage: () -> Unit,
     onAddMoreSection: () -> Unit,
-    onGoToEditQuestion: (String, String, String, String, Int) -> Unit // (type, parentId, questionId, paketName, questionNumber)
+    onGoToEditQuestion: (String, String, String, String, Int) -> Unit, // (type, parentId, questionId, paketName, questionNumber)
+    onPackageDeleted: () -> Unit
 ) {
     // Observasi State dari ViewModel
     val uiState by viewModel.uiState.collectAsState()
@@ -84,6 +92,11 @@ private fun EditManagementContent(
     // STATE popup add section
     var showAddSectionDialog by remember { mutableStateOf(false) }
 
+    var showDeleteDialog by remember { mutableStateOf(false) }
+    var subtestToDelete by remember { mutableStateOf<TryoutSectionUiModel?>(null) }
+
+    var showDeletePackageDialog by remember { mutableStateOf(false) }
+
     Column(
         modifier = Modifier
             .fillMaxWidth()
@@ -93,7 +106,8 @@ private fun EditManagementContent(
 
         // Header: back + title
         Row(
-            verticalAlignment = Alignment.CenterVertically
+            verticalAlignment = Alignment.CenterVertically,
+            modifier = Modifier.fillMaxWidth()
         ) {
             IconButton(onClick = onClose) {
                 Icon(Icons.Default.ArrowBack, contentDescription = "Back")
@@ -102,8 +116,26 @@ private fun EditManagementContent(
                 text = "Edit ${paket.name}",
                 fontWeight = FontWeight.SemiBold,
                 fontSize = 18.sp,
-                color = Color(0xFF333333)
+                color = Color(0xFF333333),
+                modifier = Modifier.weight(1f)
             )
+
+            // Tombol Hapus Paket (Di Header)
+            IconButton(
+                onClick = {
+                    if (paket.isActive) {
+                        Toast.makeText(context, "Nonaktifkan paket terlebih dahulu untuk menghapus.", Toast.LENGTH_SHORT).show()
+                    } else {
+                        showDeletePackageDialog = true
+                    }
+                }
+            ) {
+                Icon(
+                    imageVector = Icons.Default.DeleteForever,
+                    contentDescription = "Hapus Paket",
+                    tint = if (paket.isActive) Color.LightGray else Color(0xFFD32F2F) // Merah tua
+                )
+            }
         }
 
         Spacer(modifier = Modifier.height(8.dp))
@@ -150,6 +182,14 @@ private fun EditManagementContent(
                             ).apply {
                                 // Cara terbaik: Tambahkan parameter ke-6 di callback onGoToEditQuestion
                                 // onGoToEditQuestion(type, parentId, ..., subtestId)
+                            }
+                        },
+                        onDeleteClick = { clicked ->
+                            if (paket.isActive) {
+                                Toast.makeText(context, "Nonaktifkan paket terlebih dahulu untuk menghapus.", Toast.LENGTH_SHORT).show()
+                            } else {
+                                subtestToDelete = clicked
+                                showDeleteDialog = true
                             }
                         }
                     )
@@ -238,7 +278,7 @@ private fun EditManagementContent(
         Spacer(modifier = Modifier.height(4.dp))
     }
 
-    // ---------- POPUP EDIT SECTION ----------
+    // ---------- POPUP EDIT SUBTEST ----------
     if (showEditSectionDialog && selectedSectionForEdit != null) {
         val section = selectedSectionForEdit!!
 
@@ -265,7 +305,7 @@ private fun EditManagementContent(
         )
     }
 
-    // ---------- POPUP ADD SECTION ----------
+    // ---------- POPUP ADD SUBTEST ----------
     if (showAddSectionDialog) {
         AddSectionDialog(
             tryoutId = paket.id,          // <-- ADDED: tryoutId
@@ -279,6 +319,83 @@ private fun EditManagementContent(
             onEditSoalTryout = onGoToEditQuestion
         )
     }
+
+    // ---------- POPUP Delete SUBTEST ----------
+    if (showDeleteDialog && subtestToDelete != null) {
+        val subtest = subtestToDelete!!
+        AlertDialog(
+            onDismissRequest = { showDeleteDialog = false; subtestToDelete = null },
+            title = { Text("Hapus Subtest?") },
+            text = {
+                Column {
+                    Text("Anda yakin ingin menghapus subtest '${subtest.title}'?")
+                    Spacer(modifier = Modifier.height(8.dp))
+                    Text("PERINGATAN: Semua soal dalam subtest ini juga akan dihapus secara permanen.", color = Color.Red, fontSize = 12.sp)
+                }
+            },
+            confirmButton = {
+                TextButton(
+                    onClick = {
+                        viewModel.deleteSubtest(
+                            tryoutId = paket.id,
+                            subtestIdToDelete = subtest.id,
+                            onSuccess = {
+                                Toast.makeText(context, "Subtest berhasil dihapus", Toast.LENGTH_SHORT).show()
+                                showDeleteDialog = false
+                                subtestToDelete = null
+                                viewModel.loadSections(paket.id) // Refresh list
+                            },
+                            onError = { error ->
+                                Toast.makeText(context, error, Toast.LENGTH_SHORT).show()
+                            }
+                        )
+                    },
+                    colors = ButtonDefaults.textButtonColors(contentColor = Color.Red)
+                ) {
+                    Text("Hapus")
+                }
+            },
+            dismissButton = {
+                TextButton(onClick = { showDeleteDialog = false; subtestToDelete = null }) {
+                    Text("Batal")
+                }
+            }
+        )
+    }
+
+    // DIALOG KONFIRMASI HAPUS PAKET
+    if (showDeletePackageDialog) {
+        AlertDialog(
+            onDismissRequest = { showDeletePackageDialog = false },
+            title = { Text("Hapus Paket?", fontWeight = FontWeight.Bold, color = Color(0xFFD32F2F)) },
+            text = {
+                Column {
+                    Text("Anda akan menghapus '${paket.name}'.")
+                    Spacer(modifier = Modifier.height(8.dp))
+                    Text("Data akan dihapus dan hilang dari daftar.", fontSize = 13.sp)
+                }
+            },
+            confirmButton = {
+                Button(
+                    onClick = {
+                        viewModel.deletePackage(
+                            packageId = paket.id,
+                            type = type,
+                            onSuccess = {
+                                showDeletePackageDialog = false
+                                Toast.makeText(context, "Paket berhasil dihapus", Toast.LENGTH_SHORT).show()
+                                onPackageDeleted() // Tutup dialog & refresh list parent
+                            },
+                            onError = { msg -> Toast.makeText(context, msg, Toast.LENGTH_SHORT).show() }
+                        )
+                    },
+                    colors = ButtonDefaults.buttonColors(containerColor = Color(0xFFD32F2F))
+                ) { Text("Hapus") }
+            },
+            dismissButton = { TextButton(onClick = { showDeletePackageDialog = false }) { Text("Batal") } },
+            containerColor = Color(0xFFFFEBEE)
+        )
+    }
 }
 
 // -------------------------------
@@ -289,11 +406,13 @@ private fun SectionCard(
     section: TryoutSectionUiModel,
     isEditable: Boolean, // Parameter status
     onEditClick: (TryoutSectionUiModel) -> Unit,
-    onManageQuestionClick: (String) -> Unit // Callback baru: ID Subtest
+    onManageQuestionClick: (String) -> Unit, // Callback baru: ID Subtest
+    onDeleteClick: (TryoutSectionUiModel) -> Unit
 ) {
     // Tentukan warna icon berdasarkan status editable
     val settingColor = if (isEditable) Color.Gray else Color.LightGray
     val listIconColor = Color(0xFF2196F3) // Selalu biru (Material Blue)
+    val deleteColor = if (isEditable) Color(0xFFE53935) else Color.LightGray // Merah jika aktif
 
     Surface(
         modifier = Modifier.fillMaxWidth(),
@@ -335,6 +454,15 @@ private fun SectionCard(
                         modifier = Modifier.size(24.dp)
                     ) {
                         Icon(Icons.Default.Settings, contentDescription = "Edit Section", tint = settingColor)
+                    }
+                    Spacer(modifier = Modifier.width(8.dp))
+
+                    // Tombol Hapus Section
+                    IconButton(
+                        onClick = { onDeleteClick(section) },
+                        modifier = Modifier.size(24.dp)
+                    ) {
+                        Icon(Icons.Default.Delete, "Hapus Subtest", tint = deleteColor)
                     }
                 }
             }

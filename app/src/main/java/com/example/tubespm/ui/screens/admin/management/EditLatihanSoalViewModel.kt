@@ -198,6 +198,25 @@ class EditLatihanSoalViewModel : ViewModel() {
         }
     }
 
+    // Fungsi Soft Delete Latihan Soal
+    fun deleteLatihanSoal(latihanId: String, onSuccess: () -> Unit, onError: (String) -> Unit) {
+        _uiState.update { it.copy(isLoading = true) }
+        viewModelScope.launch {
+            try {
+                // Soft delete: Ubah status menjadi 'deleted'
+                db.collection("latihan_soal").document(latihanId)
+                    .update("status", "deleted")
+                    .await()
+
+                _uiState.update { it.copy(isLoading = false) }
+                onSuccess()
+            } catch (e: Exception) {
+                _uiState.update { it.copy(isLoading = false, error = e.message) }
+                onError("Gagal menghapus latihan soal: ${e.message}")
+            }
+        }
+    }
+
     private suspend fun migrateLatihanQuestions(latihanId: String, newSubtestId: String) {
         val questionsRef = db.collection("latihan_soal").document(latihanId).collection("questions")
 

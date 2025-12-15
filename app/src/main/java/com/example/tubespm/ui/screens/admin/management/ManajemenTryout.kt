@@ -171,6 +171,7 @@ fun ManajemenTryoutScreen(
             if (showEditManagementDialog && selectedPackageForEdit != null) {
                 EditManagementDialog(
                     paket = selectedPackageForEdit!!,
+                    type = if (selectedTab == 0) "tryout" else "latihan_soal",
                     onDismiss = {
                         showEditManagementDialog = false
                         selectedPackageForEdit = null
@@ -182,6 +183,11 @@ fun ManajemenTryoutScreen(
                     onAddMoreSection = { },
                     onGoToEditQuestion = { type, parentId, questionId, paketName, questionNumber ->
                         onGoToEditQuestion(type, parentId, questionId, paketName, questionNumber)
+                    },
+                    onPackageDeleted = {
+                        showEditManagementDialog = false
+                        selectedPackageForEdit = null
+                        // Data akan auto-refresh karena kita pakai .addSnapshotListener di ViewModel
                     }
                 )
             }
