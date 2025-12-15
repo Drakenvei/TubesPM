@@ -371,12 +371,19 @@ fun QuestionCard(
                     color = Color(0xFF212121)
                 )
                 Spacer(modifier = Modifier.height(4.dp))
-                Text(
-                    text = question.questionText.take(100) + if (question.questionText.length > 100) "..." else "",
-                    fontSize = 14.sp,
-                    color = Color(0xFF757575),
-                    maxLines = 2
-                )
+                Row(verticalAlignment = Alignment.CenterVertically) {
+                    Text(
+                        text = "Jawaban: ",
+                        fontSize = 14.sp,
+                        color = Color(0xFF757575)
+                    )
+                    Text(
+                        text = question.correctAnswer, // Menampilkan "A", "B", dll.
+                        fontSize = 14.sp,
+                        fontWeight = FontWeight.Bold,
+                        color = Color(0xFF4CAF50) // Warna hijau agar menonjol
+                    )
+                }
             }
             Row (
                 verticalAlignment = Alignment.CenterVertically
