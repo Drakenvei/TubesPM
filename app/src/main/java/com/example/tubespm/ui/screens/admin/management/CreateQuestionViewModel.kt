@@ -22,6 +22,8 @@ data class CreateQuestionUiState(
     val questionText: String = "",
     val questionImageUri: Uri? = null,
     val questionImageUrl: String? = null,
+    val optionImageUris: Map<String, Uri?> = mapOf("A" to null, "B" to null, "C" to null, "D" to null, "E" to null),
+    val explanationImageUri: Uri? = null,
     val answerMap: Map<String, String> = mapOf(
         "A" to "",
         "B" to "",
@@ -61,6 +63,19 @@ class CreateQuestionViewModel @Inject constructor(
 
     fun updateQuestionImageUri(uri: Uri?) {
         _uiState.update { it.copy(questionImageUri = uri) }
+    }
+
+    // Update URI Gambar Opsi
+    fun updateOptionImageUri(label: String, uri: Uri?) {
+        _uiState.update {
+            val newMap = it.optionImageUris.toMutableMap().apply { put(label, uri) }
+            it.copy(optionImageUris = newMap)
+        }
+    }
+
+    // Update URI Gambar Pembahasan
+    fun updateExplanationImageUri(uri: Uri?) {
+        _uiState.update { it.copy(explanationImageUri = uri) }
     }
 
     fun updateAnswerOption(label: String, text: String) {
@@ -106,22 +121,39 @@ class CreateQuestionViewModel @Inject constructor(
     ) {
         val currentState = _uiState.value
 
-        // Validasi
-        if (currentState.questionText.isBlank()) {
-            onError("Teks soal tidak boleh kosong")
+        // Validasi Soal Utama (Wajib ada Teks atau Gambar)
+        if (currentState.questionText.isBlank() && currentState.questionImageUri == null) {
+            onError("Soal harus memiliki teks atau gambar")
             return
         }
 
-        if (currentState.answerMap.values.any { it.isBlank() }) {
-            onError("Semua opsi jawaban harus diisi")
+        // Validasi Opsi Jawaban (Setiap opsi wajib ada Teks atau Gambar)
+        val labels = listOf("A", "B", "C", "D", "E")
+        val isAnyOptionInvalid = labels.any { label ->
+            val text = currentState.answerMap[label]
+            val image = currentState.optionImageUris[label]
+            // Invalid jika text kosong DAN image null
+            text.isNullOrBlank() && image == null
+        }
+
+        if (isAnyOptionInvalid) {
+            onError("Setiap pilihan jawaban harus memiliki Teks atau Gambar")
             return
         }
 
+        // Validasi Kunci Jawaban
         if (currentState.correctAnswer.isBlank()) {
             onError("Pilih jawaban yang benar")
             return
         }
 
+        // Validasi Pembahasan (Wajib ada Teks atau Gambar)
+        if (currentState.discussion.isBlank() && currentState.explanationImageUri == null) {
+            onError("Pembahasan wajib diisi (Teks atau Gambar)")
+            return
+        }
+
+        // Validasi Subtest ID (Khusus Tryout)
         if (type == "tryout" && currentState.subtestId.isBlank()) {
             onError("Error Fatal: Subtest ID Hilang. Silakan kembali ke menu sebelumnya.")
             return // <--- WAJIB ADA: Agar kode di bawah tidak dijalankan
@@ -140,10 +172,31 @@ class CreateQuestionViewModel @Inject constructor(
                     null
                 }
 
-                // Konversi Map jawaban ke List
-                val optionsList = listOf("A", "B", "C", "D", "E").map { label ->
-                    currentState.answerMap[label] ?: ""
+                // Convert Explanation Image to Base64
+                val explanationBase64: String? = if (currentState.explanationImageUri != null) {
+                    withContext(Dispatchers.IO) {
+                        ImageUtils.uriToBase64(context, currentState.explanationImageUri)
+                    }
+                } else null
+
+                // Convert Option Images to Base64 List
+                val optionImagesBase64 = mutableListOf<String?>()
+                val labels = listOf("A", "B", "C", "D", "E")
+
+                labels.forEach { label ->
+                    val uri = currentState.optionImageUris[label]
+                    if (uri != null) {
+                        val base64 = withContext(Dispatchers.IO) {
+                            ImageUtils.uriToBase64(context, uri)
+                        }
+                        optionImagesBase64.add(base64)
+                    } else {
+                        optionImagesBase64.add(null) // Penting: Tetap isi null agar urutan index sesuai A-E
+                    }
                 }
+
+                // Konversi Map jawaban ke List
+                val optionsList = labels.map { label -> currentState.answerMap[label] ?: "" }
 
                 // Buat object QuizQuestion
                 val newQuestion = QuizQuestion(
@@ -155,7 +208,9 @@ class CreateQuestionViewModel @Inject constructor(
                     questionImage = imageBase64,
                     options = optionsList,
                     correctAnswer = currentState.correctAnswer,
-                    discussion = currentState.discussion
+                    discussion = currentState.discussion,
+                    explanationImage = explanationBase64,
+                    optionImages = optionImagesBase64
                 )
 
                 // Simpan ke Firestore
@@ -170,7 +225,10 @@ class CreateQuestionViewModel @Inject constructor(
                     it.copy(
                         isSaving = false,
                         isSavedSuccess = true,
-                        questionImageUri = null // Reset setelah upload
+                        // Reset Gambar setelah save
+                        questionImageUri = null,
+                        explanationImageUri = null,
+                        optionImageUris = mapOf("A" to null, "B" to null, "C" to null, "D" to null, "E" to null)
                     )
                 }
 
@@ -206,7 +264,11 @@ class CreateQuestionViewModel @Inject constructor(
             CreateQuestionUiState(
                 subtestId = current.subtestId,
                 topicId = current.topicId,
-                questionNumber = nextQuestionNumber
+                questionNumber = nextQuestionNumber,
+                // Reset semua gambar
+                questionImageUri = null,
+                explanationImageUri = null,
+                optionImageUris = mapOf("A" to null, "B" to null, "C" to null, "D" to null, "E" to null)
             )
         }
     }

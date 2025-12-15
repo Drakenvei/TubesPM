@@ -1,7 +1,9 @@
 package com.example.tubespm.ui.screens.admin.management
 
+import android.net.Uri
 import androidx.activity.compose.rememberLauncherForActivityResult
 import androidx.activity.result.contract.ActivityResultContracts
+import androidx.compose.foundation.BorderStroke
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border
 import androidx.compose.foundation.clickable
@@ -15,10 +17,13 @@ import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.ArrowBack
 import androidx.compose.material.icons.filled.Add
 import androidx.compose.material.icons.filled.Check
+import androidx.compose.material.icons.filled.Close
+import androidx.compose.material.icons.filled.Image
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.platform.LocalContext
@@ -26,6 +31,7 @@ import androidx.compose.ui.text.TextStyle
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
+import androidx.compose.ui.zIndex
 import androidx.lifecycle.viewmodel.compose.viewModel
 import androidx.lifecycle.ViewModelProvider
 import coil.compose.AsyncImage
@@ -223,7 +229,7 @@ fun CreateQuestionScreen(
                         colors = OutlinedTextFieldDefaults.colors(
                             focusedContainerColor = Color(0xFFE0E0E0),
                             unfocusedContainerColor = Color(0xFFE0E0E0),
-                            focusedBorderColor = Color.Transparent,
+                            focusedBorderColor = Color(0xFFFF9966),
                             unfocusedBorderColor = Color.Transparent,
                             focusedTextColor = Color(0xFF212121),
                             unfocusedTextColor = Color(0xFF212121),
@@ -236,7 +242,7 @@ fun CreateQuestionScreen(
 
                     // ------------------ TAMBAH GAMBAR ------------------
                     Text(
-                        text = "Tambah Gambar",
+                        text = "Tambah Gambar Soal",
                         fontSize = 14.sp,
                         fontWeight = FontWeight.SemiBold,
                         color = Color(0xFF757575)
@@ -249,38 +255,29 @@ fun CreateQuestionScreen(
                         uri?.let { viewModel.updateQuestionImageUri(it) }
                     }
 
-                    Box(
-                        modifier = Modifier
-                            .size(120.dp)
-                            .background(
-                                Color(0xFFE0E0E0),
-                                RoundedCornerShape(6.dp)
-                            )
-                            .border(
-                                1.dp,
-                                Color(0xFFBDBDBD),
-                                RoundedCornerShape(6.dp)
-                            )
-                            .clickable {
-                                imagePickerLauncher.launch("image/*")
-                            },
-                        contentAlignment = Alignment.Center
-                    ) {
-                        if (uiState.questionImageUri != null) {
-                            AsyncImage(
-                                model = uiState.questionImageUri,
-                                contentDescription = "Question Image",
-                                modifier = Modifier.fillMaxSize(),
-                                contentScale = ContentScale.Crop
-                            )
-                        } else if (uiState.questionImageUrl != null) {
-                            AsyncImage(
-                                model = uiState.questionImageUrl,
-                                contentDescription = "Question Image",
-                                modifier = Modifier.fillMaxSize(),
-                                contentScale = ContentScale.Crop
-                            )
-                        } else {
+                    if (uiState.questionImageUri != null) {
+                        ImagePreviewWithDelete(
+                            uri = uiState.questionImageUri,
+                            onDelete = { viewModel.updateQuestionImageUri(null) }
+                        )
+                    } else {
+                        Box(
+                            modifier = Modifier
+                                .size(120.dp)
+                                .background(
+                                    Color(0xFFE0E0E0),
+                                    RoundedCornerShape(6.dp)
+                                )
+                                .border(
+                                    1.dp,
+                                    Color(0xFFBDBDBD),
+                                    RoundedCornerShape(6.dp)
+                                )
+                                .clickable {
+                                    imagePickerLauncher.launch("image/*")
+                                },
+                            contentAlignment = Alignment.Center
+                        ) {
                             Icon(
                                 Icons.Default.Add,
                                 contentDescription = "Add Picture",
@@ -307,85 +304,100 @@ fun CreateQuestionScreen(
                             .background(
                                 Color(0xFFE0E0E0),
                                 RoundedCornerShape(6.dp)
-                            )
+                            ).padding(vertical = 4.dp)
                     ) {
                         options.forEach { option ->
                             val labelStr = option.label.toString()
                             val isCorrect = uiState.correctAnswer == labelStr
+                            val currentOptionUri = uiState.optionImageUris[labelStr]
 
-                            Row(
+                            // State untuk mengetahui tombol mana yang diklik agar launcher tau
+                            val optionImageLauncher = rememberLauncherForActivityResult(ActivityResultContracts.GetContent()) { uri ->
+                                uri?.let { viewModel.updateOptionImageUri(labelStr, it) }
+                            }
+
+                            Column (
                                 modifier = Modifier
                                     .fillMaxWidth()
-                                    .height(52.dp)
-                                    .padding(horizontal = 4.dp),
-                                verticalAlignment = Alignment.CenterVertically
                             ) {
-                                Text(
-                                    text = "(${option.label})",
-                                    fontSize = 13.sp,
-                                    color = Color(0xFF757575),
-                                    modifier = Modifier.width(32.dp)
-                                )
-
-                                OutlinedTextField(
-                                    value = uiState.answerMap[labelStr] ?: "",
-                                    onValueChange = { viewModel.updateAnswerOption(labelStr, it) },
-                                    modifier = Modifier.weight(1f),
-                                    placeholder = {
-                                        Text(
-                                            option.placeholder,
-                                            color = Color(0xFFB0B0B0),
-                                            fontSize = 13.sp
-                                        )
-                                    },
-                                    singleLine = true,
-                                    textStyle = TextStyle(
-                                        fontSize = 13.sp,
-                                        color = Color(0xFF212121)
-                                    ),
-                                    colors = OutlinedTextFieldDefaults.colors(
-                                        focusedContainerColor = Color.White,
-                                        unfocusedContainerColor = Color.White,
-                                        focusedBorderColor = Color.Transparent,
-                                        unfocusedBorderColor = Color.Transparent,
-                                        focusedTextColor = Color(0xFF212121),
-                                        unfocusedTextColor = Color(0xFF212121),
-                                        cursorColor = Color(0xFF212121)
-                                    )
-                                )
-
-                                Spacer(modifier = Modifier.width(6.dp))
-
-                                // Tombol Set Correct Answer
-                                Surface(
-                                    modifier = Modifier.size(28.dp),
-                                    shape = CircleShape,
-                                    color = if (isCorrect) Color(0xFF4CAF50) else Color(0xFFD5D5D5)
+                                Row(
+                                    modifier = Modifier
+                                        .fillMaxWidth()
+                                        .padding(horizontal = 8.dp, vertical = 6.dp),
+                                    verticalAlignment = Alignment.CenterVertically
                                 ) {
-                                    Box(
-                                        modifier = Modifier
-                                            .fillMaxSize()
-                                            .clickable(
-                                                interactionSource = remember { MutableInteractionSource() },
-                                                indication = null,
-                                                onClick = { viewModel.setCorrectAnswer(labelStr) }
-                                            ),
-                                        contentAlignment = Alignment.Center
+                                    Text(
+                                        text = "(${option.label})",
+                                        fontSize = 14.sp,
+                                        fontWeight = FontWeight.Bold,
+                                        color = Color(0xFF757575),
+                                        modifier = Modifier.width(32.dp)
+                                    )
+
+                                    OutlinedTextField(
+                                        value = uiState.answerMap[labelStr] ?: "",
+                                        onValueChange = { viewModel.updateAnswerOption(labelStr, it) },
+                                        modifier = Modifier.weight(1f),
+                                        placeholder = {
+                                            Text(
+                                                if (currentOptionUri != null) "Teks (Opsional)" else option.placeholder,
+                                                color = Color(0xFFB0B0B0),
+                                                fontSize = 13.sp
+                                            )
+                                        },
+                                        singleLine = true,
+                                        textStyle = TextStyle(
+                                            fontSize = 14.sp,
+                                            color = Color(0xFF212121)
+                                        ),
+                                        colors = OutlinedTextFieldDefaults.colors(
+                                            focusedContainerColor = Color.White,
+                                            unfocusedContainerColor = Color.White,
+                                            focusedBorderColor = Color.Transparent,
+                                            unfocusedBorderColor = Color.Transparent,
+                                            focusedTextColor = Color(0xFF212121),
+                                            unfocusedTextColor = Color(0xFF212121),
+                                            cursorColor = Color(0xFF212121)
+                                        ),
+                                        shape = RoundedCornerShape(8.dp)
+                                    )
+
+                                    Spacer(modifier = Modifier.width(8.dp))
+
+                                    // Tombol Tambah Gambar (Kecil)
+                                    IconButton(
+                                        onClick = { optionImageLauncher.launch("image/*") },
+                                        modifier = Modifier.size(36.dp).background(if(currentOptionUri != null) Color(0xFFBBDEFB) else Color.White, CircleShape)
                                     ) {
-                                        Icon(
-                                            Icons.Default.Check,
-                                            contentDescription = "Correct",
-                                            tint = Color.White,
-                                            modifier = Modifier.size(18.dp)
+                                        Icon(Icons.Default.Image, contentDescription = "Add Image", tint = if(currentOptionUri != null) Color(0xFF1976D2) else Color.Gray, modifier = Modifier.size(20.dp))
+                                    }
+
+                                    Spacer(modifier = Modifier.width(16.dp))
+
+                                    // Tombol Centang Jawaban Benar
+                                    IconButton(
+                                        onClick = { viewModel.setCorrectAnswer(labelStr) },
+                                        modifier = Modifier.size(36.dp).background(if (isCorrect) Color(0xFF4CAF50) else Color.White, CircleShape)
+                                    ) {
+                                        Icon(Icons.Default.Check, contentDescription = "Correct", tint = if (isCorrect) Color.White else Color.LightGray, modifier = Modifier.size(20.dp))
+                                    }
+                                }
+                                // Preview Gambar Opsi (Di Bawah)
+                                if (currentOptionUri != null) {
+                                    Box(modifier = Modifier.padding(start = 48.dp, bottom = 8.dp)) {
+                                        ImagePreviewWithDelete(
+                                            uri = currentOptionUri,
+                                            onDelete = { viewModel.updateOptionImageUri(labelStr, null) },
+                                            size = 100.dp
                                         )
                                     }
                                 }
-                            }
-                            if (option.label != 'E') {
-                                HorizontalDivider(
-                                    color = Color(0xFFCCCCCC),
-                                    thickness = 0.5.dp
-                                )
+                                if (option.label != 'E') {
+                                    HorizontalDivider(
+                                        color = Color(0xFFCCCCCC),
+                                        thickness = 0.5.dp
+                                    )
+                                }
                             }
                         }
                     }
@@ -400,24 +412,68 @@ fun CreateQuestionScreen(
                         color = Color(0xFF757575)
                     )
                     Spacer(modifier = Modifier.height(4.dp))
-                    OutlinedTextField(
-                        value = uiState.discussion,
-                        onValueChange = { viewModel.updateDiscussionText(it) },
-                        modifier = Modifier
-                            .fillMaxWidth()
-                            .height(120.dp),
-                        placeholder = { Text("Tulis Pembahasan Di Sini", color = Color(0xFF9E9E9E)) },
-                        colors = OutlinedTextFieldDefaults.colors(
-                            focusedContainerColor = Color(0xFFE0E0E0),
-                            unfocusedContainerColor = Color(0xFFE0E0E0),
-                            focusedBorderColor = Color.Transparent,
-                            unfocusedBorderColor = Color.Transparent,
-                            focusedTextColor = Color(0xFF212121),
-                            unfocusedTextColor = Color(0xFF212121),
-                            cursorColor = Color(0xFF212121)
-                        ),
-                        minLines = 4
-                    )
+
+                    val explanationLauncher = rememberLauncherForActivityResult(ActivityResultContracts.GetContent()) { uri ->
+                        uri?.let { viewModel.updateExplanationImageUri(it) }
+                    }
+
+                    Column(
+                        modifier = Modifier.fillMaxWidth()
+                            .background(Color(0xFFE0E0E0), RoundedCornerShape(6.dp))
+                            .padding(1.dp)
+                    ) {
+                        OutlinedTextField(
+                            value = uiState.discussion,
+                            onValueChange = { viewModel.updateDiscussionText(it) },
+                            modifier = Modifier
+                                .fillMaxWidth()
+                                .height(120.dp),
+                            placeholder = { Text("Tulis Pembahasan Di Sini", color = Color(0xFF9E9E9E)) },
+                            colors = OutlinedTextFieldDefaults.colors(
+                                focusedContainerColor = Color(0xFFE0E0E0),
+                                unfocusedContainerColor = Color(0xFFE0E0E0),
+                                focusedBorderColor = Color.Transparent,
+                                unfocusedBorderColor = Color.Transparent,
+                                focusedTextColor = Color(0xFF212121),
+                                unfocusedTextColor = Color(0xFF212121),
+                                cursorColor = Color(0xFF212121)
+                            ),
+                            minLines = 4
+                        )
+
+                        // [BARU] Tombol Add Image Pembahasan
+                        Row(
+                            modifier = Modifier
+                                .fillMaxWidth()
+                                .background(
+                                    Color(0xFFE0E0E0),
+                                    RoundedCornerShape(bottomStart = 6.dp, bottomEnd = 6.dp))
+                                .padding(8.dp),
+                            horizontalArrangement = Arrangement.End
+                        ) {
+                            Surface(
+                                modifier = Modifier.size(32.dp).clickable { explanationLauncher.launch("image/*") },
+                                shape = RoundedCornerShape(4.dp),
+                                color = if (uiState.explanationImageUri != null) Color(0xFFBBDEFB) else Color.White
+                            ) {
+                                Box(contentAlignment = Alignment.Center) {
+                                    Icon(Icons.Default.Add, contentDescription = "Add Image", tint = Color.Gray)
+                                }
+                            }
+                        }
+                    }
+
+                    // [BARU] Preview Gambar Pembahasan
+                    if (uiState.explanationImageUri != null) {
+                        Spacer(modifier = Modifier.height(8.dp))
+                        ImagePreviewWithDelete(
+                            uri = uiState.explanationImageUri,
+                            onDelete = { viewModel.updateExplanationImageUri(null) },
+                            size = 150.dp
+                        )
+                    }
+
+                    Spacer(modifier = Modifier.height(50.dp))
 
                     // Error message
                     uiState.error?.let { error ->
@@ -428,6 +484,7 @@ fun CreateQuestionScreen(
                             fontSize = 12.sp
                         )
                     }
+
                 }
             }
         }
@@ -467,6 +524,50 @@ fun CreateQuestionScreen(
                         TextButton(onClick = { showSuccessDialog = false; onQuestionCreated() }) { Text("Selesai") }
                     }
                 }
+            )
+        }
+    }
+}
+
+@Composable
+fun ImagePreviewWithDelete(
+    uri: Uri?,
+    onDelete: () -> Unit,
+    size: androidx.compose.ui.unit.Dp = 120.dp
+) {
+    if (uri == null) return
+
+    Box(
+        modifier = Modifier.size(size)
+    ) {
+        // 1. Gambar (Layer Belakang)
+        // Diberi padding agar tombol X memiliki ruang dan tidak terpotong layout parent
+        AsyncImage(
+            model = uri,
+            contentDescription = "Preview Image",
+            modifier = Modifier
+                .fillMaxSize()
+                .padding(top = 6.dp, end = 6.dp) // Geser gambar sedikit ke kiri-bawah
+                .clip(RoundedCornerShape(8.dp))
+                .background(Color.White)
+                .border(1.dp, Color(0xFFBDBDBD), RoundedCornerShape(8.dp)),
+            contentScale = ContentScale.Crop
+        )
+
+        // 2. Tombol X (Layer Depan)
+        IconButton(
+            onClick = onDelete,
+            modifier = Modifier
+                .align(Alignment.TopEnd) // Pojok kanan atas
+                .size(20.dp)
+                .background(Color.Red, CircleShape)
+                .zIndex(1f) // Memastikan tombol selalu di lapisan paling atas
+        ) {
+            Icon(
+                imageVector = Icons.Default.Close,
+                contentDescription = "Delete Image",
+                tint = Color.White,
+                modifier = Modifier.size(12.dp)
             )
         }
     }
