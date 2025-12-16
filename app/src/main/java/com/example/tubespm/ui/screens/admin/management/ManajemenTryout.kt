@@ -343,7 +343,7 @@ fun FilterSection(
         FilterChip(
             selected = currentFilter == FilterStatus.ACTIVE,
             onClick = { onFilterSelected(FilterStatus.ACTIVE) },
-            label = { Text("Aktif") },
+            label = { Text("Active") },
             colors = FilterChipDefaults.filterChipColors(
                 selectedContainerColor = Color(0xFF4CAF50).copy(alpha = 0.2f),
                 selectedLabelColor = Color(0xFF2E7D32)
