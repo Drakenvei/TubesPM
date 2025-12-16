@@ -20,11 +20,14 @@ data class CreateLatihanSoalUiState(
     val subtest: String = "",
     val subtestId: String = "",
     val status: String = "inactive",
-    val topics: List<Topic> = emptyList(), // Ini untuk hasil jadi (opsional di UI state create)
+    val topics: List<Topic> = emptyList(),
     val error: String? = null,
     val isSavedSuccess: Boolean = false,
     val createdLatihanId: String? = null,
-    val topicsString: String = ""
+    val topicsString: String = "",
+    // --- TAMBAH STATE UNTUK VALIDASI DUPLIKASI ---
+    val codeDuplicateError: String? = null,
+    val titleDuplicateError: String? = null
 )
 
 class CreateLatihanSoalViewModel @Inject constructor(
@@ -34,7 +37,6 @@ class CreateLatihanSoalViewModel @Inject constructor(
     private val _uiState = MutableStateFlow(CreateLatihanSoalUiState())
     val uiState: StateFlow<CreateLatihanSoalUiState> = _uiState.asStateFlow()
 
-    // Map Nama Subtest -> ID
     private val subtestMap = mapOf(
         "Penalaran Umum" to "pu",
         "Pengetahuan Kuantitatif" to "pk",
@@ -46,26 +48,65 @@ class CreateLatihanSoalViewModel @Inject constructor(
     )
 
     fun updateSubtest(subtestName: String) {
-        // Otomatis cari ID berdasarkan nama
         val id = subtestMap[subtestName] ?: "umum"
         _uiState.update { it.copy(subtest = subtestName, subtestId = id) }
     }
 
     fun updateCode(code: String) {
-        _uiState.update { it.copy(code = code) }
+        _uiState.update { it.copy(code = code, codeDuplicateError = null) } // <--- Reset error
+        // Tambahkan pengecekan duplikasi saat input berubah
+        if (code.isNotBlank()) {
+            checkCodeDuplication(code)
+        }
     }
 
     fun updateTitle(title: String) {
-        _uiState.update { it.copy(title = title) }
+        _uiState.update { it.copy(title = title, titleDuplicateError = null) } // <--- Reset error
+        // Tambahkan pengecekan duplikasi saat input berubah
+        if (title.isNotBlank()) {
+            checkTitleDuplication(title)
+        }
     }
-
-//    fun updateStatus(status: String) {
-//        _uiState.update { it.copy(status = status) }
-//    }
 
     fun updateTopicsString(text: String) {
         _uiState.update { it.copy(topicsString = text) }
     }
+
+    // --- FUNGSI BARU UNTUK CEK DUPLIKASI ---
+
+    private fun checkCodeDuplication(code: String) {
+        viewModelScope.launch {
+            try {
+                if (repository.isLatihanSoalCodeDuplicate(code)) {
+                    _uiState.update {
+                        it.copy(codeDuplicateError = "Kode '$code' sudah ada")
+                    }
+                } else {
+                    _uiState.update { it.copy(codeDuplicateError = null) }
+                }
+            } catch (e: Exception) {
+                // Handle error pengecekan, misal tidak perlu error UI, cukup log
+                println("Error checking code duplication: ${e.message}")
+            }
+        }
+    }
+
+    private fun checkTitleDuplication(title: String) {
+        viewModelScope.launch {
+            try {
+                if (repository.isLatihanSoalTitleDuplicate(title)) {
+                    _uiState.update {
+                        it.copy(titleDuplicateError = "Judul '$title' sudah ada")
+                    }
+                } else {
+                    _uiState.update { it.copy(titleDuplicateError = null) }
+                }
+            } catch (e: Exception) {
+                println("Error checking title duplication: ${e.message}")
+            }
+        }
+    }
+
 
     fun createLatihanSoal(
         onSuccess: (String) -> Unit, // Callback dengan latihanId
@@ -73,7 +114,7 @@ class CreateLatihanSoalViewModel @Inject constructor(
     ) {
         val currentState = _uiState.value
 
-        // Validasi
+        // Validasi Awal
         if (currentState.code.isBlank()) {
             onError("Kode tidak boleh kosong")
             return
@@ -89,10 +130,41 @@ class CreateLatihanSoalViewModel @Inject constructor(
             return
         }
 
+        // Validasi Duplikasi State
+        if (currentState.codeDuplicateError != null) {
+            onError(currentState.codeDuplicateError)
+            return
+        }
+        if (currentState.titleDuplicateError != null) {
+            onError(currentState.titleDuplicateError)
+            return
+        }
+
         _uiState.update { it.copy(isSaving = true, error = null) }
 
         viewModelScope.launch {
             try {
+
+                // DOUBLE CHECK DUPLIKASI SEBELUM SAVE (PENTING!)
+                // Kasus: User mengetik, error muncul, lalu dia cepat-cepat klik save
+                val isCodeDuplicateFinal = repository.isLatihanSoalCodeDuplicate(currentState.code)
+                val isTitleDuplicateFinal = repository.isLatihanSoalTitleDuplicate(currentState.title)
+
+                if (isCodeDuplicateFinal) {
+                    _uiState.update {
+                        it.copy(isSaving = false, codeDuplicateError = "Kode '$${currentState.code}' sudah ada")
+                    }
+                    onError(_uiState.value.codeDuplicateError ?: "Kode sudah ada")
+                    return@launch
+                }
+
+                if (isTitleDuplicateFinal) {
+                    _uiState.update {
+                        it.copy(isSaving = false, titleDuplicateError = "Judul '$${currentState.title}' sudah ada")
+                    }
+                    onError(_uiState.value.titleDuplicateError ?: "Judul sudah ada")
+                    return@launch
+                }
 
                 val topicList = currentState.topicsString.split(",")
                     .map { it.trim() }
@@ -101,18 +173,18 @@ class CreateLatihanSoalViewModel @Inject constructor(
                         Topic(topicId = name.lowercase().replace(" ", "_"), name = name)
                     }
 
-                // Ensure the map exists or use a fallback logic
                 val mappedSubtestId = subtestMap[currentState.subtest] ?: "umum"
 
                 val newLatihan = LatihanSoal(
-                    id = "", // Akan di-generate oleh repository
+                    id = "",
                     code = currentState.code,
                     title = currentState.title,
                     subtest = currentState.subtest,
                     subtestId = mappedSubtestId,
-                    questionCount = 0, // Awal 0, akan di-update setelah soal ditambahkan
+                    questionCount = 0,
                     status = currentState.status,
                     topics = topicList
+                    // codeLower dan titleLower akan diisi di repository
                 )
 
                 val latihanId = repository.createLatihanSoal(newLatihan)
