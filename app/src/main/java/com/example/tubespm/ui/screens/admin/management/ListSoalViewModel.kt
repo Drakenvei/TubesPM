@@ -18,7 +18,8 @@ data class ListSoalUiState(
     val questions: List<QuizQuestion> = emptyList(),
     val error: String? = null,
     val currentSubtestId: String? = null, // SubtestId untuk section yang sedang dilihat
-    val isEditable: Boolean = true
+    val isEditable: Boolean = true,
+    val takenCount: Int = 0
 )
 
 class ListSoalViewModel : ViewModel() {
@@ -32,10 +33,16 @@ class ListSoalViewModel : ViewModel() {
         return try {
             val collection = if (type == "tryout") "tryouts" else "latihan_soal"
             val doc = db.collection(collection).document(parentId).get().await()
+
             val status = doc.getString("status") ?: "inactive"
-            status != "active" // Editable jika TIDAK active
+
+            val takenCount = doc.getLong("takenCount") ?: 0L
+
+            // Editable JIKA: Status Inactive DAN Belum ada yang ambil (takenCount == 0)
+            status != "active" && takenCount == 0L
+
         } catch (e: Exception) {
-            true // Default aman
+            false // Default aman (False) jika error
         }
     }
 
@@ -170,7 +177,12 @@ class ListSoalViewModel : ViewModel() {
                 val parentSubtestId = latihan?.subtestId // e.g., "pu"
                 val status = latihanDoc.getString("status") ?: "inactive"
 
-                val editable = status != "active"
+                // Ambil takenCount, default 0 jika null
+                val takenCount = latihanDoc.getLong("takenCount") ?: 0L
+
+                // Logika Strict Lock:
+                // Hanya boleh edit jika (Status != Active) DAN (TakenCount == 0)
+                val editable = (status != "active") && (takenCount == 0L)
 
                 // 2. Fetch Questions
                 val snapshot = db.collection("latihan_soal")
@@ -206,6 +218,12 @@ class ListSoalViewModel : ViewModel() {
         viewModelScope.launch {
             _uiState.update { it.copy(isLoading = true) }
             try {
+                // Cek lagi apakah benar-benar boleh dihapus sebelum eksekusi
+                val isSafeToDelete = checkIsEditable(parentId, type)
+                if (!isSafeToDelete) {
+                    throw Exception("Akses Ditolak: Soal sedang aktif atau sudah dikerjakan siswa.")
+                }
+
                 val collectionName = if (type == "tryout") "tryouts" else "latihan_soal"
                 val parentRef = db.collection(collectionName).document(parentId)
 

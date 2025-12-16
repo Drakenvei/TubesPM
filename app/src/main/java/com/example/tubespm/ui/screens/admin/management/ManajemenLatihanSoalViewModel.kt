@@ -19,7 +19,8 @@ data class PaketSoal(
     val subtest: String,    // Tambahan: Untuk Tag kategori (misal: Penalaran Umum)
     val totalSoal: Int,     // Tambahan: Jumlah total soal langsung
     val code: String,       // Tambahan: Kode paket (opsional, untuk info tambahan)
-    val isActive: Boolean = true  // Status aktif/nonaktif
+    val isActive: Boolean = true,  // Status aktif/nonaktif
+    val takenCount: Int = 0
 )
 
 data class ManajemenLatihanUiState(
@@ -96,7 +97,8 @@ class ManajemenLatihanSoalViewModel : ViewModel() {
                                     subtest = it.subtest.ifEmpty { "Umum" }, // Ambil subtest
                                     totalSoal = it.questionCount,
                                     code = it.code,
-                                    isActive = it.status == "active"
+                                    isActive = it.status == "active",
+                                    takenCount = it.takenCount
                                 )
                             }
                         } catch (err: Exception) {

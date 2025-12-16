@@ -15,6 +15,8 @@ data class LatihanSoal(
     val questionCount: Int = 0,
     val status: String = "",
 
+    val takenCount: Int = 0,
+
     @ServerTimestamp
     val createdAt: Date? = null,
 

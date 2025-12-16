@@ -35,7 +35,8 @@ data class TryoutPackage(
     val tpsSoal: Int,
     val tpsMenit: Int,
     val literasiSoal: Int,
-    val literasiMenit: Int
+    val literasiMenit: Int,
+    val takenCount: Int,
 )
 
 // ======================================================

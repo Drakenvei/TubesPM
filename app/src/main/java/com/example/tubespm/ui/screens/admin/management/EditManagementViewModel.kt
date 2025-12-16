@@ -170,6 +170,17 @@ class EditManagementViewModel : ViewModel() {
     ) {
         viewModelScope.launch {
             try {
+
+                // 1. Validasi Keamanan: Cek takenCount terlebih dahulu!
+                val tryoutDoc = db.collection("tryouts").document(tryoutId).get().await()
+                val takenCount = tryoutDoc.getLong("takenCount") ?: 0L
+                val status = tryoutDoc.getString("status") ?: "active"
+
+                // Jika status active ATAU sudah ada yang ambil -> TOLAK
+                if (status == "active" || takenCount > 0) {
+                    throw Exception("Akses Ditolak: Tryout sedang aktif atau sudah dikerjakan siswa.")
+                }
+
                 // 1. Hapus Soal-soal Terkait (Batch Delete)
                 // Kita cari dulu semua soal dengan subtestId ini
                 val questionsRef = db.collection("tryouts").document(tryoutId).collection("questions")

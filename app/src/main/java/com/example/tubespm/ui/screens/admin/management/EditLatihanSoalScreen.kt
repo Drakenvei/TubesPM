@@ -1,5 +1,6 @@
 package com.example.tubespm.ui.screens.admin.management
 
+import androidx.compose.foundation.BorderStroke
 import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.rememberScrollState
@@ -8,6 +9,7 @@ import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.ArrowBack
 import androidx.compose.material.icons.filled.DeleteForever
+import androidx.compose.material.icons.filled.Warning
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
@@ -33,7 +35,9 @@ fun EditLatihanSoalScreen(
     val context = LocalContext.current
 
     // [BARU] Logika Kunci: Hanya bisa edit jika inactive
-    val isEditable = uiState.status != "active"
+    val isEditable = uiState.status != "active" && uiState.takenCount == 0
+    // 2. Hapus Paket (Soft Delete): Boleh walau sudah diambil, ASALKAN Inactive
+    val isDeletable = uiState.status != "active"
 
     // State Dropdown
     var expandedSubtest by remember { mutableStateOf(false) }
@@ -84,13 +88,10 @@ fun EditLatihanSoalScreen(
                     }
                 },
                 actions = {
-                    // Hanya tampilkan tombol hapus jika status Inactive (agar aman)
-                    // Atau boleh selalu tampil, tapi best practice harus inactive dulu
-                    val isInactive = uiState.status != "active"
-
+                    // Tombol Hapus di Header
                     IconButton(
                         onClick = {
-                            if (isInactive) {
+                            if (isDeletable) {
                                 showDeleteDialog = true
                             } else {
                                 android.widget.Toast.makeText(context, "Nonaktifkan latihan terlebih dahulu untuk menghapus.", android.widget.Toast.LENGTH_SHORT).show()
@@ -100,7 +101,8 @@ fun EditLatihanSoalScreen(
                         Icon(
                             imageVector = Icons.Default.DeleteForever,
                             contentDescription = "Hapus Latihan",
-                            tint = if (isInactive) Color.White else Color.White.copy(alpha = 0.5f)
+                            // Visual feedback: Redup jika Active
+                            tint = if (isDeletable) Color.White else Color.White.copy(alpha = 0.5f)
                         )
                     }
                 },
@@ -132,6 +134,29 @@ fun EditLatihanSoalScreen(
                         .verticalScroll(rememberScrollState())
                         .padding(horizontal = 16.dp, vertical = 12.dp)
                 ) {
+
+                    // [BANNER PERINGATAN]
+                    if (!isEditable) {
+                        val warningText = when {
+                            uiState.status == "active" -> "Status Aktif: Nonaktifkan latihan ini terlebih dahulu untuk mengedit."
+                            uiState.takenCount > 0 -> "Terkunci: Latihan ini sudah diambil oleh ${uiState.takenCount} siswa. Pengeditan dilarang demi menjaga integritas data."
+                            else -> "Mode Baca."
+                        }
+
+                        Surface(
+                            color = Color(0xFFFFF3E0),
+                            shape = RoundedCornerShape(8.dp),
+                            border = BorderStroke(1.dp, Color(0xFFFFB74D)),
+                            modifier = Modifier.fillMaxWidth().padding(bottom = 16.dp)
+                        ) {
+                            Row(modifier = Modifier.padding(12.dp), verticalAlignment = Alignment.CenterVertically) {
+                                Icon(Icons.Default.Warning, null, tint = Color(0xFFF57C00))
+                                Spacer(modifier = Modifier.width(12.dp))
+                                Text(text = warningText, color = Color(0xFFE65100), fontSize = 12.sp, lineHeight = 16.sp)
+                            }
+                        }
+                    }
+
                     // Kode
                     Text(
                         text = "Kode",
@@ -258,6 +283,8 @@ fun EditLatihanSoalScreen(
                     Spacer(modifier = Modifier.height(16.dp))
 
                     // Status
+                    // Tombol Status (Aktif/Nonaktif) - INI BOLEH TETAP AKTIF
+                    // Admin boleh menonaktifkan paket yang sudah dikerjakan orang (untuk menyembunyikannya)
                     Button(
                         onClick = {
                             // Toggle status di UI State
@@ -319,7 +346,7 @@ fun EditLatihanSoalScreen(
                         modifier = Modifier
                             .fillMaxWidth()
                             .height(48.dp),
-                        enabled = !uiState.isSaving && isEditable,
+                        enabled = !uiState.isSaving && isEditable, // Disabled jika sudah dikerjakan
                         colors = ButtonDefaults.buttonColors(
                             containerColor = Color(0xFF4CAF50),
                             contentColor = Color.White
@@ -394,7 +421,12 @@ fun EditLatihanSoalScreen(
                     Column {
                         Text("Anda yakin ingin menghapus latihan '${uiState.title}'?")
                         Spacer(modifier = Modifier.height(8.dp))
-                        Text("Data akan dipindahkan ke sampah dan hilang dari daftar.", fontSize = 13.sp)
+                        // Pesan khusus jika Soft Delete (ada yang ambil)
+                        if (uiState.takenCount > 0) {
+                            Text("INFO: Latihan ini sudah diambil ${uiState.takenCount} siswa. Data akan dihilangkan dari daftar.", fontSize = 13.sp, color = Color(0xFFE65100))
+                        } else {
+                            Text("Data akan dihapus dan hilang dari daftar.", fontSize = 13.sp)
+                        }
                     }
                 },
                 confirmButton = {

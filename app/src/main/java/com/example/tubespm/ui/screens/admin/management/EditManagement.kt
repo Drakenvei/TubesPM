@@ -1,6 +1,7 @@
 package com.example.tubespm.ui.screens.admin.management
 
 import android.widget.Toast
+import androidx.compose.foundation.BorderStroke
 import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.lazy.LazyColumn
@@ -13,6 +14,7 @@ import androidx.compose.material.icons.filled.DeleteForever
 import androidx.compose.material.icons.filled.List
 import androidx.compose.material.icons.filled.Settings
 import androidx.compose.material.icons.filled.Visibility
+import androidx.compose.material.icons.filled.Warning
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
@@ -97,6 +99,13 @@ private fun EditManagementContent(
 
     var showDeletePackageDialog by remember { mutableStateOf(false) }
 
+    // [LOGIKA STRICT LOCK]
+    // 1. Edit Struktur (Subtest/Soal): Hanya jika Inactive DAN Belum ada yang ambil
+    val isEditable = !paket.isActive && paket.takenCount == 0
+
+    // 2. Hapus Paket (Soft Delete): Boleh walau sudah diambil, ASALKAN Inactive dulu
+    val isDeletable = !paket.isActive
+
     Column(
         modifier = Modifier
             .fillMaxWidth()
@@ -120,10 +129,10 @@ private fun EditManagementContent(
                 modifier = Modifier.weight(1f)
             )
 
-            // Tombol Hapus Paket (Di Header)
+            // Tombol Hapus Paket (SOFT DELETE)
             IconButton(
                 onClick = {
-                    if (paket.isActive) {
+                    if (!isDeletable) {
                         Toast.makeText(context, "Nonaktifkan paket terlebih dahulu untuk menghapus.", Toast.LENGTH_SHORT).show()
                     } else {
                         showDeletePackageDialog = true
@@ -133,12 +142,35 @@ private fun EditManagementContent(
                 Icon(
                     imageVector = Icons.Default.DeleteForever,
                     contentDescription = "Hapus Paket",
-                    tint = if (paket.isActive) Color.LightGray else Color(0xFFD32F2F) // Merah tua
+                    // Enable visual jika Inactive (meskipun takenCount > 0)
+                    tint = if (isDeletable) Color(0xFFD32F2F) else Color.LightGray
                 )
             }
         }
 
         Spacer(modifier = Modifier.height(8.dp))
+
+        // [BARU] Banner Peringatan
+        if (!isEditable) {
+            val warningText = when {
+                paket.isActive -> "Status Aktif: Nonaktifkan tryout ini terlebih dahulu untuk mengedit."
+                paket.takenCount > 0 -> "Terkunci: Sudah diambil ${paket.takenCount} siswa. Edit struktur dilarang demi keamanan data."
+                else -> "Mode Baca."
+            }
+
+            Surface(
+                color = Color(0xFFFFF3E0),
+                shape = RoundedCornerShape(8.dp),
+                border = BorderStroke(1.dp, Color(0xFFFFB74D)),
+                modifier = Modifier.fillMaxWidth().padding(bottom = 12.dp)
+            ) {
+                Row(modifier = Modifier.padding(12.dp), verticalAlignment = Alignment.CenterVertically) {
+                    Icon(Icons.Default.Warning, null, tint = Color(0xFFF57C00))
+                    Spacer(modifier = Modifier.width(8.dp))
+                    Text(text = warningText, color = Color(0xFFE65100), fontSize = 12.sp)
+                }
+            }
+        }
 
         // List section (Dynamic from Firestore)
         if (uiState.isLoading) {
@@ -159,10 +191,11 @@ private fun EditManagementContent(
                 items(uiState.sections) { section ->
                     SectionCard(
                         section = section,
-                        isEditable = !paket.isActive, // [BARU] Kirim status editable
+                        isEditable = isEditable, // <-- Kunci tombol delete/edit subtest
                         onEditClick = { clicked ->
-                            if (paket.isActive) {
-                                Toast.makeText(context, "Nonaktifkan paket terlebih dahulu untuk mengedit.", Toast.LENGTH_SHORT).show()
+                            if (!isEditable) {
+                                val msg = if (paket.isActive) "Nonaktifkan paket dulu." else "Paket sudah dikerjakan siswa, tidak bisa diedit."
+                                Toast.makeText(context, msg, Toast.LENGTH_SHORT).show()
                             } else {
                                 selectedSectionForEdit = clicked
                                 showEditSectionDialog = true
@@ -185,8 +218,9 @@ private fun EditManagementContent(
                             }
                         },
                         onDeleteClick = { clicked ->
-                            if (paket.isActive) {
-                                Toast.makeText(context, "Nonaktifkan paket terlebih dahulu untuk menghapus.", Toast.LENGTH_SHORT).show()
+                            if (!isEditable) {
+                                val msg = if (paket.isActive) "Nonaktifkan paket dulu." else "Paket sudah dikerjakan siswa, tidak bisa dihapus."
+                                Toast.makeText(context, msg, Toast.LENGTH_SHORT).show()
                             } else {
                                 subtestToDelete = clicked
                                 showDeleteDialog = true
@@ -221,15 +255,17 @@ private fun EditManagementContent(
         // Tombol Add More Section
         OutlinedButton(
             onClick = {
-                if (paket.isActive) {
-                    Toast.makeText(context, "Nonaktifkan paket terlebih dahulu untuk menambah subtest.", Toast.LENGTH_SHORT).show()
+                if (!isEditable) {
+                    val msg = if (paket.isActive) "Nonaktifkan paket dulu." else "Paket sudah dikerjakan siswa, tidak bisa tambah subtest."
+                    Toast.makeText(context, msg, Toast.LENGTH_SHORT).show()
                 } else {
                     showAddSectionDialog = true
                 }
             },
+            enabled = isEditable,
             modifier = Modifier.align(Alignment.End),
             colors = ButtonDefaults.outlinedButtonColors(
-                contentColor = if (paket.isActive) Color.LightGray else Color.Gray
+                contentColor = if (isEditable) Color(0xFFE91E63) else Color.LightGray
             )
         ) {
             Text("Tambah Subtest")
@@ -241,17 +277,15 @@ private fun EditManagementContent(
         Button(
             onClick = {
                 if (paket.isActive) {
-                    // Nonaktifkan (Langsung)
                     viewModel.deactivatePackage(paket.id) {
-                        onDeactivatePackage() // Refresh parent
+                        onDeactivatePackage()
                         Toast.makeText(context, "Tryout Dinonaktifkan", Toast.LENGTH_SHORT).show()
                     }
                 } else {
-                    // Aktifkan (Pakai Validasi Target)
                     viewModel.activatePackage(
                         tryoutId = paket.id,
                         onSuccess = {
-                            onDeactivatePackage() // Refresh parent
+                            onDeactivatePackage()
                             Toast.makeText(context, "Tryout Berhasil Diaktifkan", Toast.LENGTH_SHORT).show()
                         },
                         onError = { errorMsg ->
@@ -336,19 +370,23 @@ private fun EditManagementContent(
             confirmButton = {
                 TextButton(
                     onClick = {
-                        viewModel.deleteSubtest(
-                            tryoutId = paket.id,
-                            subtestIdToDelete = subtest.id,
-                            onSuccess = {
-                                Toast.makeText(context, "Subtest berhasil dihapus", Toast.LENGTH_SHORT).show()
-                                showDeleteDialog = false
-                                subtestToDelete = null
-                                viewModel.loadSections(paket.id) // Refresh list
-                            },
-                            onError = { error ->
-                                Toast.makeText(context, error, Toast.LENGTH_SHORT).show()
-                            }
-                        )
+                        // Cek lagi di sini (Double protection)
+                        if (!isEditable) {
+                            Toast.makeText(context, "Akses ditolak: Paket terkunci.", Toast.LENGTH_SHORT).show()
+                            showDeleteDialog = false
+                        } else {
+                            viewModel.deleteSubtest(
+                                tryoutId = paket.id,
+                                subtestIdToDelete = subtest.id,
+                                onSuccess = {
+                                    Toast.makeText(context, "Subtest berhasil dihapus", Toast.LENGTH_SHORT).show()
+                                    showDeleteDialog = false
+                                    subtestToDelete = null
+                                    viewModel.loadSections(paket.id)
+                                },
+                                onError = { error -> Toast.makeText(context, error, Toast.LENGTH_SHORT).show() }
+                            )
+                        }
                     },
                     colors = ButtonDefaults.textButtonColors(contentColor = Color.Red)
                 ) {
@@ -372,7 +410,12 @@ private fun EditManagementContent(
                 Column {
                     Text("Anda akan menghapus '${paket.name}'.")
                     Spacer(modifier = Modifier.height(8.dp))
-                    Text("Data akan dihapus dan hilang dari daftar.", fontSize = 13.sp)
+                    if (paket.takenCount > 0) {
+                        // Pesan khusus untuk Soft Delete
+                        Text("INFO: Paket ini sudah diambil ${paket.takenCount} siswa. Paket akan dihilangkan dari daftar.", fontSize = 13.sp, color = Color(0xFFE65100))
+                    } else {
+                        Text("Data akan dihapus dan hilang dari daftar.", fontSize = 13.sp)
+                    }
                 }
             },
             confirmButton = {

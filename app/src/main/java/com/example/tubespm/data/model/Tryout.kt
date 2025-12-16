@@ -51,6 +51,8 @@ data class Tryout(
     val title: String = "",
     val status: String = "",
 
+    val takenCount: Int = 0,
+
     // --- PERUBAHAN DI SINI: Hapus totalDuration & totalQuestionCount dari sini ---
     // (Field ini tidak lagi diambil dari database)
 //    val totalDuration: Int = 0,

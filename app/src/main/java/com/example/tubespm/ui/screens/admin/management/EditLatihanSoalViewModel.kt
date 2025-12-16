@@ -24,7 +24,8 @@ data class EditLatihanSoalUiState(
     val topicsString: String = "", // Simpan string kisi-kisi
     val status: String = "active",
     val error: String? = null,
-    val isSavedSuccess: Boolean = false
+    val isSavedSuccess: Boolean = false,
+    val takenCount: Int = 0
 )
 
 class EditLatihanSoalViewModel : ViewModel() {
@@ -61,6 +62,7 @@ class EditLatihanSoalViewModel : ViewModel() {
                             subtestId = latihan.subtestId,
                             topicsString = topicsStr,
                             status = latihan.status,
+                            takenCount = latihan.takenCount,
                             error = null
                         )
                     }
@@ -134,6 +136,19 @@ class EditLatihanSoalViewModel : ViewModel() {
     fun saveLatihanSoal(latihanId: String, onSuccess: () -> Unit, onError: (String) -> Unit) {
         val currentState = _uiState.value
 
+        // [VALIDASI STRICT LOCK]
+        // 1. Cek Status Active
+        if (currentState.status == "active") {
+            onError("Gagal: Latihan soal sedang Aktif. Nonaktifkan dulu untuk mengedit.")
+            return
+        }
+
+        // 2. Cek Taken Count (Sudah diambil siswa?)
+        if (currentState.takenCount > 0) {
+            onError("Gagal: Latihan soal sudah diambil oleh siswa. Data terkunci.")
+            return
+        }
+
         if (currentState.code.isBlank()) {
             onError("Kode tidak boleh kosong")
             return
@@ -200,6 +215,16 @@ class EditLatihanSoalViewModel : ViewModel() {
 
     // Fungsi Soft Delete Latihan Soal
     fun deleteLatihanSoal(latihanId: String, onSuccess: () -> Unit, onError: (String) -> Unit) {
+        val currentState = _uiState.value
+
+        // [VALIDASI SOFT DELETE]
+        // Hapus hanya boleh jika status INACTIVE.
+        // TAPI: Boleh menghapus walaupun takenCount > 0 (ini bedanya dengan Edit).
+        if (currentState.status == "active") {
+            onError("Gagal: Nonaktifkan latihan soal terlebih dahulu sebelum menghapus.")
+            return
+        }
+
         _uiState.update { it.copy(isLoading = true) }
         viewModelScope.launch {
             try {
@@ -212,7 +237,7 @@ class EditLatihanSoalViewModel : ViewModel() {
                 onSuccess()
             } catch (e: Exception) {
                 _uiState.update { it.copy(isLoading = false, error = e.message) }
-                onError("Gagal menghapus latihan soal: ${e.message}")
+                onError("Gagal menghapus: ${e.message}")
             }
         }
     }
