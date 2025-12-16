@@ -17,11 +17,14 @@ import kotlinx.coroutines.flow.combine
 import kotlinx.coroutines.flow.update
 import kotlinx.coroutines.launch
 
+enum class FilterStatus { ALL, ACTIVE, INACTIVE }
+
 // State UI khusus untuk screen Admin Manajemen Tryout
 data class ManajemenTryoutUiState(
     val isLoading: Boolean = true,
     val tryoutPackages: List<TryoutPackage> = emptyList(),
-    val error: String? = null
+    val error: String? = null,
+    val filterStatus: FilterStatus = FilterStatus.ALL
 )
 
 class ManajemenTryoutViewModel : ViewModel() {
@@ -34,37 +37,56 @@ class ManajemenTryoutViewModel : ViewModel() {
     private val _searchQuery = MutableStateFlow("")
     val searchQuery: StateFlow<String> = _searchQuery.asStateFlow()
 
+    // StateFlow terpisah untuk Filter
+    private val _filterStatus = MutableStateFlow(FilterStatus.ALL)
+
     init {
         // Menggabungkan data tryout dari Firestore dengan query pencarian
         viewModelScope.launch {
-            observeTryoutData()
-                .combine(_searchQuery) { tryoutPackages, query ->
-                    if (query.isBlank()) {
-                        tryoutPackages
-                    } else {
-                        tryoutPackages.filter {
-                            it.name.contains(query, ignoreCase = true) ||
-                                    it.code.contains(query, ignoreCase = true) // Filter berdasarkan code juga
-                        }
-                    }
+            combine(
+                observeTryoutData(),
+                _searchQuery,
+                _filterStatus
+            ) { packages, query, filter ->
+
+                // 1. Filter Search
+                var result = if (query.isBlank()) packages else packages.filter {
+                    it.name.contains(query, ignoreCase = true) || it.code.contains(query, ignoreCase = true)
                 }
-                .catch { e ->
-                    _uiState.update { it.copy(error = e.message, isLoading = false) }
+
+                // 2. Filter Status
+                result = when (filter) {
+                    FilterStatus.ALL -> result
+                    FilterStatus.ACTIVE -> result.filter { it.isActive }
+                    FilterStatus.INACTIVE -> result.filter { !it.isActive }
                 }
-                .collect { filteredPackages ->
-                    _uiState.update {
-                        it.copy(
-                            tryoutPackages = filteredPackages,
-                            isLoading = false,
-                            error = null
-                        )
-                    }
+
+                // 3. Sorting DEFAULT (Terbaru Paling Atas)
+                result.sortedByDescending { it.createdAt }
+
+            }
+            .catch { e ->
+                _uiState.update { it.copy(error = e.message, isLoading = false) }
+            }
+            .collect { filteredPackages ->
+                _uiState.update {
+                    it.copy(
+                        tryoutPackages = filteredPackages,
+                        isLoading = false,
+                        error = null,
+                        filterStatus = _filterStatus.value
+                    )
                 }
+            }
         }
     }
 
     fun onSearchQueryChanged(query: String) {
         _searchQuery.value = query
+    }
+
+    fun setFilterStatus(status: FilterStatus) {
+        _filterStatus.value = status
     }
 
     private fun observeTryoutData(): Flow<List<TryoutPackage>> = callbackFlow {
@@ -103,7 +125,8 @@ class ManajemenTryoutViewModel : ViewModel() {
                                     tpsMenit = tpsSection?.sectionDuration ?: 0,
                                     literasiSoal = literasiSection?.sectionQuestionCount ?: 0,
                                     literasiMenit = literasiSection?.sectionDuration ?: 0,
-                                    takenCount = it.takenCount
+                                    takenCount = it.takenCount,
+                                    createdAt = it.createdAt
                                 )
                             }
                         } catch (err: Exception) {

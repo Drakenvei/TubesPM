@@ -62,6 +62,16 @@ class AnalisisViewModel @Inject constructor(
                     // Tapi karena struktur map 'subtestScores' mungkin kosong atau custom, kita handle generic
                 }
 
+                val subtestPriority = listOf(
+                    "pu",    // Penalaran Umum
+                    "ppu",   // Pengetahuan & Pemahaman Umum
+                    "pbm",   // Pemahaman Bacaan & Menulis
+                    "pk",    // Pengetahuan Kuantitatif
+                    "lbi",   // Literasi Bhs Indo
+                    "lbing", // Literasi Bhs Inggris
+                    "pm"     // Penalaran Matematika
+                )
+
                 // Mapping data skor
                 val details = activity.subtestScores.map { (id, score) ->
                     SubtestScoreDetail(
@@ -69,6 +79,9 @@ class AnalisisViewModel @Inject constructor(
                         name = subtestNameMap[id] ?: id.uppercase(), // Gunakan ID jika nama tidak ketemu
                         score = score
                     )
+                }.sortedBy { detail ->
+                    val index = subtestPriority.indexOf(detail.id.lowercase())
+                    if (index == -1) Int.MAX_VALUE else index
                 }
 
                 _uiState.update {

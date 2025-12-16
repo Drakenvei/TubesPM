@@ -31,7 +31,9 @@ fun LatihanSoalTabContent(
     onAddClick: () -> Unit,
     onEditClick: (String, String, String, String, Int) -> Unit, // (type, latihanId, questionId, paketName, questionNumber)
     onGoToListSoal: (String, String, String) -> Unit = { _, _, _ -> }, // (type, parentId, paketName)
-    viewModel: ManajemenLatihanSoalViewModel = viewModel()
+    filterStatus: FilterStatus,
+    onFilterChange: (FilterStatus) -> Unit,
+    viewModel: ManajemenLatihanSoalViewModel = viewModel(),
 ) {
     val uiState by viewModel.uiState.collectAsState()
     val searchQuery by viewModel.searchQuery.collectAsState()
@@ -70,7 +72,7 @@ fun LatihanSoalTabContent(
                 onValueChange = { viewModel.onSearchQueryChanged(it) },
                 modifier = Modifier
                     .fillMaxWidth()
-                    .padding(16.dp),
+                    .padding(horizontal = 16.dp, vertical = 8.dp),
                 placeholder = { Text("Cari Latihan Soal...", color = Color.Gray) },
                 leadingIcon = {
                     Icon(Icons.Filled.Search, contentDescription = "Search", tint = Color.Gray)
@@ -83,6 +85,11 @@ fun LatihanSoalTabContent(
                     unfocusedBorderColor = Color.Transparent
                 ),
                 singleLine = true
+            )
+
+            FilterSection(
+                currentFilter = filterStatus,
+                onFilterSelected = onFilterChange
             )
 
             // ===============================

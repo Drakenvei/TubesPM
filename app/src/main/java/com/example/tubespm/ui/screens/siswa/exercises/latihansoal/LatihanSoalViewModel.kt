@@ -96,8 +96,10 @@ class LatihanSoalViewModel @Inject constructor(
                     catalogItems
                 } else {
                     // Jika query ada, filter daftar berdasarkan judul
-                    catalogItems.filter {
-                        it.latihanSoal.title.contains(query, ignoreCase = true)
+                    catalogItems.filter { item ->
+                        val titelMatch = item.latihanSoal.title.contains(query, ignoreCase = true)
+                        val codeMatch = item.latihanSoal.code.contains(query, ignoreCase = true)
+                        titelMatch || codeMatch
                     }
                 }
             }

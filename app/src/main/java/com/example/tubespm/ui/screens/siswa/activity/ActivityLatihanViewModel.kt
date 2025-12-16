@@ -62,9 +62,12 @@ class ActivityLatihanViewModel @Inject constructor(
                     _uiState.update {
                         it.copy(
                             isLoading = false,
-                            notStarted = details.filter { d -> d.userActivity.status == "not_started" },
-                            inProgress = details.filter { d -> d.userActivity.status == "in_progress" },
+                            notStarted = details.filter { d -> d.userActivity.status == "not_started" }
+                                .sortedByDescending { d -> d.userActivity.startedAt },
+                            inProgress = details.filter { d -> d.userActivity.status == "in_progress" }
+                                .sortedByDescending { d -> d.userActivity.startedAt },
                             completed = details.filter { d -> d.userActivity.status == "completed" }
+                                .sortedByDescending { d -> d.userActivity.completedAt }
                         )
                     }
                 }

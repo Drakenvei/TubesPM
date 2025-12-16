@@ -23,7 +23,9 @@ import androidx.compose.ui.unit.sp
 import androidx.lifecycle.viewmodel.compose.viewModel
 import androidx.compose.material3.FabPosition
 import androidx.compose.foundation.layout.WindowInsets
+import androidx.compose.material.icons.filled.Sort
 import com.example.tubespm.ui.theme.TubesPMTheme
+import java.util.Date
 
 // ======================================================
 // DATA MODEL TRYOUT (UI Helper)
@@ -37,7 +39,8 @@ data class TryoutPackage(
     val literasiSoal: Int,
     val literasiMenit: Int,
     val takenCount: Int,
-    val code: String
+    val code: String,
+    val createdAt: Date? = null
 )
 
 // ======================================================
@@ -150,19 +153,25 @@ fun ManajemenTryoutScreen(
                             searchQuery = searchQuery,
                             onSearchQueryChange = { viewModel.onSearchQueryChanged(it) },
                             tryoutPackages = uiState.tryoutPackages,
-                            onClickSettings = { pkg ->
-                                selectedPackageForEdit = pkg
-                                showEditManagementDialog = true
-                            }
+                            filterStatus = uiState.filterStatus,
+                            onFilterChange = { viewModel.setFilterStatus(it) },
+                            onClickSettings = { pkg -> selectedPackageForEdit = pkg; showEditManagementDialog = true }
                         )
                     }
                     1 -> {
+                        val latihanViewModel: ManajemenLatihanSoalViewModel = viewModel()
+                        val latihanUiState by latihanViewModel.uiState.collectAsState()
+
                         LatihanSoalTabContent(
                             contentPadding = PaddingValues(0.dp),
                             onAddClick = onNavigateToCreateLatihan,
                             onEditClick = onGoToEditQuestion,
                             onGoToListSoal = { type, parentId, paketName ->
                                 onGoToEditQuestion(type, parentId, "list_soal", paketName, 0)
+                            },
+                            filterStatus = latihanUiState.filterStatus,
+                            onFilterChange = { status ->
+                                latihanViewModel.setFilterStatus(status)
                             }
                         )
                     }
@@ -202,49 +211,41 @@ fun TryoutTabContent(
     searchQuery: String,
     onSearchQueryChange: (String) -> Unit,
     tryoutPackages: List<TryoutPackage>,
+    filterStatus: FilterStatus,          // Parameter Baru
+    onFilterChange: (FilterStatus) -> Unit, // Parameter Baru
     onClickSettings: (TryoutPackage) -> Unit
 ) {
     Column {
         OutlinedTextField(
             value = searchQuery,
             onValueChange = onSearchQueryChange,
-            modifier = Modifier
-                .fillMaxWidth()
-                .padding(horizontal = 16.dp, vertical = 12.dp),
+            modifier = Modifier.fillMaxWidth().padding(horizontal = 16.dp, vertical = 8.dp),
             placeholder = { Text("Cari Tryout...", color = Color.Gray) },
-            leadingIcon = { Icon(Icons.Default.Search, contentDescription = "Search", tint = Color.Gray) },
+            leadingIcon = { Icon(Icons.Default.Search, "Search", tint = Color.Gray) },
             colors = OutlinedTextFieldDefaults.colors(
-                focusedContainerColor = Color(0xFFE0E0E0),
-                unfocusedContainerColor = Color(0xFFE0E0E0),
-                focusedBorderColor = Color.Transparent,
-                unfocusedBorderColor = Color.Transparent
+                focusedContainerColor = Color(0xFFE0E0E0), unfocusedContainerColor = Color(0xFFE0E0E0),
+                focusedBorderColor = Color.Transparent, unfocusedBorderColor = Color.Transparent
             ),
             shape = RoundedCornerShape(8.dp),
             singleLine = true
         )
 
+        // Tampilkan Filter Section
+        FilterSection(
+            currentFilter = filterStatus,
+            onFilterSelected = onFilterChange
+        )
+
         LazyColumn(
             modifier = Modifier.fillMaxSize(),
-            contentPadding = PaddingValues(
-                start = 16.dp,
-                end = 16.dp,
-                top = 8.dp,
-                bottom = 100.dp
-            ),
+            contentPadding = PaddingValues(start = 16.dp, end = 16.dp, top = 8.dp, bottom = 100.dp),
             verticalArrangement = Arrangement.spacedBy(16.dp)
         ) {
             if (tryoutPackages.isEmpty()) {
-                item {
-                    Box(modifier = Modifier.fillMaxWidth().padding(24.dp), contentAlignment = Alignment.Center) {
-                        Text("Tidak ada paket tryout tersedia.", color = Color.Gray)
-                    }
-                }
+                item { Box(Modifier.fillMaxWidth().padding(24.dp), contentAlignment = Alignment.Center) { Text("Tidak ada paket tryout.", color = Color.Gray) } }
             } else {
                 items(tryoutPackages) { tryoutPackage ->
-                    TryoutPackageCard(
-                        tryoutPackage = tryoutPackage,
-                        onClickSettings = onClickSettings
-                    )
+                    TryoutPackageCard(tryoutPackage = tryoutPackage, onClickSettings = onClickSettings)
                 }
             }
         }
@@ -319,5 +320,43 @@ fun TryoutSection(title: String, soal: Int, menit: Int) {
             Spacer(modifier = Modifier.width(4.dp))
             Text(text = if (menit > 0) "$menit menit" else "- menit", color = Color.White, fontSize = 14.sp)
         }
+    }
+}
+
+@Composable
+fun FilterSection(
+    currentFilter: FilterStatus,
+    onFilterSelected: (FilterStatus) -> Unit
+) {
+    Row(
+        modifier = Modifier
+            .fillMaxWidth()
+            .padding(horizontal = 16.dp, vertical = 4.dp),
+        horizontalArrangement = Arrangement.spacedBy(8.dp),
+        verticalAlignment = Alignment.CenterVertically
+    ) {
+        FilterChip(
+            selected = currentFilter == FilterStatus.ALL,
+            onClick = { onFilterSelected(FilterStatus.ALL) },
+            label = { Text("Semua") }
+        )
+        FilterChip(
+            selected = currentFilter == FilterStatus.ACTIVE,
+            onClick = { onFilterSelected(FilterStatus.ACTIVE) },
+            label = { Text("Aktif") },
+            colors = FilterChipDefaults.filterChipColors(
+                selectedContainerColor = Color(0xFF4CAF50).copy(alpha = 0.2f),
+                selectedLabelColor = Color(0xFF2E7D32)
+            )
+        )
+        FilterChip(
+            selected = currentFilter == FilterStatus.INACTIVE,
+            onClick = { onFilterSelected(FilterStatus.INACTIVE) },
+            label = { Text("Inactive") },
+            colors = FilterChipDefaults.filterChipColors(
+                selectedContainerColor = Color(0xFF9E9E9E).copy(alpha = 0.2f),
+                selectedLabelColor = Color(0xFF616161)
+            )
+        )
     }
 }

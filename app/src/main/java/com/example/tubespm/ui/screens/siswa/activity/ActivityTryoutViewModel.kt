@@ -68,9 +68,12 @@ class ActivityTryoutViewModel @Inject constructor(
                     _uiState.update { state ->
                         state.copy(
                             isLoading = false,
-                            notStarted = details.filter { it.userActivity.status == "not_started" },
-                            inProgress = details.filter { it.userActivity.status == "in_progress" },
+                            notStarted = details.filter { it.userActivity.status == "not_started" }
+                                .sortedByDescending { it.userActivity.startedAt },
+                            inProgress = details.filter { it.userActivity.status == "in_progress" }
+                                .sortedByDescending { it.userActivity.startedAt },
                             completed = details.filter { it.userActivity.status == "completed" }
+                                .sortedByDescending { it.userActivity.completedAt },
                         )
                     }
                 }

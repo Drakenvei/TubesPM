@@ -63,11 +63,37 @@ class PembahasanViewModel @Inject constructor(
                     type = userActivity.type
                 )
 
+                // Tentukan urutan ID subtest sesuai urutan pengerjaan (Flow SNBT)
+                val subtestPriority = listOf(
+                    "pu",    // 1. Penalaran Umum
+                    "ppu",   // 2. Pengetahuan & Pemahaman Umum
+                    "pbm",   // 3. Pemahaman Bacaan & Menulis
+                    "pk",    // 4. Pengetahuan Kuantitatif
+                    "lbi",   // 5. Literasi Bhs Indonesia
+                    "lbing", // 6. Literasi Bhs Inggris
+                    "pm"     // 7. Penalaran Matematika
+                )
+
+                // Lakukan sorting
+                val sortedQuestions = questions.sortedWith(
+                    compareBy(
+                        // Prioritas 1: Berdasarkan urutan list di atas
+                        {
+                            val id = it.subtestId.lowercase()
+                            val index = subtestPriority.indexOf(id)
+                            // Jika subtest tidak ada di list (misal typo), taruh di paling belakang (Int.MAX_VALUE)
+                            if (index == -1) Int.MAX_VALUE else index
+                        },
+                        // Prioritas 2: Berdasarkan Nomor Soal
+                        { it.questionNumber }
+                    )
+                )
+
                 // getSavedAnswers() mengembalikan Flow<Map<...>>, jadi ambil first() dari Flow
                 val userAnswers = repository.getSavedAnswers(activityIdNav).first()
 
                 // Sekarang types cocok: mapData(List<QuizQuestion>, Map<String, String>)
-                val combinedData = mapData(questions, userAnswers)
+                val combinedData = mapData(sortedQuestions, userAnswers)
 
                 _uiState.update {
                     it.copy(isLoading = false, questions = combinedData)
