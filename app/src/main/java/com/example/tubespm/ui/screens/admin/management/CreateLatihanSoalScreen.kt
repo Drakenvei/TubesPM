@@ -127,8 +127,19 @@ fun CreateLatihanSoalScreen(
                         focusedTextColor = Color(0xFF212121),
                         unfocusedTextColor = Color(0xFF212121),
                         cursorColor = Color(0xFF212121)
-                    )
+                    ),
+                    isError = uiState.codeDuplicateError != null // <--- TAMBAH INI
                 )
+
+                // PESAN ERROR DUPLIKASI KODE
+                uiState.codeDuplicateError?.let { error ->
+                    Text(
+                        text = error,
+                        color = Color(0xFFE53935),
+                        fontSize = 12.sp,
+                        modifier = Modifier.padding(start = 16.dp, top = 4.dp)
+                    )
+                }
 
                 Spacer(modifier = Modifier.height(16.dp))
 
@@ -154,8 +165,19 @@ fun CreateLatihanSoalScreen(
                         focusedTextColor = Color(0xFF212121),
                         unfocusedTextColor = Color(0xFF212121),
                         cursorColor = Color(0xFF212121)
-                    )
+                    ),
+                    isError = uiState.titleDuplicateError != null // <--- TAMBAH INI
                 )
+
+                // PESAN ERROR DUPLIKASI JUDUL
+                uiState.titleDuplicateError?.let { error ->
+                    Text(
+                        text = error,
+                        color = Color(0xFFE53935),
+                        fontSize = 12.sp,
+                        modifier = Modifier.padding(start = 16.dp, top = 4.dp)
+                    )
+                }
 
                 Spacer(modifier = Modifier.height(16.dp))
 
@@ -204,23 +226,13 @@ fun CreateLatihanSoalScreen(
                     }
                 }
 
-                // Menampilkan Subtest ID otomatis (Read Only - Optional)
-//                if (uiState.subtestId.isNotEmpty()) {
-//                    Spacer(Modifier.height(4.dp))
-//                    Text(
-//                        text = "Subtest ID: ${uiState.subtestId}",
-//                        fontSize = 12.sp,
-//                        color = Color(0xFFE61C5D)
-//                    )
-//                }
-
                 Spacer(modifier = Modifier.height(16.dp))
 
                 Text("Kisi-kisi (Pisahkan dengan koma)", fontWeight = FontWeight.SemiBold, color = Color.Gray)
                 Spacer(Modifier.height(4.dp))
                 OutlinedTextField(
                     value = uiState.topicsString,
-                    onValueChange = { viewModel.updateTopicsString(it) }, // Buat fungsi ini di VM
+                    onValueChange = { viewModel.updateTopicsString(it) },
                     modifier = Modifier.fillMaxWidth(),
                     placeholder = { Text("Contoh: Persamaan Linear, Fungsi Kuadrat", color = Color(0xFF9E9E9E)) },
                     colors = OutlinedTextFieldDefaults.colors(
@@ -237,55 +249,7 @@ fun CreateLatihanSoalScreen(
 
                 Spacer(modifier = Modifier.height(16.dp))
 
-                // Status
-//                Text(
-//                    text = "Status",
-//                    fontSize = 14.sp,
-//                    fontWeight = FontWeight.SemiBold,
-//                    color = Color(0xFF757575)
-//                )
-//                Spacer(modifier = Modifier.height(4.dp))
-//                var expanded by remember { mutableStateOf(false) }
-//                ExposedDropdownMenuBox(
-//                    expanded = expanded,
-//                    onExpandedChange = { expanded = !expanded }
-//                ) {
-//                    OutlinedTextField(
-//                        value = uiState.status,
-//                        onValueChange = {},
-//                        readOnly = true,
-//                        modifier = Modifier
-//                            .fillMaxWidth()
-//                            .menuAnchor(),
-//                        placeholder = { Text("Pilih Status", color = Color(0xFF9E9E9E)) },
-//                        shape = RoundedCornerShape(6.dp),
-//                        colors = OutlinedTextFieldDefaults.colors(
-//                            focusedContainerColor = Color(0xFFE0E0E0),
-//                            unfocusedContainerColor = Color(0xFFE0E0E0),
-//                            focusedBorderColor = Color.Transparent,
-//                            unfocusedBorderColor = Color.Transparent
-//                        ),
-//                        trailingIcon = { ExposedDropdownMenuDefaults.TrailingIcon(expanded = expanded) }
-//                    )
-//                    ExposedDropdownMenu(
-//                        expanded = expanded,
-//                        onDismissRequest = { expanded = false }
-//                    ) {
-//                        listOf("active", "inactive").forEach { status ->
-//                            DropdownMenuItem(
-//                                text = { Text(status) },
-//                                onClick = {
-//                                    viewModel.updateStatus(status)
-//                                    expanded = false
-//                                }
-//                            )
-//                        }
-//                    }
-//                }
-
-//                Spacer(modifier = Modifier.height(24.dp))
-
-                // Error message
+                // Error message (General Save Error)
                 uiState.error?.let { error ->
                     Text(
                         text = error,
@@ -318,7 +282,8 @@ fun CreateLatihanSoalScreen(
                     modifier = Modifier
                         .fillMaxWidth()
                         .height(48.dp),
-                    enabled = !uiState.isSaving,
+                    // DISABLE TOMBOL JIKA ADA ERROR DUPLIKASI ATAU SEDANG MENYIMPAN
+                    enabled = !uiState.isSaving && uiState.codeDuplicateError == null && uiState.titleDuplicateError == null, // <--- TAMBAH INI
                     colors = ButtonDefaults.buttonColors(
                         containerColor = Color(0xFF4CAF50),
                         contentColor = Color.White

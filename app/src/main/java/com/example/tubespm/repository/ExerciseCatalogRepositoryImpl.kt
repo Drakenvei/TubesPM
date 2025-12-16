@@ -15,8 +15,9 @@ class ExerciseCatalogRepositoryImpl @Inject constructor(
     private val db: FirebaseFirestore
 ) : ExerciseCatalogRepository {
 
-    // Nama koleksi Tryout
+    // Nama koleksi
     private val tryoutsCollection = db.collection("tryouts")
+    private val latihanSoalCollection = db.collection("latihan_soal") // <--- TAMBAH INI
 
     override fun getTryouts(): Flow<List<Tryout>> {
         // Ambil dari koleksi 'tryouts'
@@ -33,7 +34,7 @@ class ExerciseCatalogRepositoryImpl @Inject constructor(
 
     override fun getLatihanSoal(): Flow<List<LatihanSoal>> {
         // Implementasi serupa untuk latihan soal
-        return db.collection("latihan_soal")
+        return latihanSoalCollection // <--- Ganti dengan variabel koleksi
             .whereEqualTo("status", "active")
             .orderBy("createdAt", Query.Direction.DESCENDING)
             .snapshots()
@@ -71,8 +72,13 @@ class ExerciseCatalogRepositoryImpl @Inject constructor(
     }
 
     override suspend fun createLatihanSoal(latihan: LatihanSoal): String {
-        val docRef = db.collection("latihan_soal").document()
-        val latihanWithId = latihan.copy(id = docRef.id)
+        val docRef = latihanSoalCollection.document() // <--- Ganti dengan variabel koleksi
+        // SAAT MEMBUAT, KITA PASTIKAN FIELD LOWERCASE TERISI
+        val latihanWithId = latihan.copy(
+            id = docRef.id,
+            codeLower = latihan.code.trim().lowercase(), // <--- TAMBAH INI
+            titleLower = latihan.title.trim().lowercase() // <--- TAMBAH INI
+        )
         docRef.set(latihanWithId).await()
         return docRef.id
     }
@@ -108,7 +114,7 @@ class ExerciseCatalogRepositoryImpl @Inject constructor(
 
             !snapshot.isEmpty
         } catch (e: Exception) {
-            println("Error checking code duplication: ${e.message}")
+            println("Error checking tryout code duplication: ${e.message}")
             false
         }
     }
@@ -128,7 +134,47 @@ class ExerciseCatalogRepositoryImpl @Inject constructor(
 
             !snapshot.isEmpty
         } catch (e: Exception) {
-            println("Error checking title duplication: ${e.message}")
+            println("Error checking tryout title duplication: ${e.message}")
+            false
+        }
+    }
+
+    // --- IMPLEMENTASI FUNGSI BARU UNTUK LATIHAN SOAL ---
+
+    /**
+     * Memeriksa apakah Latihan Soal dengan kode tertentu sudah ada di database.
+     */
+    override suspend fun isLatihanSoalCodeDuplicate(code: String): Boolean {
+        return try {
+            val lowerCaseCode = code.trim().lowercase()
+            val snapshot = latihanSoalCollection // <--- PENTING: Gunakan koleksi Latihan Soal
+                .whereEqualTo("codeLower", lowerCaseCode)
+                .limit(1)
+                .get()
+                .await()
+
+            !snapshot.isEmpty
+        } catch (e: Exception) {
+            println("Error checking latihan soal code duplication: ${e.message}")
+            false
+        }
+    }
+
+    /**
+     * Memeriksa apakah Latihan Soal dengan judul tertentu sudah ada di database.
+     */
+    override suspend fun isLatihanSoalTitleDuplicate(title: String): Boolean {
+        return try {
+            val lowerCaseTitle = title.trim().lowercase()
+            val snapshot = latihanSoalCollection // <--- PENTING: Gunakan koleksi Latihan Soal
+                .whereEqualTo("titleLower", lowerCaseTitle)
+                .limit(1)
+                .get()
+                .await()
+
+            !snapshot.isEmpty
+        } catch (e: Exception) {
+            println("Error checking latihan soal title duplication: ${e.message}")
             false
         }
     }
