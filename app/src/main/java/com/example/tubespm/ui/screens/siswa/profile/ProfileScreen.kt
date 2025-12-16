@@ -228,12 +228,6 @@ fun ProfileScreen(
                             horizontalArrangement = Arrangement.Center,
                             verticalAlignment = Alignment.CenterVertically
                         ) {
-                            Icon(
-                                painter = painterResource(id = R.drawable.user_default_profile),
-                                contentDescription = null,
-                                tint = Color(0xFFE91E63),
-                                modifier = Modifier.size(18.dp)
-                            )
                             Spacer(modifier = Modifier.width(6.dp))
                             Text(
                                 text = uiState.school,

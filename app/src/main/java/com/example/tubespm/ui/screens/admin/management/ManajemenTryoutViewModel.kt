@@ -35,36 +35,27 @@ class ManajemenTryoutViewModel : ViewModel() {
     val searchQuery: StateFlow<String> = _searchQuery.asStateFlow()
 
     init {
-        observeTryoutData()
-    }
-
-    fun onSearchQueryChanged(query: String) {
-        _searchQuery.value = query
-    }
-
-    private fun observeTryoutData() {
+        // Menggabungkan data tryout dari Firestore dengan query pencarian
         viewModelScope.launch {
-            // A. Ambil data Realtime dari Firestore sebagai Flow
-            val firestoreFlow = getTryoutsFromFirestore()
-
-            // B. Gabungkan (Combine) data Firestore dengan Query Pencarian
-            combine(firestoreFlow, _searchQuery) { packages, query ->
-                if (query.isBlank()) {
-                    packages
-                } else {
-                    packages.filter {
-                        it.name.contains(query, ignoreCase = true)
+            observeTryoutData()
+                .combine(_searchQuery) { tryoutPackages, query ->
+                    if (query.isBlank()) {
+                        tryoutPackages
+                    } else {
+                        tryoutPackages.filter {
+                            it.name.contains(query, ignoreCase = true) ||
+                                    it.code.contains(query, ignoreCase = true) // Filter berdasarkan code juga
+                        }
                     }
                 }
-            }
                 .catch { e ->
-                    _uiState.update { it.copy(isLoading = false, error = e.message) }
+                    _uiState.update { it.copy(error = e.message, isLoading = false) }
                 }
                 .collect { filteredPackages ->
                     _uiState.update {
                         it.copy(
-                            isLoading = false,
                             tryoutPackages = filteredPackages,
+                            isLoading = false,
                             error = null
                         )
                     }
@@ -72,16 +63,13 @@ class ManajemenTryoutViewModel : ViewModel() {
         }
     }
 
-    /**
-     * Mengambil data dari Firestore dan mengubahnya menjadi Flow List<TryoutPackage>.
-     * Termasuk logika try-catch untuk menangani data "sampah" (tipe data salah).
-     */
-    private fun getTryoutsFromFirestore(): Flow<List<TryoutPackage>> = callbackFlow {
+    fun onSearchQueryChanged(query: String) {
+        _searchQuery.value = query
+    }
+
+    private fun observeTryoutData(): Flow<List<TryoutPackage>> = callbackFlow {
         val db = Firebase.firestore
         val listener = db.collection("tryouts")
-            // [QUERY FILTER] Hanya ambil yang statusnya BUKAN 'deleted'
-            // Kita bisa menggunakan whereIn atau whereNotEqualTo (jika field pasti ada)
-            // Cara paling aman & kompatibel dengan data lama (field null): Ambil semua, filter di client
             .addSnapshotListener { snapshot, e ->
                 if (e != null) {
                     close(e) // Jika error koneksi, tutup flow dengan error
@@ -91,14 +79,14 @@ class ManajemenTryoutViewModel : ViewModel() {
                 if (snapshot != null) {
                     val results = snapshot.documents.mapNotNull { doc ->
                         try {
-                            // Coba convert, handle error jika tipe data 'id' salah
                             val tryout = doc.toObject(Tryout::class.java)
 
-                            // Skip jika status == "deleted"
+                            // Skip jika status == "deleted" (Soft Delete)
                             if (tryout?.status == "deleted") return@mapNotNull null
 
                             tryout?.let {
                                 // Logic Mapping: Tryout (Domain) -> TryoutPackage (UI)
+                                // Asumsi: Tryout.kt memiliki properti 'sections'
                                 val tpsSection = it.sections.find { sec ->
                                     sec.sectionId.contains("TPS", ignoreCase = true) || sec.sectionName.contains("TPS", ignoreCase = true)
                                 }
@@ -108,6 +96,7 @@ class ManajemenTryoutViewModel : ViewModel() {
 
                                 TryoutPackage(
                                     id = it.id,
+                                    code = it.code, // <-- PERBAIKAN: Parameter 'code' ditambahkan di sini
                                     name = it.title.ifEmpty { "Tanpa Judul (${it.code})" },
                                     isActive = it.status == "active",
                                     tpsSoal = tpsSection?.sectionQuestionCount ?: 0,

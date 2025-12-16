@@ -14,17 +14,19 @@ import javax.inject.Inject
 class ExerciseCatalogRepositoryImpl @Inject constructor(
     private val db: FirebaseFirestore
 ) : ExerciseCatalogRepository {
+
+    // Nama koleksi Tryout
+    private val tryoutsCollection = db.collection("tryouts")
+
     override fun getTryouts(): Flow<List<Tryout>> {
         // Ambil dari koleksi 'tryouts'
         // Filter hanya yang statusnya 'active'
-        return db.collection("tryouts")
+        return tryoutsCollection
             .whereEqualTo("status", "active")
             .orderBy("createdAt", Query.Direction.DESCENDING)
             .snapshots() // Ambil data secara real-time
             .map { snapshot ->
                 // Konversi dokumen Firestore ke List<Tryout>
-                // Ini berfungsi karena data class Tryout.kt
-                // sekarang cocok dengan struktur database
                 snapshot.toObjects(Tryout::class.java)
             }
     }
@@ -76,9 +78,58 @@ class ExerciseCatalogRepositoryImpl @Inject constructor(
     }
 
     override suspend fun createTryout(tryout: Tryout): String {
-        val docRef = db.collection("tryouts").document()
-        val tryoutWithId = tryout.copy(id = docRef.id)
+        val docRef = tryoutsCollection.document()
+        // Saat membuat, kita pastikan field lowercase terisi
+        val tryoutWithId = tryout.copy(
+            id = docRef.id,
+            codeLower = tryout.code.trim().lowercase(), // Simpan versi lowercase
+            titleLower = tryout.title.trim().lowercase() // Simpan versi lowercase
+        )
         docRef.set(tryoutWithId).await()
         return docRef.id
+    }
+
+    // =========================================================
+    // IMPLEMENTASI FUNGSI BARU UNTUK VALIDASI DUPLIKASI
+    // =========================================================
+
+    /**
+     * Memeriksa apakah Tryout dengan kode tertentu sudah ada di database.
+     * Pengecekan dilakukan secara case-insensitive menggunakan field 'codeLower'.
+     */
+    override suspend fun isTryoutCodeDuplicate(code: String): Boolean {
+        return try {
+            val lowerCaseCode = code.trim().lowercase() // Konversi input ke lowercase
+            val snapshot = tryoutsCollection
+                .whereEqualTo("codeLower", lowerCaseCode) // Query ke field lowercase
+                .limit(1)
+                .get()
+                .await()
+
+            !snapshot.isEmpty
+        } catch (e: Exception) {
+            println("Error checking code duplication: ${e.message}")
+            false
+        }
+    }
+
+    /**
+     * Memeriksa apakah Tryout dengan judul tertentu sudah ada di database.
+     * Pengecekan dilakukan secara case-insensitive menggunakan field 'titleLower'.
+     */
+    override suspend fun isTryoutTitleDuplicate(title: String): Boolean {
+        return try {
+            val lowerCaseTitle = title.trim().lowercase() // Konversi input ke lowercase
+            val snapshot = tryoutsCollection
+                .whereEqualTo("titleLower", lowerCaseTitle) // Query ke field lowercase
+                .limit(1)
+                .get()
+                .await()
+
+            !snapshot.isEmpty
+        } catch (e: Exception) {
+            println("Error checking title duplication: ${e.message}")
+            false
+        }
     }
 }

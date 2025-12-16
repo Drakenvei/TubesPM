@@ -21,4 +21,17 @@ interface ExerciseCatalogRepository {
     suspend fun createLatihanSoal(latihan: LatihanSoal): String
 
     suspend fun createTryout(tryout: Tryout): String
+
+    // --- FUNGSI BARU UNTUK VALIDASI DUPLIKASI ---
+    /**
+     * Memeriksa apakah Tryout dengan kode tertentu sudah ada di database.
+     */
+    suspend fun isTryoutCodeDuplicate(code: String): Boolean
+
+    /**
+     * Memeriksa apakah Tryout dengan judul tertentu sudah ada di database.
+     */
+    suspend fun isTryoutTitleDuplicate(title: String): Boolean
+
+
 }

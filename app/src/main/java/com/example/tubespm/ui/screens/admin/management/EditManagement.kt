@@ -150,6 +150,28 @@ private fun EditManagementContent(
 
         Spacer(modifier = Modifier.height(8.dp))
 
+        // START OF NEW CODE: Menampilkan Code Paket
+        Row(
+            modifier = Modifier.fillMaxWidth(),
+            verticalAlignment = Alignment.CenterVertically
+        ) {
+            Text(
+                text = "Code:",
+                fontSize = 14.sp,
+                color = Color(0xFF616161),
+                fontWeight = FontWeight.Medium,
+                modifier = Modifier.width(90.dp)
+            )
+            Text(
+                text = paket.code, // Asumsi properti 'code' ada di TryoutPackage
+                fontSize = 14.sp,
+                color = Color(0xFF333333),
+                fontWeight = FontWeight.Bold
+            )
+        }
+        Spacer(modifier = Modifier.height(8.dp))
+        // END OF NEW CODE
+
         // [BARU] Banner Peringatan
         if (!isEditable) {
             val warningText = when {
