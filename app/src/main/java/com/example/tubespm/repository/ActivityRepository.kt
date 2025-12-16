@@ -23,6 +23,13 @@ interface ActivityRepository {
 //
     fun getGlobalRecentActivities(limit: Long = 100): Flow<List<UserActivity>>
 
+    // [BARU] Tambahkan ini agar ViewModel bisa mengambil detail Tryout
+    // meskipun statusnya inactive/deleted (untuk ditampilkan di riwayat siswa)
+    suspend fun getTryoutById(tryoutId: String): Tryout?
+
+    // [BARU] Tambahkan ini untuk Latihan Soal
+    suspend fun getLatihanSoalById(latihanId: String): LatihanSoal?
+
     /**
      * Menambahkan tryout baru ke koleksi user_activities.
      * Ini adalah fungsi "Ambil Tryout".

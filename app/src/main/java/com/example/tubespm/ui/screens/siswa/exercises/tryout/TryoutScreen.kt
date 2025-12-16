@@ -11,6 +11,7 @@ import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Close
 import androidx.compose.material.icons.filled.Description
+import androidx.compose.material.icons.filled.People
 import androidx.compose.material.icons.filled.Search
 import androidx.compose.material.icons.filled.Timer
 import androidx.compose.material.icons.outlined.FilterList
@@ -213,14 +214,42 @@ fun TryoutCard(tryout: Tryout, onClick: () -> Unit) {
         Column (
             modifier = Modifier.padding(16.dp)
         ) {
-            Text(
-                text = tryout.title,
-                style = MaterialTheme.typography.titleMedium.copy(color = Color.White),
-                fontWeight = FontWeight.Bold,
-            )
+            Row(
+                modifier = Modifier.fillMaxWidth(),
+                horizontalArrangement = Arrangement.SpaceBetween,
+                verticalAlignment = Alignment.Top
+            ) {
+                Text(
+                    text = tryout.title,
+                    style = MaterialTheme.typography.titleMedium.copy(color = Color.White),
+                    fontWeight = FontWeight.Bold,
+                    modifier = Modifier.weight(1f)
+                )
+
+                // [BARU] Info Pengambil
+                Surface(
+                    color = Color.White.copy(alpha = 0.2f),
+                    shape = RoundedCornerShape(12.dp)
+                ) {
+                    Row(
+                        modifier = Modifier.padding(horizontal = 8.dp, vertical = 4.dp),
+                        verticalAlignment = Alignment.CenterVertically
+                    ) {
+                        Icon(Icons.Default.People, contentDescription = null, tint = Color.White, modifier = Modifier.size(14.dp))
+                        Spacer(modifier = Modifier.width(4.dp))
+                        Text(
+                            text = "${tryout.takenCount}", // Menampilkan jumlah pengambil
+                            color = Color.White,
+                            fontSize = 12.sp,
+                            fontWeight = FontWeight.Bold
+                        )
+                    }
+                }
+            }
+
             Spacer(Modifier.height(8.dp))
 
-            Column (verticalArrangement = Arrangement.spacedBy(8.dp)) {
+            Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
                 tryout.sections.forEach { section ->
                     TryoutSectionRow(section = section)
                 }
@@ -338,6 +367,8 @@ fun TryoutDetailDialog(
                 Text("Kode Paket: ${tryout.code}", style = MaterialTheme.typography.bodyMedium)
                 Text("Jumlah Soal: ${tryout.totalQuestionCount}", style = MaterialTheme.typography.bodyMedium)
                 Text("Durasi: ${tryout.totalDuration} menit", style = MaterialTheme.typography.bodyMedium)
+                // [BARU] Info detail di dialog
+                Text("Diambil oleh: ${tryout.takenCount} siswa", style = MaterialTheme.typography.bodyMedium)
 
                 Divider(Modifier.padding(vertical = 12.dp))
 

@@ -71,6 +71,27 @@ class ActivityRepositoryImpl @Inject constructor(
             }
     }
 
+    // [BARU] Ambil Detail Tryout TANPA Filter Status
+    // Ini digunakan oleh Activity Siswa agar tetap bisa melihat soal inactive/deleted
+    override suspend fun getTryoutById(tryoutId: String): Tryout? {
+        return try {
+            val snapshot = db.collection("tryouts").document(tryoutId).get().await()
+            snapshot.toObject(Tryout::class.java)
+        } catch (e: Exception) {
+            null
+        }
+    }
+
+    // [BARU] Ambil Detail Latihan TANPA Filter Status
+    override suspend fun getLatihanSoalById(latihanId: String): LatihanSoal? {
+        return try {
+            val snapshot = db.collection("latihan_soal").document(latihanId).get().await()
+            snapshot.toObject(LatihanSoal::class.java)
+        } catch (e: Exception) {
+            null
+        }
+    }
+
     override suspend fun addTryoutActivity(tryout: Tryout) {
         val uid = currentUserId ?: return // Jangan lakukan apa-apa jika user tidak login
 
