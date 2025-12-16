@@ -120,7 +120,7 @@ class CreateTryoutViewModel @Inject constructor(
                     code = currentState.code, // Simpan code asli (case-sensitive)
                     title = currentState.title, // Simpan title asli (case-sensitive)
                     // Status awal Tryout baru harus 'draft'
-                    status = "draft",
+                    status = currentState.status,
                     sections = emptyList() // Awal kosong
                 )
                 // Note: codeLowercase dan titleLowercase akan diisi di layer Repository (createTryout)
