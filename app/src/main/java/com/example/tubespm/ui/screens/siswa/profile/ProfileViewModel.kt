@@ -13,7 +13,7 @@ import javax.inject.Inject
 
 @HiltViewModel
 class ProfileViewModel @Inject constructor(
-    private val repository: UserRepository // Inject Repository
+    private val repository: UserRepository
 ) : ViewModel() {
     private val _uiState = MutableStateFlow(ProfileUiState())
     val uiState = _uiState.asStateFlow()
@@ -28,7 +28,7 @@ class ProfileViewModel @Inject constructor(
 
             repository.getMyProfile()
                 .catch { e ->
-                    _uiState.update { it.copy(isLoading = false, error = e.localizedMessage) }
+                    _uiState.update { it.copy(isLoading = false, error = e.localizedMessage ?: "Unknown error") }
                 }
                 .collect { userModel ->
                     _uiState.update {
@@ -40,9 +40,10 @@ class ProfileViewModel @Inject constructor(
                             tryoutCount = userModel.tryoutCompleted,
                             latihanCount = userModel.latihanCompleted,
 
-                            // ✅ PERBAIKAN DI SINI:
-                            // Ubah userModel.profileImageUrl -> userModel.profilePicture
-                            profileImageUrl = userModel.profilePicture
+                            profileImageUrl = userModel.profilePicture,
+
+                            // ✅ PERBAIKAN: Mapping nilai yang dihitung dari Repository
+                            totalPaketDiambil = userModel.totalPaketTaken
                         )
                     }
                 }

@@ -9,11 +9,13 @@ data class UserModel(
     val school: String = "",
     val role: String = "",
 
-    // ✅ UBAH DARI 'profileImageUrl' MENJADI 'profilePicture'
     val profilePicture: String = "",
 
     val tryoutCompleted: Int = 0,
     val latihanCompleted: Int = 0,
+
+    // ✅ PERBAIKAN: Properti baru untuk Total Paket yang Pernah Diambil
+    val totalPaketTaken: Int = 0
 )
 
 fun DocumentSnapshot.toUserModel(uid: String): UserModel{
@@ -24,11 +26,14 @@ fun DocumentSnapshot.toUserModel(uid: String): UserModel{
         school = getString("school") ?: "",
         role = getString("role") ?: "siswa",
 
-        // ✅ PASTIKAN KEY NYA "profile_picture" (Sesuai Firestore)
-        // DAN VARIABELNYA 'profilePicture'
+        // Sesuai dengan nama field di Firestore: 'profile_picture'
         profilePicture = getString("profile_picture") ?: "",
 
+        // Mengambil data Selesai dari Firestore /users/{uid}
         tryoutCompleted = getLong("tryoutCompleted")?.toInt() ?: 0,
         latihanCompleted = getLong("latihanCompleted")?.toInt() ?: 0,
+
+        // Dibiarkan 0, karena nilai ini akan ditimpa/ditambahkan di Repository Impl
+        totalPaketTaken = 0
     )
 }

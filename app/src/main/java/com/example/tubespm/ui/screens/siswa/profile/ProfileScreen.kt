@@ -5,7 +5,6 @@ import android.util.Base64
 import androidx.compose.foundation.Image
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border
-import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.shape.CircleShape
@@ -94,17 +93,12 @@ fun ProfileScreen(
                             fontWeight = FontWeight.Bold
                         )
 
-                        Row(
-                            horizontalArrangement = Arrangement.spacedBy(16.dp)
-                        ) {
+                        Row(horizontalArrangement = Arrangement.spacedBy(16.dp)) {
                             IconButton(
                                 onClick = onEditClick,
                                 modifier = Modifier
                                     .size(40.dp)
-                                    .background(
-                                        Color.White.copy(alpha = 0.2f),
-                                        CircleShape
-                                    )
+                                    .background(Color.White.copy(alpha = 0.2f), CircleShape)
                             ) {
                                 Icon(
                                     imageVector = Icons.Default.Edit,
@@ -118,10 +112,7 @@ fun ProfileScreen(
                                 onClick = onSettingsClick,
                                 modifier = Modifier
                                     .size(40.dp)
-                                    .background(
-                                        Color.White.copy(alpha = 0.2f),
-                                        CircleShape
-                                    )
+                                    .background(Color.White.copy(alpha = 0.2f), CircleShape)
                             ) {
                                 Icon(
                                     imageVector = Icons.Default.Settings,
@@ -158,9 +149,7 @@ fun ProfileScreen(
                                     } catch (e: Exception) {
                                         null
                                     }
-                                } else {
-                                    null
-                                }
+                                } else null
                             }
 
                             if (decodedBitmap != null) {
@@ -190,16 +179,14 @@ fun ProfileScreen(
                     }
                 }
 
-                // User Info Card (Floating) - Nama, Email, Sekolah
+                // User Info Card (Floating)
                 Card(
                     modifier = Modifier
                         .align(Alignment.BottomCenter)
                         .padding(horizontal = 32.dp)
                         .fillMaxWidth(),
                     shape = RoundedCornerShape(16.dp),
-                    colors = CardDefaults.cardColors(
-                        containerColor = Color.White
-                    ),
+                    colors = CardDefaults.cardColors(containerColor = Color.White),
                     elevation = CardDefaults.cardElevation(defaultElevation = 4.dp)
                 ) {
                     Column(
@@ -253,14 +240,13 @@ fun ProfileScreen(
                         CircularProgressIndicator(color = Color(0xFFE91E63))
                     }
                 }
+
                 uiState.error != null -> {
                     Card(
                         modifier = Modifier
                             .fillMaxWidth()
                             .padding(24.dp),
-                        colors = CardDefaults.cardColors(
-                            containerColor = Color(0xFFFFEBEE)
-                        ),
+                        colors = CardDefaults.cardColors(containerColor = Color(0xFFFFEBEE)),
                         shape = RoundedCornerShape(12.dp)
                     ) {
                         Text(
@@ -271,6 +257,7 @@ fun ProfileScreen(
                         )
                     }
                 }
+
                 else -> {
                     Column(
                         modifier = Modifier
@@ -278,7 +265,6 @@ fun ProfileScreen(
                             .padding(24.dp),
                         verticalArrangement = Arrangement.spacedBy(16.dp)
                     ) {
-                        // Section Title
                         Text(
                             text = "Statistik Aktivitas",
                             fontSize = 18.sp,
@@ -287,7 +273,6 @@ fun ProfileScreen(
                             modifier = Modifier.padding(bottom = 4.dp)
                         )
 
-                        // Statistics Cards
                         Row(
                             modifier = Modifier.fillMaxWidth(),
                             horizontalArrangement = Arrangement.spacedBy(12.dp)
@@ -297,10 +282,7 @@ fun ProfileScreen(
                                 label = "Paket Tryout",
                                 subtitle = "Dikerjakan",
                                 icon = Icons.Outlined.Assignment,
-                                gradientColors = listOf(
-                                    Color(0xFFE91E63),
-                                    Color(0xFFEC407A)
-                                ),
+                                gradientColors = listOf(Color(0xFFE91E63), Color(0xFFEC407A)),
                                 modifier = Modifier.weight(1f)
                             )
 
@@ -309,23 +291,17 @@ fun ProfileScreen(
                                 label = "Soal Latihan",
                                 subtitle = "Dikerjakan",
                                 icon = Icons.Outlined.Quiz,
-                                gradientColors = listOf(
-                                    Color(0xFFFF9800),
-                                    Color(0xFFFFB74D)
-                                ),
+                                gradientColors = listOf(Color(0xFFFF9800), Color(0xFFFFB74D)),
                                 modifier = Modifier.weight(1f)
                             )
                         }
 
-                        // Achievement Section (Optional)
                         Spacer(modifier = Modifier.height(8.dp))
 
                         Card(
                             modifier = Modifier.fillMaxWidth(),
                             shape = RoundedCornerShape(16.dp),
-                            colors = CardDefaults.cardColors(
-                                containerColor = Color.White
-                            ),
+                            colors = CardDefaults.cardColors(containerColor = Color.White),
                             elevation = CardDefaults.cardElevation(defaultElevation = 2.dp)
                         ) {
                             Column(
@@ -342,16 +318,17 @@ fun ProfileScreen(
 
                                 Spacer(modifier = Modifier.height(16.dp))
 
+                                // ✅ PERUBAHAN LABEL: Total Paket Diambil -> Total Tryout Diambil
                                 ProgressItem(
-                                    label = "Total Paket",
-                                    value = uiState.tryoutCount,
+                                    label = "Total Tryout Diambil",
+                                    value = uiState.totalPaketDiambil,
                                     color = Color(0xFFE91E63)
                                 )
 
                                 Spacer(modifier = Modifier.height(12.dp))
 
                                 ProgressItem(
-                                    label = "Total Latihan",
+                                    label = "Total Latihan Diambil",
                                     value = uiState.latihanCount,
                                     color = Color(0xFFFF9800)
                                 )
@@ -383,11 +360,7 @@ fun ModernStatCard(
         Box(
             modifier = Modifier
                 .fillMaxSize()
-                .background(
-                    brush = Brush.verticalGradient(
-                        colors = gradientColors
-                    )
-                )
+                .background(brush = Brush.verticalGradient(colors = gradientColors))
         ) {
             Column(
                 modifier = Modifier
@@ -395,14 +368,10 @@ fun ModernStatCard(
                     .padding(16.dp),
                 verticalArrangement = Arrangement.SpaceBetween
             ) {
-                // Icon
                 Box(
                     modifier = Modifier
                         .size(40.dp)
-                        .background(
-                            Color.White.copy(alpha = 0.3f),
-                            CircleShape
-                        ),
+                        .background(Color.White.copy(alpha = 0.3f), CircleShape),
                     contentAlignment = Alignment.Center
                 ) {
                     Icon(
@@ -413,7 +382,6 @@ fun ModernStatCard(
                     )
                 }
 
-                // Text Content
                 Column {
                     Text(
                         text = value,
