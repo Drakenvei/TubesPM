@@ -2,7 +2,7 @@
 # 📘 Aplikasi Tryout & Latihan Soal
 
 ## 📝 Deskripsi Singkat
-Aplikasi ini adalah platform mobile berbasis **Kotlin (Native Android)** yang menyediakan fitur **tryout** dan **latihan soal** yang dikerjakan untuk siswa beserta dengan pembahasannya. Selain itu, terdapat peran Admin untuk mengelola paket **Tryout** dan **Latihan Soal** dan Super Admin untuk melakukan kontrol penuh, termasuk manajemen akun dan publikasi soal.
+Aplikasi ini adalah platform mobile berbasis **Kotlin (Native Android)** yang menyediakan fitur **tryout** dan **latihan soal** yang dikerjakan untuk siswa beserta dengan pembahasannya. Selain itu, terdapat peran Admin untuk mengelola paket **Tryout** dan **Latihan Soal**.
 
 ---
 
