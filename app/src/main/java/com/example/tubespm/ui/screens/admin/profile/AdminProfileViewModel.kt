@@ -68,25 +68,27 @@ class AdminProfileViewModel : ViewModel() {
         }
     }
 
-    // --- FUNGSI STATISTIK ---
+    // --- FUNGSI STATISTIK (Hanya bagian ini yang diubah filternya) ---
     private fun loadStatistics() {
         viewModelScope.launch {
             Log.d("AdminStat", "Mulai menghitung data...")
 
             try {
-                // 1. Hitung User (Siswa Saja): Memfilter koleksi 'users' di mana 'role' adalah 'siswa'
+                // 1. Hitung User (Siswa Saja)
                 val usersTask = db.collection("users")
                     .whereEqualTo("role", "siswa")
                     .count()
                     .get(AggregateSource.SERVER)
 
-                // 2. Hitung Tryout: Koleksi 'tryouts'
+                // 2. Hitung Tryout: FILTER STATUS ACTIVE
                 val tryoutTask = db.collection("tryouts")
+                    .whereEqualTo("status", "active")
                     .count()
                     .get(AggregateSource.SERVER)
 
-                // 3. Hitung Latihan: Koleksi 'latihan_soal'
+                // 3. Hitung Latihan: FILTER STATUS ACTIVE
                 val latihanTask = db.collection("latihan_soal")
+                    .whereEqualTo("status", "active")
                     .count()
                     .get(AggregateSource.SERVER)
 
@@ -114,7 +116,7 @@ class AdminProfileViewModel : ViewModel() {
         }
     }
 
-    // --- FUNGSI BARU UNTUK GANTI PASSWORD ---
+    // --- FUNGSI BARU UNTUK GANTI PASSWORD (Sama Persis Kode Awal Anda) ---
     fun changePassword(context: Context, newPassword: String) {
         val user = auth.currentUser
         if (user == null) {
@@ -156,7 +158,7 @@ class AdminProfileViewModel : ViewModel() {
     }
 
 
-    // --- FUNGSI PROFILE PICTURE ---
+    // --- FUNGSI PROFILE PICTURE (Sama Persis Kode Awal Anda) ---
     fun updateProfilePicture(context: Context, uri: Uri) {
         val currentUser = auth.currentUser ?: return
         viewModelScope.launch {
