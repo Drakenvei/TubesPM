@@ -89,10 +89,32 @@ class AdminHomeViewModel : ViewModel() {
 
             try {
                 // Hitung data pakai Server Aggregate (Cepat)
-                val tryoutSnap = db.collection("tryouts").count().get(AggregateSource.SERVER).await()
-                val latihanSnap = db.collection("latihan_soal").count().get(AggregateSource.SERVER).await()
-                val siswaSnap = db.collection("users").count().get(AggregateSource.SERVER).await()
-                val aktivitasSnap = db.collection("user_activities").count().get(AggregateSource.SERVER).await()
+                // 1. Tryout Aktif (Filter where status == active)
+                val tryoutSnap = db.collection("tryouts")
+                    .whereEqualTo("status", "active") // [FILTER]
+                    .count()
+                    .get(AggregateSource.SERVER)
+                    .await()
+
+                // 2. Latihan Soal Aktif (Filter where status == active)
+                val latihanSnap = db.collection("latihan_soal")
+                    .whereEqualTo("status", "active") // [FILTER]
+                    .count()
+                    .get(AggregateSource.SERVER)
+                    .await()
+
+                // 3. Siswa (User role == siswa) -> Opsional, jika mau spesifik
+                val siswaSnap = db.collection("users")
+                    .whereEqualTo("role", "siswa") // [FILTER] Opsional
+                    .count()
+                    .get(AggregateSource.SERVER)
+                    .await()
+
+                // 4. Aktivitas (Semua)
+                val aktivitasSnap = db.collection("user_activities")
+                    .count()
+                    .get(AggregateSource.SERVER)
+                    .await()
 
                 _uiState.update {
                     it.copy(
