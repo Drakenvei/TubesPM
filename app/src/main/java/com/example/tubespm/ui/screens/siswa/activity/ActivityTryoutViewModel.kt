@@ -2,9 +2,13 @@ package com.example.tubespm.ui.screens.siswa.activity
 
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
+import com.example.tubespm.data.model.Tryout
+import com.example.tubespm.data.model.UserActivity
 import com.example.tubespm.repository.ActivityRepository
 import com.example.tubespm.repository.ExerciseCatalogRepository
 import dagger.hilt.android.lifecycle.HiltViewModel
+import kotlinx.coroutines.async
+import kotlinx.coroutines.awaitAll
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.flow.catch
@@ -24,7 +28,7 @@ data class ActivityTryoutUiState(
 @HiltViewModel
 class ActivityTryoutViewModel @Inject constructor(
     private val repository: ActivityRepository,
-    private val catalogRepository: ExerciseCatalogRepository //INJECT REPO KATALOG
+//    private val catalogRepository: ExerciseCatalogRepository //INJECT REPO KATALOG
 ) : ViewModel() {
     private val _uiState = MutableStateFlow(ActivityTryoutUiState())
     val uiState = _uiState.asStateFlow()
@@ -37,50 +41,43 @@ class ActivityTryoutViewModel @Inject constructor(
         viewModelScope.launch {
             _uiState.update { it.copy(isLoading = true, error = null) }
 
-            // 1. Ambil flow dari aktivitas user (misal: List<UserActivity>)
-            val myActivitiesFlow = repository.getMyTryoutActivities()
-
-            // 2. Ambil flow dari semua katalog tryout (misal: List<Tryout>)
-            val allTryoutsFlow = catalogRepository.getTryouts()
-
-            // 3. Gabungkan (combine) kedua flow tersebut
-            combine(myActivitiesFlow, allTryoutsFlow) { activities, tryouts ->
-                // Buat Peta (Map) untuk pencarian cepat
-                // Kunci: ID Tryout (misal: "to_utbk_2025_paket1")
-                // Nilai: Objek Tryout lengkap
-                val tryoutsMap = tryouts.associateBy { it.id }
-
-                // 4. Ubah List<UserActivity> menjadi List<ActivityTryoutDetail>
-                activities.mapNotNull { activity ->
-                    // Cari metadata tryout di Peta menggunakan ID referensi
-                    val tryoutDetail = tryoutsMap[activity.activityRefId]
-
-                    if (tryoutDetail != null) {
-                        // Jika ketemu, gabungkan
-                        ActivityTryoutDetail(
-                            userActivity = activity,
-                            tryout = tryoutDetail
-                        )
-                    } else {
-                        // Jika tidak ketemu (misal: admin menghapus tryout), abaikan
-                        null
-                    }
-                }
-            }
+            // 1. Ambil Flow Aktivitas Siswa
+            repository.getMyTryoutActivities()
                 .catch { e ->
                     _uiState.update { it.copy(isLoading = false, error = e.localizedMessage) }
                 }
-                .collect { combinedDetails ->
-                    // 5. Pisahkan daftar gabungan ke 3 tab
-                    _uiState.update {
-                        it.copy(
+                .collect { activities ->
+                    // 2. Untuk setiap aktivitas, ambil Detail Tryout-nya secara async
+                    //    Kita gunakan 'map' + 'async' untuk fetch parallel agar cepat
+                    val details = activities.map { activity ->
+                        async {
+                            // [PENTING] Ambil Tryout berdasarkan ID, tanpa peduli status (Active/Inactive/Deleted)
+                            // Fungsi ini ada di Repository (lihat langkah 1)
+                            val tryout = repository.getTryoutById(activity.activityRefId)
+
+                            if (tryout != null) {
+                                ActivityTryoutDetail(activity, tryout)
+                            } else {
+                                // Jika return null, berarti Hard Delete (benar-benar hilang dari DB)
+                                null
+                            }
+                        }
+                    }.awaitAll().filterNotNull() // Tunggu semua selesai, filter yang null
+
+                    // 3. Update State & Pisahkan Tab
+                    _uiState.update { state ->
+                        state.copy(
                             isLoading = false,
-                            notStarted = combinedDetails.filter { d -> d.userActivity.status == "not_started" },
-                            inProgress = combinedDetails.filter { d -> d.userActivity.status == "in_progress" },
-                            completed = combinedDetails.filter { d -> d.userActivity.status == "completed" }
+                            notStarted = details.filter { it.userActivity.status == "not_started" }
+                                .sortedByDescending { it.userActivity.startedAt },
+                            inProgress = details.filter { it.userActivity.status == "in_progress" }
+                                .sortedByDescending { it.userActivity.startedAt },
+                            completed = details.filter { it.userActivity.status == "completed" }
+                                .sortedByDescending { it.userActivity.completedAt },
                         )
                     }
                 }
+
         }
     }
 

@@ -9,6 +9,7 @@ import com.google.firebase.firestore.firestore
 import kotlinx.coroutines.channels.awaitClose
 import kotlinx.coroutines.flow.*
 import kotlinx.coroutines.launch
+import java.util.Date
 
 // ======================================================
 // DATA MODEL DIPERBARUI (Menyesuaikan kebutuhan UI Siswa)
@@ -19,13 +20,16 @@ data class PaketSoal(
     val subtest: String,    // Tambahan: Untuk Tag kategori (misal: Penalaran Umum)
     val totalSoal: Int,     // Tambahan: Jumlah total soal langsung
     val code: String,       // Tambahan: Kode paket (opsional, untuk info tambahan)
-    val isActive: Boolean = true  // Status aktif/nonaktif
+    val isActive: Boolean = true,  // Status aktif/nonaktif
+    val takenCount: Int = 0,
+    val createdAt: Date? = null
 )
 
 data class ManajemenLatihanUiState(
     val isLoading: Boolean = true,
     val paketSoalList: List<PaketSoal> = emptyList(),
-    val error: String? = null
+    val error: String? = null,
+    val filterStatus: FilterStatus = FilterStatus.ALL
 )
 
 class ManajemenLatihanSoalViewModel : ViewModel() {
@@ -36,6 +40,9 @@ class ManajemenLatihanSoalViewModel : ViewModel() {
     private val _searchQuery = MutableStateFlow("")
     val searchQuery: StateFlow<String> = _searchQuery.asStateFlow()
 
+    // State Filter & Sort
+    private val _filterStatus = MutableStateFlow(FilterStatus.ALL)
+
     init {
         observeLatihanSoalData()
     }
@@ -44,28 +51,45 @@ class ManajemenLatihanSoalViewModel : ViewModel() {
         _searchQuery.value = query
     }
 
+    fun setFilterStatus(status: FilterStatus) {
+        _filterStatus.value = status
+    }
+
     private fun observeLatihanSoalData() {
         viewModelScope.launch {
-            val firestoreFlow = getLatihanSoalFromFirestore()
+            combine(
+                getLatihanSoalFromFirestore(),
+                _searchQuery,
+                _filterStatus
+            ) { list, query, filter ->
 
-            combine(firestoreFlow, _searchQuery) { list, query ->
-                val filtered = if (query.isBlank()) {
-                    list
-                } else {
-                    list.filter {
-                        it.nama.contains(query, ignoreCase = true) ||
-                                it.subtest.contains(query, ignoreCase = true)
-                    }
+                // 1. Search
+                var result = if (query.isBlank()) list else list.filter {
+                    it.nama.contains(query, ignoreCase = true) || it.subtest.contains(query, ignoreCase = true)
                 }
-                // Sort: active items first, then inactive items
-                filtered.sortedByDescending { it.isActive }
+
+                // 2. Filter Status
+                result = when (filter) {
+                    FilterStatus.ALL -> result
+                    FilterStatus.ACTIVE -> result.filter { it.isActive }
+                    FilterStatus.INACTIVE -> result.filter { !it.isActive }
+                }
+
+                // 3. Sort Default (Terbaru)
+                result.sortedByDescending { it.createdAt }
+
             }
                 .catch { e ->
                     _uiState.update { it.copy(isLoading = false, error = e.message) }
                 }
                 .collect { filteredList ->
                     _uiState.update {
-                        it.copy(isLoading = false, paketSoalList = filteredList, error = null)
+                        it.copy(
+                            isLoading = false,
+                            paketSoalList = filteredList,
+                            error = null,
+                            filterStatus = _filterStatus.value
+                        )
                     }
                 }
         }
@@ -84,6 +108,10 @@ class ManajemenLatihanSoalViewModel : ViewModel() {
                     val results = snapshot.documents.mapNotNull { doc ->
                         try {
                             val lat = doc.toObject(LatihanSoal::class.java)
+
+                            // Filter item deleted
+                            if (lat?.status == "deleted") return@mapNotNull null
+
                             lat?.let {
                                 // MAPPING DATA BARU
                                 PaketSoal(
@@ -92,7 +120,9 @@ class ManajemenLatihanSoalViewModel : ViewModel() {
                                     subtest = it.subtest.ifEmpty { "Umum" }, // Ambil subtest
                                     totalSoal = it.questionCount,
                                     code = it.code,
-                                    isActive = it.status == "active"
+                                    isActive = it.status == "active",
+                                    takenCount = it.takenCount,
+                                    createdAt = it.createdAt
                                 )
                             }
                         } catch (err: Exception) {

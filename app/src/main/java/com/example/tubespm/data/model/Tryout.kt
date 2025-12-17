@@ -1,6 +1,7 @@
 package com.example.tubespm.data.model
 
 import com.google.firebase.firestore.DocumentId
+import com.google.firebase.firestore.Exclude
 import com.google.firebase.firestore.ServerTimestamp
 import java.util.Date
 
@@ -46,29 +47,20 @@ data class Tryout(
     val id: String = "", // ID unik acak dari Firestore (ZxY...Pq)
 
     val code: String = "",
+    val codeLower: String = "", // <-- TAMBAHAN: Untuk pengecekan case-insensitive
 
     val title: String = "",
+    val titleLower: String = "", // <-- TAMBAHAN: Untuk pengecekan case-insensitive
+
     val status: String = "",
 
-    // --- PERUBAHAN DI SINI: Hapus totalDuration & totalQuestionCount dari sini ---
-    // (Field ini tidak lagi diambil dari database)
-//    val totalDuration: Int = 0,
-//    val totalQuestionCount: Int = 0,
+    val takenCount: Int = 0,
 
     @ServerTimestamp
     val createdAt: Date? = null, // Bisa null jika data lama belum punya field ini
 
     // List of sections (nama field 'sections' sudah cocok dengan DB)
-    val sections: List<Section> = emptyList()
-) {
-    // Properti ini akan dihitung otomatis setiap kali data Tryout dimuat.
-    // Firestore akan MENGABAIKAN ini saat mapping (karena bukan di constructor).
-    val totalDuration: Int
-        get() = sections.sumOf { it.sectionDuration }
-
-    val totalQuestionCount: Int
-        get() = sections.sumOf { section ->
-            section.subtests.sumOf { it.questionCount }
-        }
-}
-
+    val sections: List<Section> = emptyList(),
+    val totalDuration: Int = 0,
+    val totalQuestionCount: Int = 0
+)

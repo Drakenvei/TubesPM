@@ -18,7 +18,22 @@ interface ExerciseCatalogRepository {
 
     suspend fun updateQuestionCount(parentId: String, type: String, count: Int)
 
-    suspend fun createLatihanSoal(latihan: LatihanSoal): String
+    suspend fun createLatihanSoal(latihan: LatihanSoal): String // <--- Akan diperbarui implementasinya
 
     suspend fun createTryout(tryout: Tryout): String
+
+    // --- FUNGSI BARU UNTUK VALIDASI DUPLIKASI TRYOUT ---
+    suspend fun isTryoutCodeDuplicate(code: String): Boolean
+    suspend fun isTryoutTitleDuplicate(title: String): Boolean
+
+    // --- FUNGSI BARU UNTUK VALIDASI DUPLIKASI LATIHAN SOAL ---
+    /**
+     * Memeriksa apakah Latihan Soal dengan kode tertentu sudah ada di database.
+     */
+    suspend fun isLatihanSoalCodeDuplicate(code: String): Boolean // <--- TAMBAH INI
+
+    /**
+     * Memeriksa apakah Latihan Soal dengan judul tertentu sudah ada di database.
+     */
+    suspend fun isLatihanSoalTitleDuplicate(title: String): Boolean // <--- TAMBAH INI
 }

@@ -4,6 +4,7 @@ import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import com.example.tubespm.data.model.QuizQuestion
 import com.google.firebase.Firebase
+import com.google.firebase.firestore.FieldValue
 import com.google.firebase.firestore.firestore
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
@@ -16,7 +17,9 @@ data class ListSoalUiState(
     val isLoading: Boolean = true,
     val questions: List<QuizQuestion> = emptyList(),
     val error: String? = null,
-    val currentSubtestId: String? = null // SubtestId untuk section yang sedang dilihat
+    val currentSubtestId: String? = null, // SubtestId untuk section yang sedang dilihat
+    val isEditable: Boolean = true,
+    val takenCount: Int = 0
 )
 
 class ListSoalViewModel : ViewModel() {
@@ -25,6 +28,24 @@ class ListSoalViewModel : ViewModel() {
 
     private val db = Firebase.firestore
 
+    // Helper untuk cek status parent
+    private suspend fun checkIsEditable(parentId: String, type: String): Boolean {
+        return try {
+            val collection = if (type == "tryout") "tryouts" else "latihan_soal"
+            val doc = db.collection(collection).document(parentId).get().await()
+
+            val status = doc.getString("status") ?: "inactive"
+
+            val takenCount = doc.getLong("takenCount") ?: 0L
+
+            // Editable JIKA: Status Inactive DAN Belum ada yang ambil (takenCount == 0)
+            status != "active" && takenCount == 0L
+
+        } catch (e: Exception) {
+            false // Default aman (False) jika error
+        }
+    }
+
     /**
      * Load semua soal dari parent (tryout atau latihan_soal)
      */
@@ -32,6 +53,7 @@ class ListSoalViewModel : ViewModel() {
         _uiState.update { it.copy(isLoading = true) }
         viewModelScope.launch {
             try {
+                val editable = checkIsEditable(parentId, type)
                 val collectionName = if (type == "tryout") "tryouts" else "latihan_soal"
                 val snapshot = db.collection(collectionName)
                     .document(parentId)
@@ -45,6 +67,7 @@ class ListSoalViewModel : ViewModel() {
                     it.copy(
                         isLoading = false,
                         questions = questions,
+                        isEditable = editable,
                         error = null
                     )
                 }
@@ -65,7 +88,13 @@ class ListSoalViewModel : ViewModel() {
     fun loadQuestionsBySubtest(parentId: String, type: String, subtestId: String) {
         _uiState.update { it.copy(isLoading = true) }
         viewModelScope.launch {
+            android.util.Log.d("DEBUG_SOAL", "Mencari soal di Parent: $parentId")
+            android.util.Log.d("DEBUG_SOAL", "Dengan Subtest ID: '$subtestId'") // Pakai tanda kutip untuk cek spasi
             try {
+                android.util.Log.d("DEBUG_SOAL", "Mencari soal di Parent: $parentId")
+                android.util.Log.d("DEBUG_SOAL", "Dengan Subtest ID: '$subtestId'") // Pakai tanda kutip untuk cek spasi
+
+                val editable = checkIsEditable(parentId, type)
                 val collectionName = if (type == "tryout") "tryouts" else "latihan_soal"
                 val snapshot = db.collection(collectionName)
                     .document(parentId)
@@ -80,7 +109,9 @@ class ListSoalViewModel : ViewModel() {
                     it.copy(
                         isLoading = false,
                         questions = questions,
-                        error = null
+                        isEditable = editable,
+                        error = null,
+                        currentSubtestId = subtestId
                     )
                 }
             } catch (e: Exception) {
@@ -97,56 +128,137 @@ class ListSoalViewModel : ViewModel() {
     /**
      * Load soal berdasarkan section (load semua soal, filter di UI berdasarkan subtestId di section)
      */
-    fun loadQuestionsBySection(parentId: String, type: String, sectionIdOrName: String) {
+    fun loadQuestionsBySection(parentId: String, type: String, subtestId: String) {
+//        _uiState.update { it.copy(isLoading = true) }
+//        viewModelScope.launch {
+//            try {
+//                val collectionName = if (type == "tryout") "tryouts" else "latihan_soal"
+//                val snapshot = db.collection(collectionName)
+//                    .document(parentId)
+//                    .collection("questions")
+//                    .whereEqualTo("subtestId", subtestId)
+//                    .orderBy("questionNumber")
+//                    .get()
+//                    .await()
+//
+//                val questions = snapshot.toObjects(QuizQuestion::class.java)
+//
+//                // UPDATE DISINI: Simpan currentSubtestId ke state!
+//                _uiState.update {
+//                    it.copy(
+//                        isLoading = false,
+//                        questions = questions,
+//                        error = null,
+//                        currentSubtestId = subtestId // <--- PENTING!
+//                    )
+//                }
+//            } catch (e: Exception) {
+//                _uiState.update {
+//                    it.copy(
+//                        isLoading = false,
+//                        error = "Gagal memuat soal: ${e.message}"
+//                    )
+//                }
+//            }
+//        }
+        loadQuestionsBySubtest(parentId, type, subtestId)
+    }
+
+    /**
+     * Specialized loader for Latihan Soal to fetch parent metadata first
+     */
+    fun loadLatihanSoalQuestions(latihanId: String) {
         _uiState.update { it.copy(isLoading = true) }
         viewModelScope.launch {
             try {
-                val collectionName = if (type == "tryout") "tryouts" else "latihan_soal"
-                
-                // Ambil tryout untuk mendapatkan subtestId dari section
-                val tryoutDoc = db.collection(collectionName).document(parentId).get().await()
-                val tryout = tryoutDoc.toObject(com.example.tubespm.data.model.Tryout::class.java)
-                
-                // Cari section berdasarkan sectionId atau sectionName
-                val section = tryout?.sections?.find { 
-                    it.sectionId == sectionIdOrName || it.sectionName == sectionIdOrName 
-                }
-                
-                val subtestIds = section?.subtests?.map { it.subtestId } ?: emptyList()
-                
-                if (subtestIds.isEmpty()) {
-                    // Jika tidak ada subtest, load semua soal
-                    loadQuestions(parentId, type)
-                    return@launch
-                }
-                
-                // Load semua soal dan filter berdasarkan subtestId
-                val allQuestions = db.collection(collectionName)
-                    .document(parentId)
+                // 1. Fetch Latihan Metadata to get subtestId
+                val latihanDoc = db.collection("latihan_soal").document(latihanId).get().await()
+                val latihan = latihanDoc.toObject(com.example.tubespm.data.model.LatihanSoal::class.java)
+                val parentSubtestId = latihan?.subtestId // e.g., "pu"
+                val status = latihanDoc.getString("status") ?: "inactive"
+
+                // Ambil takenCount, default 0 jika null
+                val takenCount = latihanDoc.getLong("takenCount") ?: 0L
+
+                // Logika Strict Lock:
+                // Hanya boleh edit jika (Status != Active) DAN (TakenCount == 0)
+                val editable = (status != "active") && (takenCount == 0L)
+
+                // 2. Fetch Questions
+                val snapshot = db.collection("latihan_soal")
+                    .document(latihanId)
                     .collection("questions")
                     .orderBy("questionNumber")
                     .get()
                     .await()
-                    .toObjects(com.example.tubespm.data.model.QuizQuestion::class.java)
-                
-                val filteredQuestions = allQuestions.filter { it.subtestId in subtestIds }
-                
-                // Ambil subtestId pertama untuk digunakan saat menambah soal baru
-                val firstSubtestId = subtestIds.firstOrNull()
-                
+
+                val questions = snapshot.toObjects(QuizQuestion::class.java)
+
                 _uiState.update {
                     it.copy(
                         isLoading = false,
-                        questions = filteredQuestions,
+                        questions = questions,
+                        isEditable = editable,
                         error = null,
-                        currentSubtestId = firstSubtestId
+                        currentSubtestId = parentSubtestId // <--- STORE THIS IN STATE
                     )
                 }
             } catch (e: Exception) {
+                _uiState.update { it.copy(isLoading = false, error = e.message) }
+            }
+        }
+    }
+
+    fun deleteQuestionSingle(
+        parentId: String,
+        type: String,
+        questionId: String,
+        currentSubtestId: String?
+    ) {
+        viewModelScope.launch {
+            _uiState.update { it.copy(isLoading = true) }
+            try {
+                // Cek lagi apakah benar-benar boleh dihapus sebelum eksekusi
+                val isSafeToDelete = checkIsEditable(parentId, type)
+                if (!isSafeToDelete) {
+                    throw Exception("Akses Ditolak: Soal sedang aktif atau sudah dikerjakan siswa.")
+                }
+
+                val collectionName = if (type == "tryout") "tryouts" else "latihan_soal"
+                val parentRef = db.collection(collectionName).document(parentId)
+
+                // HANYA HAPUS 1 DOKUMEN (Hemat Biaya & Cepat)
+                db.collection(collectionName)
+                    .document(parentId)
+                    .collection("questions")
+                    .document(questionId)
+                    .delete()
+                    .await()
+
+                if (type == "latihan_soal") {
+                    parentRef.update("questionCount", FieldValue.increment(-1))
+                }
+
+                // 2. [PENTING] REFRESH DATA AGAR UI UPDATE
+                // Cek state: apakah kita sedang melihat subtest tertentu atau semua?
+                val currentSubtest = _uiState.value.currentSubtestId
+
+                if (type == "latihan_soal") {
+                    loadLatihanSoalQuestions(parentId)
+                } else if (currentSubtestId != null && currentSubtestId.isNotBlank()) {
+                    // JIKA SUBTEST ID ADA -> LOAD PER SUBTEST (Filter)
+                    loadQuestionsBySubtest(parentId, type, currentSubtestId)
+                } else {
+                    loadQuestions(parentId, type)
+                }
+
+                // ... (Update total question count di parent jika perlu) ...
+
+            } catch (e: Exception) {
                 _uiState.update {
                     it.copy(
-                        isLoading = false,
-                        error = "Gagal memuat soal: ${e.message}"
+                        isLoading = false, // Matikan loading
+                        error = "Gagal menghapus: ${e.message}"
                     )
                 }
             }

@@ -11,6 +11,7 @@ import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Close
 import androidx.compose.material.icons.filled.Description
+import androidx.compose.material.icons.filled.People
 import androidx.compose.material.icons.filled.Search
 import androidx.compose.material.icons.outlined.FilterList
 import androidx.compose.material3.*
@@ -204,11 +205,39 @@ fun LatihanSoalCard(latihan: LatihanSoal, onClick: () -> Unit) {
         Column (
             modifier = Modifier.padding(16.dp)
         ) {
-            Text(
-                text = latihan.title,
-                style = MaterialTheme.typography.titleMedium.copy(color = Color.White),
-                fontWeight = FontWeight.Bold
-            )
+            Row(
+                modifier = Modifier.fillMaxWidth(),
+                horizontalArrangement = Arrangement.SpaceBetween,
+                verticalAlignment = Alignment.Top
+            ) {
+                Text(
+                    text = latihan.title,
+                    style = MaterialTheme.typography.titleMedium.copy(color = Color.White),
+                    fontWeight = FontWeight.Bold,
+                    modifier = Modifier.weight(1f)
+                )
+
+                // Info Pengambil
+                Surface(
+                    color = Color.White.copy(alpha = 0.2f),
+                    shape = RoundedCornerShape(12.dp)
+                ) {
+                    Row(
+                        modifier = Modifier.padding(horizontal = 8.dp, vertical = 4.dp),
+                        verticalAlignment = Alignment.CenterVertically
+                    ) {
+                        Icon(Icons.Default.People, contentDescription = null, tint = Color.White, modifier = Modifier.size(14.dp))
+                        Spacer(modifier = Modifier.width(4.dp))
+                        Text(
+                            text = "${latihan.takenCount}",
+                            color = Color.White,
+                            fontSize = 12.sp,
+                            fontWeight = FontWeight.Bold
+                        )
+                    }
+                }
+            }
+
             Spacer(Modifier.height(8.dp))
 
             //subtest tag
@@ -301,7 +330,8 @@ fun LatihanDetailDialog(
                 Text("Kode Paket: ${latihan.code}", style = MaterialTheme.typography.bodyMedium)
                 Text("Subtest: ${latihan.subtest}", style = MaterialTheme.typography.bodyMedium)
                 Text("Jumlah Soal: ${latihan.questionCount} soal", style = MaterialTheme.typography.bodyMedium)
-
+                // Info Taken
+                Text("Diambil oleh: ${latihan.takenCount} siswa", style = MaterialTheme.typography.bodyMedium)
                 Divider(Modifier.padding(vertical = 12.dp))
 
                 // Kisi-kisi

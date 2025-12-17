@@ -75,11 +75,11 @@ fun HomeScreen(
     val categories = listOf(
         CategoryModel("Penalaran Umum", Icons.Default.Lightbulb, Color(0xFFE91E63)),
         CategoryModel("Pengetahuan Kuantitatif", Icons.Default.Calculate, Color(0xFF9C27B0)),
-        CategoryModel("Literasi Bahasa Indonesia", Icons.Default.MenuBook, Color(0xFF673AB7)),
-        CategoryModel("Pengetahuan Umum", Icons.Default.Public, Color(0xFF3F51B5)),
-        CategoryModel("Literasi Bahasa Inggris", Icons.Default.Book, Color(0xFF2196F3)),
-        CategoryModel("Penalaran Matematika", Icons.Default.AutoGraph, Color(0xFF4CAF50)),
-        CategoryModel("Pemahaman Konsep", Icons.Default.School, Color(0xFFFF9800))
+        CategoryModel("Pengetahuan dan Pemahaman Umum", Icons.Default.Public, Color(0xFF3F51B5)), // PPU
+        CategoryModel("Pemahaman Bacaan dan Menulis", Icons.Default.Edit, Color(0xFFFF9800)), // PBM
+        CategoryModel("Literasi dalam Bahasa Indonesia", Icons.Default.MenuBook, Color(0xFF673AB7)),
+        CategoryModel("Literasi dalam Bahasa Inggris", Icons.Default.Book, Color(0xFF2196F3)),
+        CategoryModel("Penalaran Matematika", Icons.Default.AutoGraph, Color(0xFF4CAF50))
     )
 
     // Selected: selalu ada satu (default = pertama). User tidak bisa membatalkan (hanya ganti ke yang lain).
@@ -388,7 +388,8 @@ fun HomeScreen(
                         // Jika subtest latihan sama dengan judul kategori, ambil warnanya.
                         // Jika tidak ketemu, pakai warna default.
                         val categoryColor = categories.find { category ->
-                            latihan.subtest.contains(category.title, ignoreCase = true)
+                            latihan.subtest.contains(category.title, ignoreCase = true) ||
+                                    category.title.contains(latihan.subtest, ignoreCase = true)
                         }?.color ?: Color(0xFFE91E63)
 
                         LatestQuestionCard(

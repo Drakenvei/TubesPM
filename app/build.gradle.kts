@@ -118,6 +118,8 @@ dependencies {
     implementation("androidx.compose.runtime:runtime-livedata:1.6.0") // Sesuaikan versi compose Anda
 
     // Other libraries
+    implementation("androidx.compose.ui:ui")
+    implementation("androidx.compose.ui:ui-text:1.6.0")
     implementation(libs.androidx.core.ktx)
     implementation(libs.androidx.lifecycle.runtime.ktx)
     implementation(libs.androidx.activity.compose)

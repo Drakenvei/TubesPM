@@ -32,6 +32,7 @@ import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.compose.ui.window.Dialog
 import com.example.tubespm.data.model.LatihanSoal
+// Asumsi model lain (ActivityLatihanDetail) di-import atau dideklarasikan di file lain.
 
 @Composable
 fun LatihanBelumDikerjakanContent(
@@ -51,8 +52,8 @@ fun LatihanBelumDikerjakanContent(
     ) {
         items(latihanList) { activityDetail->
             LatihanCard(
-                latihan = activityDetail.latihanSoal, // <-- Kirim LatihanSoal
-                onClick = {onCardClick(activityDetail)} // <-- Kirim ActivityLatihanDetail
+                latihan = activityDetail.latihanSoal,
+                onClick = {onCardClick(activityDetail)}
             )
         }
     }
@@ -77,6 +78,10 @@ fun LatihanCard(latihan: LatihanSoal, onClick: () -> Unit) {
                 fontWeight = FontWeight.Bold
             )
             Spacer(Modifier.height(8.dp))
+            // SubtestTag didefinisikan di ActivityLatihanScreen.kt
+            // Jika Anda ingin menggunakannya di sini, Anda harus mendeklarasikannya di sini
+            // atau memindahkannya ke file utility.
+            // ASUMSI: SubtestTag adalah komponen yang ada.
             SubtestTag(text = latihan.subtest)
             Spacer(Modifier.height(12.dp))
             Row (
@@ -100,13 +105,17 @@ fun LatihanCard(latihan: LatihanSoal, onClick: () -> Unit) {
     }
 }
 
-// Dialog Detail
+// Dialog Detail Latihan harus ada di sini jika Anda ingin ActivityLatihanScreen.kt
+// memanggilnya. Jika tidak, maka harus didefinisikan di ActivityLatihanScreen.kt
+// Kita asumsikan tetap di sini (seperti kode awal Anda) agar ActivityLatihanScreen.kt
+// tidak menjadi terlalu besar (walaupun penanganan state ada di parent).
+
 @Composable
 fun LatihanDetailDialog(
     latihan: LatihanSoal,
     onDismiss: () -> Unit,
     onStart: () -> Unit,
-    onCancel: () -> Unit,
+    onCancel: () -> Unit, // onCancel ini sekarang hanya memicu state di ActivityLatihanScreen
 ) {
     Dialog(onDismissRequest = onDismiss) {
         Surface(
@@ -187,7 +196,7 @@ fun LatihanDetailDialog(
                 ActionButton(text = "Kerjakan Latihan", onClick = onStart)
                 Spacer(Modifier.height(8.dp))
                 Button(
-                    onClick = onCancel,
+                    onClick = onCancel, // onCancel ini memicu state di ActivityLatihanScreen
                     shape = RoundedCornerShape(12.dp),
                     colors = ButtonDefaults.buttonColors(containerColor = Color(0xFFE61C5D)),
                     modifier = Modifier.fillMaxWidth().height(48.dp)

@@ -27,7 +27,7 @@ import com.google.firebase.firestore.FirebaseFirestore
 fun CreateLatihanSoalScreen(
     paddingValuesFromNavHost: androidx.compose.foundation.layout.PaddingValues,
     onBackClick: () -> Unit,
-    onLatihanCreated: (String) -> Unit, // Callback dengan latihanId
+    onLatihanCreated: (String, String) -> Unit, // Callback dengan latihanId
     viewModel: CreateLatihanSoalViewModel = viewModel(
         factory = object : ViewModelProvider.Factory {
             override fun <T : androidx.lifecycle.ViewModel> create(modelClass: Class<T>): T {
@@ -43,10 +43,25 @@ fun CreateLatihanSoalScreen(
     val uiState by viewModel.uiState.collectAsState()
     val context = LocalContext.current
 
+    var expandedSubtest by remember { mutableStateOf(false)}
+
+    val subtestOptions = listOf(
+        "Penalaran Umum",
+        "Pengetahuan Kuantitatif",
+        "Pengetahuan dan Pemahaman Umum",
+        "Pemahaman Bacaan dan Menulis",
+        "Literasi dalam Bahasa Indonesia",
+        "Literasi dalam Bahasa Inggris",
+        "Penalaran Matematika"
+    )
+
     // Handle success
     LaunchedEffect(uiState.isSavedSuccess) {
         if (uiState.isSavedSuccess && uiState.createdLatihanId != null) {
-            onLatihanCreated(uiState.createdLatihanId!!)
+            onLatihanCreated(
+                uiState.createdLatihanId!!,
+                uiState.subtestId
+            )
         }
     }
 
@@ -112,8 +127,19 @@ fun CreateLatihanSoalScreen(
                         focusedTextColor = Color(0xFF212121),
                         unfocusedTextColor = Color(0xFF212121),
                         cursorColor = Color(0xFF212121)
-                    )
+                    ),
+                    isError = uiState.codeDuplicateError != null // <--- TAMBAH INI
                 )
+
+                // PESAN ERROR DUPLIKASI KODE
+                uiState.codeDuplicateError?.let { error ->
+                    Text(
+                        text = error,
+                        color = Color(0xFFE53935),
+                        fontSize = 12.sp,
+                        modifier = Modifier.padding(start = 16.dp, top = 4.dp)
+                    )
+                }
 
                 Spacer(modifier = Modifier.height(16.dp))
 
@@ -129,7 +155,7 @@ fun CreateLatihanSoalScreen(
                     value = uiState.title,
                     onValueChange = { viewModel.updateTitle(it) },
                     modifier = Modifier.fillMaxWidth(),
-                    placeholder = { Text("Contoh: Latihan Aljabar", color = Color(0xFF9E9E9E)) },
+                    placeholder = { Text("Contoh: Latihan Penalaran Umum Paket 1", color = Color(0xFF9E9E9E)) },
                     shape = RoundedCornerShape(6.dp),
                     colors = OutlinedTextFieldDefaults.colors(
                         focusedContainerColor = Color(0xFFE0E0E0),
@@ -139,87 +165,91 @@ fun CreateLatihanSoalScreen(
                         focusedTextColor = Color(0xFF212121),
                         unfocusedTextColor = Color(0xFF212121),
                         cursorColor = Color(0xFF212121)
-                    )
+                    ),
+                    isError = uiState.titleDuplicateError != null // <--- TAMBAH INI
                 )
+
+                // PESAN ERROR DUPLIKASI JUDUL
+                uiState.titleDuplicateError?.let { error ->
+                    Text(
+                        text = error,
+                        color = Color(0xFFE53935),
+                        fontSize = 12.sp,
+                        modifier = Modifier.padding(start = 16.dp, top = 4.dp)
+                    )
+                }
 
                 Spacer(modifier = Modifier.height(16.dp))
 
                 // Subtest
                 Text(
-                    text = "Subtest",
+                    text = "Jenis Subtest",
                     fontSize = 14.sp,
                     fontWeight = FontWeight.SemiBold,
                     color = Color(0xFF757575)
                 )
-                Spacer(modifier = Modifier.height(4.dp))
-                OutlinedTextField(
-                    value = uiState.subtest,
-                    onValueChange = { viewModel.updateSubtest(it) },
-                    modifier = Modifier.fillMaxWidth(),
-                    placeholder = { Text("Contoh: Matematika", color = Color(0xFF9E9E9E)) },
-                    shape = RoundedCornerShape(6.dp),
-                    colors = OutlinedTextFieldDefaults.colors(
-                        focusedContainerColor = Color(0xFFE0E0E0),
-                        unfocusedContainerColor = Color(0xFFE0E0E0),
-                        focusedBorderColor = Color.Transparent,
-                        unfocusedBorderColor = Color.Transparent,
-                        focusedTextColor = Color(0xFF212121),
-                        unfocusedTextColor = Color(0xFF212121),
-                        cursorColor = Color(0xFF212121)
-                    )
-                )
-
-                Spacer(modifier = Modifier.height(16.dp))
-
-                // Status
-                Text(
-                    text = "Status",
-                    fontSize = 14.sp,
-                    fontWeight = FontWeight.SemiBold,
-                    color = Color(0xFF757575)
-                )
-                Spacer(modifier = Modifier.height(4.dp))
-                var expanded by remember { mutableStateOf(false) }
                 ExposedDropdownMenuBox(
-                    expanded = expanded,
-                    onExpandedChange = { expanded = !expanded }
+                    expanded = expandedSubtest,
+                    onExpandedChange = { expandedSubtest = !expandedSubtest }
                 ) {
                     OutlinedTextField(
-                        value = uiState.status,
+                        value = uiState.subtest, // Menampilkan Nama Subtest
                         onValueChange = {},
                         readOnly = true,
-                        modifier = Modifier
-                            .fillMaxWidth()
-                            .menuAnchor(),
-                        placeholder = { Text("Pilih Status", color = Color(0xFF9E9E9E)) },
-                        shape = RoundedCornerShape(6.dp),
+                        modifier = Modifier.fillMaxWidth().menuAnchor(),
+                        placeholder = { Text("Pilih Subtest") },
+                        trailingIcon = { ExposedDropdownMenuDefaults.TrailingIcon(expanded = expandedSubtest) },
                         colors = OutlinedTextFieldDefaults.colors(
                             focusedContainerColor = Color(0xFFE0E0E0),
                             unfocusedContainerColor = Color(0xFFE0E0E0),
                             focusedBorderColor = Color.Transparent,
-                            unfocusedBorderColor = Color.Transparent
+                            unfocusedBorderColor = Color.Transparent,
+                            focusedTextColor = Color(0xFF212121),
+                            unfocusedTextColor = Color(0xFF212121),
+                            cursorColor = Color(0xFF212121)
                         ),
-                        trailingIcon = { ExposedDropdownMenuDefaults.TrailingIcon(expanded = expanded) }
+                        shape = RoundedCornerShape(6.dp)
                     )
                     ExposedDropdownMenu(
-                        expanded = expanded,
-                        onDismissRequest = { expanded = false }
+                        expanded = expandedSubtest,
+                        onDismissRequest = { expandedSubtest = false }
                     ) {
-                        listOf("active", "inactive").forEach { status ->
+                        subtestOptions.forEach { option ->
                             DropdownMenuItem(
-                                text = { Text(status) },
+                                text = { Text(option) },
                                 onClick = {
-                                    viewModel.updateStatus(status)
-                                    expanded = false
+                                    viewModel.updateSubtest(option) // Update ke ViewModel
+                                    expandedSubtest = false
                                 }
                             )
                         }
                     }
                 }
 
-                Spacer(modifier = Modifier.height(24.dp))
+                Spacer(modifier = Modifier.height(16.dp))
 
-                // Error message
+                Text("Kisi-kisi (Pisahkan dengan koma)", fontWeight = FontWeight.SemiBold, color = Color.Gray)
+                Spacer(Modifier.height(4.dp))
+                OutlinedTextField(
+                    value = uiState.topicsString,
+                    onValueChange = { viewModel.updateTopicsString(it) },
+                    modifier = Modifier.fillMaxWidth(),
+                    placeholder = { Text("Contoh: Persamaan Linear, Fungsi Kuadrat", color = Color(0xFF9E9E9E)) },
+                    colors = OutlinedTextFieldDefaults.colors(
+                        focusedContainerColor = Color(0xFFE0E0E0),
+                        unfocusedContainerColor = Color(0xFFE0E0E0),
+                        focusedBorderColor = Color.Transparent,
+                        unfocusedBorderColor = Color.Transparent,
+                        focusedTextColor = Color(0xFF212121),
+                        unfocusedTextColor = Color(0xFF212121),
+                        cursorColor = Color(0xFF212121)
+                    ),
+                    minLines = 2
+                )
+
+                Spacer(modifier = Modifier.height(16.dp))
+
+                // Error message (General Save Error)
                 uiState.error?.let { error ->
                     Text(
                         text = error,
@@ -252,7 +282,8 @@ fun CreateLatihanSoalScreen(
                     modifier = Modifier
                         .fillMaxWidth()
                         .height(48.dp),
-                    enabled = !uiState.isSaving,
+                    // DISABLE TOMBOL JIKA ADA ERROR DUPLIKASI ATAU SEDANG MENYIMPAN
+                    enabled = !uiState.isSaving && uiState.codeDuplicateError == null && uiState.titleDuplicateError == null, // <--- TAMBAH INI
                     colors = ButtonDefaults.buttonColors(
                         containerColor = Color(0xFF4CAF50),
                         contentColor = Color.White

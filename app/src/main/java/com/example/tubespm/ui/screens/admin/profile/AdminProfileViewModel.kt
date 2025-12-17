@@ -31,7 +31,10 @@ data class AdminProfileUiState(
     val userCount: String = "0", // Default 0
     val tryoutCount: String = "0",
     val exerciseCount: String = "0",
-    val error: String? = null
+    val error: String? = null,
+    // BARU: State untuk fitur ganti password
+    val passwordChangeSuccess: Boolean = false,
+    val passwordChangeError: String? = null
 )
 
 class AdminProfileViewModel : ViewModel() {
@@ -65,25 +68,27 @@ class AdminProfileViewModel : ViewModel() {
         }
     }
 
-    // --- FUNGSI STATISTIK (DIPERBAIKI) ---
+    // --- FUNGSI STATISTIK (Hanya bagian ini yang diubah filternya) ---
     private fun loadStatistics() {
         viewModelScope.launch {
             Log.d("AdminStat", "Mulai menghitung data...")
 
             try {
-                // 1. Cek Nama Koleksi: Pastikan di Firestore tulisannya PERSIS 'users'
+                // 1. Hitung User (Siswa Saja)
                 val usersTask = db.collection("users")
-                    .whereEqualTo("role", "siswa") // Filter hanya siswa
+                    .whereEqualTo("role", "siswa")
                     .count()
                     .get(AggregateSource.SERVER)
 
-                // 2. Cek Nama Koleksi: Pastikan di Firestore tulisannya PERSIS 'tryouts'
+                // 2. Hitung Tryout: FILTER STATUS ACTIVE
                 val tryoutTask = db.collection("tryouts")
+                    .whereEqualTo("status", "active")
                     .count()
                     .get(AggregateSource.SERVER)
 
-                // 3. Cek Nama Koleksi: Pastikan di Firestore tulisannya PERSIS 'latihan_soal'
+                // 3. Hitung Latihan: FILTER STATUS ACTIVE
                 val latihanTask = db.collection("latihan_soal")
+                    .whereEqualTo("status", "active")
                     .count()
                     .get(AggregateSource.SERVER)
 
@@ -103,17 +108,57 @@ class AdminProfileViewModel : ViewModel() {
                 }
 
             } catch (e: Exception) {
-                // INI YANG PENTING: Tangkap Error-nya!
                 Log.e("AdminStat", "GAGAL Menghitung: ${e.message}")
                 e.printStackTrace()
 
-                // Opsional: Tampilkan error ke UI sementara untuk debugging
                 _uiState.update { it.copy(userCount = "Err", tryoutCount = "Err", exerciseCount = "Err") }
             }
         }
     }
 
-    // ... (Fungsi updateProfilePicture dan processImageToBase64 biarkan sama seperti sebelumnya) ...
+    // --- FUNGSI BARU UNTUK GANTI PASSWORD (Sama Persis Kode Awal Anda) ---
+    fun changePassword(context: Context, newPassword: String) {
+        val user = auth.currentUser
+        if (user == null) {
+            Toast.makeText(context, "Admin belum login.", Toast.LENGTH_SHORT).show()
+            return
+        }
+
+        if (newPassword.length < 6) {
+            _uiState.update { it.copy(passwordChangeError = "Password minimal 6 karakter.") }
+            return
+        }
+
+        viewModelScope.launch {
+            _uiState.update { it.copy(isLoading = true, passwordChangeSuccess = false, passwordChangeError = null) }
+            try {
+                // Memanggil fungsi updatePassword dari Firebase Auth
+                user.updatePassword(newPassword).await()
+
+                // Berhasil
+                _uiState.update { it.copy(isLoading = false, passwordChangeSuccess = true) }
+                Toast.makeText(context, "Password berhasil diperbarui!", Toast.LENGTH_LONG).show()
+
+            } catch (e: Exception) {
+                Log.e("AdminPass", "GAGAL ganti password: ${e.message}")
+                val errorMessage = if (e.message?.contains("auth/requires-recent-login") == true) {
+                    "Admin harus login ulang untuk mengganti password."
+                } else {
+                    "Gagal ganti password: ${e.localizedMessage ?: "Terjadi kesalahan"}"
+                }
+                _uiState.update { it.copy(isLoading = false, passwordChangeError = errorMessage) }
+                Toast.makeText(context, errorMessage, Toast.LENGTH_LONG).show()
+            }
+        }
+    }
+
+    // Fungsi untuk membersihkan state error/success
+    fun clearError() {
+        _uiState.update { it.copy(passwordChangeSuccess = false, passwordChangeError = null) }
+    }
+
+
+    // --- FUNGSI PROFILE PICTURE (Sama Persis Kode Awal Anda) ---
     fun updateProfilePicture(context: Context, uri: Uri) {
         val currentUser = auth.currentUser ?: return
         viewModelScope.launch {

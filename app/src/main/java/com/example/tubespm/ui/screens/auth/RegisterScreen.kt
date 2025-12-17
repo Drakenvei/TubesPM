@@ -52,32 +52,46 @@ fun RegisterContent(
     var passwordFocused by remember { mutableStateOf(false) }
     var confirmFocused by remember { mutableStateOf(false) }
 
+    val nameElevation by animateDpAsState(
+        targetValue = if (name.isNotEmpty() || nameFocused) 8.dp else 2.dp,
+        animationSpec = tween(300),
+        label = "nameElevation"
+    )
+    val emailElevation by animateDpAsState(
+        targetValue = if (email.isNotEmpty() || emailFocused) 8.dp else 2.dp,
+        animationSpec = tween(300),
+        label = "emailElevation"
+    )
+    val passwordElevation by animateDpAsState(
+        targetValue = if (pass.isNotEmpty() || passwordFocused) 8.dp else 2.dp,
+        animationSpec = tween(300),
+        label = "passwordElevation"
+    )
+    val confirmElevation by animateDpAsState(
+        targetValue = if (confirm.isNotEmpty() || confirmFocused) 8.dp else 2.dp,
+        animationSpec = tween(300),
+        label = "confirmElevation"
+    )
+
     Column(
         horizontalAlignment = Alignment.CenterHorizontally
     ) {
         Spacer(modifier = Modifier.height(16.dp))
-        Text("Get started", color = Color.White, fontSize = 24.sp, fontWeight = FontWeight.Bold)
-        Text("Let's create your account!", color = Color.White, fontSize = 14.sp)
+        Text("Mari mulai", color = Color.White, fontSize = 24.sp, fontWeight = FontWeight.Bold) // Perubahan: Get started -> Mari mulai
+        Text("Ayo buat akun Anda!", color = Color.White, fontSize = 14.sp) // Perubahan: Let's create... -> Ayo buat...
         Spacer(modifier = Modifier.height(20.dp))
 
-        // Name TextField dengan floating label
-        val nameElevation by animateDpAsState(
-            targetValue = if (name.isNotEmpty() || nameFocused) 8.dp else 2.dp,
-            animationSpec = tween(300),
-            label = "nameElevation"
-        )
-
+        // Name TextField
         OutlinedTextField(
             value = name,
             onValueChange = onNameChanged,
             label = {
                 Text(
-                    "Your Name",
+                    "Nama Anda", // Perubahan: Your Name -> Nama Anda
                     color = if (name.isNotEmpty() || nameFocused) Color.White else Color.Gray.copy(alpha = 0.6f),
                     fontWeight = if (name.isNotEmpty() || nameFocused) FontWeight.Medium else FontWeight.Normal
                 )
             },
-            isError = error != null,
             modifier = Modifier
                 .fillMaxWidth()
                 .shadow(
@@ -97,23 +111,16 @@ fun RegisterContent(
                 unfocusedTextColor = Color.Black,
                 focusedLabelColor = Color.White,
                 unfocusedLabelColor = Color.White,
-                // -- WARNA SAAT ERROR (KUNCI UTAMANYA DI SINI) --
-                errorContainerColor = Color.White.copy(alpha = 0.95f), // Background tetap putih
-                errorBorderColor = Color.White, // Border PUTIH saat error
-                errorLabelColor = Color.White, // Label "Email" tetap putih
-                errorTextColor = Color.Black // Teks yang diketik tetap hitam
+                errorContainerColor = Color.White.copy(alpha = 0.95f),
+                errorBorderColor = Color.White,
+                errorLabelColor = Color.White,
+                errorTextColor = Color.Black
             )
         )
 
         Spacer(modifier = Modifier.height(12.dp))
 
-        // Email TextField dengan floating label
-        val emailElevation by animateDpAsState(
-            targetValue = if (email.isNotEmpty() || emailFocused) 8.dp else 2.dp,
-            animationSpec = tween(300),
-            label = "emailElevation"
-        )
-
+        // Email TextField
         OutlinedTextField(
             value = email,
             onValueChange = onEmailChanged,
@@ -124,7 +131,6 @@ fun RegisterContent(
                     fontWeight = if (email.isNotEmpty() || emailFocused) FontWeight.Medium else FontWeight.Normal
                 )
             },
-            isError = error != null,
             modifier = Modifier
                 .fillMaxWidth()
                 .shadow(
@@ -144,30 +150,22 @@ fun RegisterContent(
                 unfocusedTextColor = Color.Black,
                 focusedLabelColor = Color.White,
                 unfocusedLabelColor = Color.White,
-
-                // -- WARNA SAAT ERROR (KUNCI UTAMANYA DI SINI) --
-                errorContainerColor = Color.White.copy(alpha = 0.95f), // Background tetap putih
-                errorBorderColor = Color.White, // Border PUTIH saat error
-                errorLabelColor = Color.White, // Label "Email" tetap putih
-                errorTextColor = Color.Black // Teks yang diketik tetap hitam
+                errorContainerColor = Color.White.copy(alpha = 0.95f),
+                errorBorderColor = Color.White,
+                errorLabelColor = Color.White,
+                errorTextColor = Color.Black
             )
         )
 
         Spacer(modifier = Modifier.height(12.dp))
 
-        // Password TextField dengan floating label
-        val passwordElevation by animateDpAsState(
-            targetValue = if (pass.isNotEmpty() || passwordFocused) 8.dp else 2.dp,
-            animationSpec = tween(300),
-            label = "passwordElevation"
-        )
-
+        // Password TextField
         OutlinedTextField(
             value = pass,
-            onValueChange = onPassChanged,
+            onValueChange = onPassChanged, // Memicu validasi real-time di ViewModel
             label = {
                 Text(
-                    "Password",
+                    "Kata Sandi", // Perubahan: Password -> Kata Sandi
                     color = if (pass.isNotEmpty() || passwordFocused) Color.White else Color.Gray.copy(alpha = 0.6f),
                     fontWeight = if (pass.isNotEmpty() || passwordFocused) FontWeight.Medium else FontWeight.Normal
                 )
@@ -202,35 +200,26 @@ fun RegisterContent(
                 unfocusedTextColor = Color.Black,
                 focusedLabelColor = Color.White,
                 unfocusedLabelColor = Color.White,
-
-                // -- WARNA SAAT ERROR (KUNCI UTAMANYA DI SINI) --
-                errorContainerColor = Color.White.copy(alpha = 0.95f), // Background tetap putih
-                errorBorderColor = Color.White, // Border PUTIH saat error
-                errorLabelColor = Color.White, // Label "Email" tetap putih
-                errorTextColor = Color.Black // Teks yang diketik tetap hitam
+                errorContainerColor = Color.White.copy(alpha = 0.95f),
+                errorBorderColor = Color.White,
+                errorLabelColor = Color.White,
+                errorTextColor = Color.Black
             )
         )
 
         Spacer(modifier = Modifier.height(12.dp))
 
-        // Confirm Password TextField dengan floating label
-        val confirmElevation by animateDpAsState(
-            targetValue = if (confirm.isNotEmpty() || confirmFocused) 8.dp else 2.dp,
-            animationSpec = tween(300),
-            label = "confirmElevation"
-        )
-
+        // Confirm Password TextField
         OutlinedTextField(
             value = confirm,
             onValueChange = onConfirmChanged,
             label = {
                 Text(
-                    "Confirm Password",
+                    "Konfirmasi Kata Sandi", // Perubahan: Confirm Password -> Konfirmasi Kata Sandi
                     color = if (confirm.isNotEmpty() || confirmFocused) Color.White else Color.Gray.copy(alpha = 0.6f),
                     fontWeight = if (confirm.isNotEmpty() || confirmFocused) FontWeight.Medium else FontWeight.Normal
                 )
             },
-            isError = error != null,
             modifier = Modifier
                 .fillMaxWidth()
                 .shadow(
@@ -260,15 +249,14 @@ fun RegisterContent(
                 unfocusedTextColor = Color.Black,
                 focusedLabelColor = Color.White,
                 unfocusedLabelColor = Color.White,
-
-                // -- WARNA SAAT ERROR (KUNCI UTAMANYA DI SINI) --
-                errorContainerColor = Color.White.copy(alpha = 0.95f), // Background tetap putih
-                errorBorderColor = Color.White, // Border PUTIH saat error
-                errorLabelColor = Color.White, // Label "Email" tetap putih
-                errorTextColor = Color.Black // Teks yang diketik tetap hitam
+                errorContainerColor = Color.White.copy(alpha = 0.95f),
+                errorBorderColor = Color.White,
+                errorLabelColor = Color.White,
+                errorTextColor = Color.Black
             )
         )
 
+        // PESAN ERROR MUNCUL DI SINI SECARA REAL-TIME
         if (error != null) {
             Text(
                 text = error,
@@ -293,7 +281,7 @@ fun RegisterContent(
             if (isLoading) {
                 CircularProgressIndicator(color = Color.White, modifier = Modifier.size(24.dp))
             } else {
-                Text("Sign up", color = Color.White, fontSize = 16.sp)
+                Text("Daftar", color = Color.White, fontSize = 16.sp) // Perubahan: Sign up -> Daftar
             }
         }
     }

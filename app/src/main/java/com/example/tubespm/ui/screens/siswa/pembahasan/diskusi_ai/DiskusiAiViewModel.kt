@@ -12,7 +12,6 @@ import kotlinx.coroutines.flow.*
 import kotlinx.coroutines.launch
 import javax.inject.Inject
 import com.example.tubespm.BuildConfig
-// ** IMPORTS BASE CLIENT 0.6.0 YANG SUDAH TERVERIFIKASI **
 import com.google.ai.client.generativeai.GenerativeModel
 import com.google.ai.client.generativeai.type.Content
 import com.google.ai.client.generativeai.type.Part
@@ -50,11 +49,20 @@ class DiskusiAiViewModel @Inject constructor(
     private val _uiState = MutableStateFlow(DiskusiAiUiState())
     val uiState = _uiState.asStateFlow()
 
-    // FIX: Ambil parameter sebagai nullable untuk menghindari crash jika null
     private val activityId: String? = savedStateHandle.get<String>("activityId")
     private val questionIndex: Int? = savedStateHandle.get<Int>("questionIndex")
 
-    // API Key disembunyikan untuk keamanan, asumsikan ini sudah benar
+    // Urutan subtest yang sama dengan PembahasanViewModel untuk konsistensi sorting
+    private val subtestPriority = listOf(
+        "pu",    // 1. Penalaran Umum
+        "ppu",   // 2. Pengetahuan & Pemahaman Umum
+        "pbm",   // 3. Pemahaman Bacaan & Menulis
+        "pk",    // 4. Pengetahuan Kuantitatif
+        "lbi",   // 5. Literasi Bhs Indonesia
+        "lbing", // 6. Literasi Bhs Inggris
+        "pm"     // 7. Penalaran Matematika
+    )
+
     private val generativeModel = GenerativeModel(
         modelName = "gemini-2.5-flash",
         apiKey = BuildConfig.GEMINI_API_KEY
@@ -62,7 +70,6 @@ class DiskusiAiViewModel @Inject constructor(
 
     private var chatSession: Chat? = null
 
-    // --- Inisialisasi ---
     init {
         loadQuestionData()
     }
@@ -72,30 +79,39 @@ class DiskusiAiViewModel @Inject constructor(
     // =======================================================
 
     private fun loadQuestionData() {
-        // Validasi yang sama, namun kini memeriksa null secara eksplisit
         if (activityId.isNullOrBlank() || questionIndex == null || questionIndex < 0) {
-            // Error ini akan muncul jika PembahasanScreen mengirimkan ID kosong atau null, atau index < 0
             _uiState.update { it.copy(isLoading = false, error = "Parameter navigasi tidak valid.") }
             return
         }
 
-        // Ambil nilai yang sudah divalidasi
-        val id = activityId
-        val index = questionIndex
-
         viewModelScope.launch {
             try {
-                val activity = repository.getActivity(id)
+                val activity = repository.getActivity(activityId)
                     ?: throw Exception("Aktivitas tidak ditemukan.")
-                val allQuestions = repository.getQuestions(
+
+                // Ambil semua soal asli dari repository
+                val allQuestionsRaw = repository.getQuestions(
                     refId = activity.activityRefId,
                     type = activity.type
                 )
 
-                val questionToDiscuss = allQuestions.getOrNull(index)
-                    ?: throw Exception("Soal ke-${index + 1} tidak ditemukan.")
-                val userAnswers = repository.getSavedAnswers(id).first()
+                // PERBAIKAN: Lakukan sorting yang sama persis dengan PembahasanViewModel
+                val sortedQuestions = allQuestionsRaw.sortedWith(
+                    compareBy(
+                        {
+                            val id = it.subtestId.lowercase()
+                            val index = subtestPriority.indexOf(id)
+                            if (index == -1) Int.MAX_VALUE else index
+                        },
+                        { it.questionNumber }
+                    )
+                )
 
+                // Ambil soal berdasarkan index dari list yang SUDAH DIURUTKAN
+                val questionToDiscuss = sortedQuestions.getOrNull(questionIndex)
+                    ?: throw Exception("Soal ke-${questionIndex + 1} tidak ditemukan.")
+
+                val userAnswers = repository.getSavedAnswers(activityId).first()
                 val combinedData = mapData(questionToDiscuss, userAnswers.get(questionToDiscuss.id))
 
                 _uiState.update {
@@ -119,9 +135,8 @@ class DiskusiAiViewModel @Inject constructor(
         question: QuizQuestion,
         userAnswerString: String?
     ) : QuestionWithExplanation {
-        // Konversi "A" -> 0, "B" -> 1, dst.
         val correctAnwerIndex = question.correctAnswer.firstOrNull()?.minus('A') ?: 0
-        val userAnswerIndex = userAnswerString?.firstOrNull()?.minus('A') // Bisa null
+        val userAnswerIndex = userAnswerString?.firstOrNull()?.minus('A')
 
         return QuestionWithExplanation(
             id = question.id,
@@ -143,13 +158,12 @@ class DiskusiAiViewModel @Inject constructor(
             val imageBytes = Base64.decode(base64String, Base64.DEFAULT)
             BlobPart("image/jpeg", imageBytes)
         } catch (e: Exception) {
-            println("Error decoding Base64 image: ${e.message}")
             null
         }
     }
 
     // =======================================================
-    // Chat Logic (Menggunakan Constructor KTX/Base Client)
+    // Chat Logic
     // =======================================================
 
     private fun initializeSession(questionData: QuestionWithExplanation) {
@@ -157,7 +171,6 @@ class DiskusiAiViewModel @Inject constructor(
 
         val initialParts = mutableListOf<Part>()
 
-        // --- SYSTEM PROMPT ---
         val systemPrompt = """
             Kamu adalah Guru Privat Cerdas untuk aplikasi Tryout UTBK.
             KONTEKS SOAL SAAT INI:
@@ -177,13 +190,11 @@ class DiskusiAiViewModel @Inject constructor(
 
         initialParts.add(TextPart(systemPrompt))
 
-        // --- Image Context ---
         val imagePart = base64ToPart(questionData.questionImage)
         if (imagePart != null) {
             initialParts.add(imagePart)
         }
 
-        // Mulai sesi chat dengan system prompt dan image (jika ada)
         chatSession = generativeModel.startChat(
             history = listOf(
                 Content(
@@ -193,7 +204,6 @@ class DiskusiAiViewModel @Inject constructor(
             )
         )
 
-        // Tambahkan pesan sambutan
         addMessage(
             ChatMessage(
                 "Halo! Saya AI Tutor Anda. Saya siap membantu Anda memahami soal ${questionData.subtest} ini lebih dalam. Apa yang ingin Anda tanyakan?",
@@ -206,28 +216,25 @@ class DiskusiAiViewModel @Inject constructor(
         if (chatSession == null || _uiState.value.isSending || text.isBlank()) return
 
         _uiState.update { it.copy(isSending = true) }
-        val userMessage = ChatMessage(text, isUser = true)
-        addMessage(userMessage)
-        val pendingMessage = ChatMessage("", isUser = false, isPending = true)
-        addMessage(pendingMessage)
+        addMessage(ChatMessage(text, isUser = true))
+        addMessage(ChatMessage("", isUser = false, isPending = true))
 
         viewModelScope.launch {
             try {
-                removePendingMessage()
                 val response = chatSession?.sendMessage(text)
+                removePendingMessage()
                 response?.text?.let { aiResponse ->
                     addMessage(ChatMessage(aiResponse, isUser = false))
                 }
             } catch (e: Exception) {
                 removePendingMessage()
-                addMessage(ChatMessage("Maaf, terjadi kesalahan saat menghubungi AI. Coba lagi: ${e.localizedMessage}", isUser = false))
+                addMessage(ChatMessage("Maaf, terjadi kesalahan: ${e.localizedMessage}", isUser = false))
             } finally {
                 _uiState.update { it.copy(isSending = false) }
             }
         }
     }
 
-    // [ Helper functions addMessage, removePendingMessage, onCleared tetap sama ]
     private fun addMessage(message: ChatMessage) {
         _uiState.update {
             it.copy(messages = it.messages + message)
@@ -238,10 +245,5 @@ class DiskusiAiViewModel @Inject constructor(
         _uiState.update {
             it.copy(messages = it.messages.filter { msg -> !msg.isPending })
         }
-    }
-
-    override fun onCleared() {
-        // Hapus chatSession jika diperlukan, namun untuk Gemini 2.5, tidak ada metode close() eksplisit.
-        super.onCleared()
     }
 }

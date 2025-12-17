@@ -1,5 +1,7 @@
 package com.example.tubespm.ui.screens.admin.management
 
+import android.widget.Toast
+import androidx.compose.foundation.BorderStroke
 import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.lazy.LazyColumn
@@ -7,12 +9,18 @@ import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.ArrowBack
+import androidx.compose.material.icons.filled.Delete
+import androidx.compose.material.icons.filled.DeleteForever
+import androidx.compose.material.icons.filled.List
 import androidx.compose.material.icons.filled.Settings
+import androidx.compose.material.icons.filled.Visibility
+import androidx.compose.material.icons.filled.Warning
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
@@ -26,10 +34,12 @@ import androidx.lifecycle.viewmodel.compose.viewModel
 @Composable
 fun EditManagementDialog(
     paket: TryoutPackage,
+    type: String = "tryout",
     onDismiss: () -> Unit,
     onDeactivatePackage: () -> Unit, // Callback ke parent (opsional, bisa dihandle VM juga)
     onAddMoreSection: () -> Unit,
     onGoToEditQuestion: (String, String, String, String, Int) -> Unit, // (type, parentId, questionId, paketName, questionNumber)
+    onPackageDeleted: () -> Unit,
     // Inject ViewModel
     viewModel: EditManagementViewModel = viewModel()
 ) {
@@ -47,24 +57,13 @@ fun EditManagementDialog(
         ) {
             EditManagementContent(
                 paket = paket,
+                type = type, // Pass type
                 viewModel = viewModel, // Pass VM ke konten
                 onClose = onDismiss,
-                onDeactivatePackage = {
-                    // Panggil logika di VM, lalu tutup dialog/refresh parent
-                    if (paket.isActive) {
-                        viewModel.deactivatePackage(paket.id) {
-                            onDeactivatePackage() // trigger refresh di parent jika perlu
-                            onDismiss()
-                        }
-                    } else {
-                        viewModel.activatePackage(paket.id) {
-                            onDeactivatePackage() // trigger refresh di parent jika perlu
-                            onDismiss()
-                        }
-                    }
-                },
+                onDeactivatePackage = onDeactivatePackage,
                 onAddMoreSection = onAddMoreSection,
-                onGoToEditQuestion = onGoToEditQuestion
+                onGoToEditQuestion = onGoToEditQuestion,
+                onPackageDeleted = onPackageDeleted // Pass callback
             )
         }
     }
@@ -76,14 +75,17 @@ fun EditManagementDialog(
 @Composable
 private fun EditManagementContent(
     paket: TryoutPackage,
+    type: String,
     viewModel: EditManagementViewModel,
     onClose: () -> Unit,
     onDeactivatePackage: () -> Unit,
     onAddMoreSection: () -> Unit,
-    onGoToEditQuestion: (String, String, String, String, Int) -> Unit // (type, parentId, questionId, paketName, questionNumber)
+    onGoToEditQuestion: (String, String, String, String, Int) -> Unit, // (type, parentId, questionId, paketName, questionNumber)
+    onPackageDeleted: () -> Unit
 ) {
     // Observasi State dari ViewModel
     val uiState by viewModel.uiState.collectAsState()
+    val context = LocalContext.current // [BARU] Untuk Toast
 
     // STATE popup edit section (UI State Lokal)
     var showEditSectionDialog by remember { mutableStateOf(false) }
@@ -91,6 +93,18 @@ private fun EditManagementContent(
 
     // STATE popup add section
     var showAddSectionDialog by remember { mutableStateOf(false) }
+
+    var showDeleteDialog by remember { mutableStateOf(false) }
+    var subtestToDelete by remember { mutableStateOf<TryoutSectionUiModel?>(null) }
+
+    var showDeletePackageDialog by remember { mutableStateOf(false) }
+
+    // [LOGIKA STRICT LOCK]
+    // 1. Edit Struktur (Subtest/Soal): Hanya jika Inactive DAN Belum ada yang ambil
+    val isEditable = !paket.isActive && paket.takenCount == 0
+
+    // 2. Hapus Paket (Soft Delete): Boleh walau sudah diambil, ASALKAN Inactive dulu
+    val isDeletable = !paket.isActive
 
     Column(
         modifier = Modifier
@@ -101,7 +115,8 @@ private fun EditManagementContent(
 
         // Header: back + title
         Row(
-            verticalAlignment = Alignment.CenterVertically
+            verticalAlignment = Alignment.CenterVertically,
+            modifier = Modifier.fillMaxWidth()
         ) {
             IconButton(onClick = onClose) {
                 Icon(Icons.Default.ArrowBack, contentDescription = "Back")
@@ -110,11 +125,74 @@ private fun EditManagementContent(
                 text = "Edit ${paket.name}",
                 fontWeight = FontWeight.SemiBold,
                 fontSize = 18.sp,
-                color = Color(0xFF333333)
+                color = Color(0xFF333333),
+                modifier = Modifier.weight(1f)
             )
+
+            // Tombol Hapus Paket (SOFT DELETE)
+            IconButton(
+                onClick = {
+                    if (!isDeletable) {
+                        Toast.makeText(context, "Nonaktifkan paket terlebih dahulu untuk menghapus.", Toast.LENGTH_SHORT).show()
+                    } else {
+                        showDeletePackageDialog = true
+                    }
+                }
+            ) {
+                Icon(
+                    imageVector = Icons.Default.DeleteForever,
+                    contentDescription = "Hapus Paket",
+                    // Enable visual jika Inactive (meskipun takenCount > 0)
+                    tint = if (isDeletable) Color(0xFFD32F2F) else Color.LightGray
+                )
+            }
         }
 
         Spacer(modifier = Modifier.height(8.dp))
+
+        // START OF NEW CODE: Menampilkan Code Paket
+        Row(
+            modifier = Modifier.fillMaxWidth(),
+            verticalAlignment = Alignment.CenterVertically
+        ) {
+            Text(
+                text = "Code:",
+                fontSize = 14.sp,
+                color = Color(0xFF616161),
+                fontWeight = FontWeight.Medium,
+                modifier = Modifier.width(90.dp)
+            )
+            Text(
+                text = paket.code, // Asumsi properti 'code' ada di TryoutPackage
+                fontSize = 14.sp,
+                color = Color(0xFF333333),
+                fontWeight = FontWeight.Bold
+            )
+        }
+        Spacer(modifier = Modifier.height(8.dp))
+        // END OF NEW CODE
+
+        // [BARU] Banner Peringatan
+        if (!isEditable) {
+            val warningText = when {
+                paket.isActive -> "Status Aktif: Nonaktifkan tryout ini terlebih dahulu untuk mengedit."
+                paket.takenCount > 0 -> "Terkunci: Sudah diambil ${paket.takenCount} siswa. Edit struktur dilarang demi keamanan data."
+                else -> "Mode Baca."
+            }
+
+            Surface(
+                color = Color(0xFFFFF3E0),
+                shape = RoundedCornerShape(8.dp),
+                border = BorderStroke(1.dp, Color(0xFFFFB74D)),
+                modifier = Modifier.fillMaxWidth().padding(bottom = 12.dp)
+            ) {
+                Row(modifier = Modifier.padding(12.dp), verticalAlignment = Alignment.CenterVertically) {
+                    Icon(Icons.Default.Warning, null, tint = Color(0xFFF57C00))
+                    Spacer(modifier = Modifier.width(8.dp))
+                    Text(text = warningText, color = Color(0xFFE65100), fontSize = 12.sp)
+                }
+            }
+        }
 
         // List section (Dynamic from Firestore)
         if (uiState.isLoading) {
@@ -135,9 +213,40 @@ private fun EditManagementContent(
                 items(uiState.sections) { section ->
                     SectionCard(
                         section = section,
+                        isEditable = isEditable, // <-- Kunci tombol delete/edit subtest
                         onEditClick = { clicked ->
-                            selectedSectionForEdit = clicked
-                            showEditSectionDialog = true
+                            if (!isEditable) {
+                                val msg = if (paket.isActive) "Nonaktifkan paket dulu." else "Paket sudah dikerjakan siswa, tidak bisa diedit."
+                                Toast.makeText(context, msg, Toast.LENGTH_SHORT).show()
+                            } else {
+                                selectedSectionForEdit = clicked
+                                showEditSectionDialog = true
+                            }
+                        },
+                        onManageQuestionClick = { subtestId ->
+                            // NAVIGASI KE LIST SOAL DENGAN MEMBAWA SUBTEST ID
+                            onGoToEditQuestion(
+                                "tryout",      // type
+                                paket.id,      // parentId (tryoutId)
+                                "list_soal|$subtestId",   // Pass ID here separated by pipe |
+                                paket.name,    // paketName
+                                section.questionCount              // questionNumber
+                                // PENTING: Anda perlu memodifikasi Navigasi Anda
+                                // agar bisa menerima parameter 'subtestId' tambahan
+                                // atau selipkan di parameter yang ada jika malas ubah route.
+                            ).apply {
+                                // Cara terbaik: Tambahkan parameter ke-6 di callback onGoToEditQuestion
+                                // onGoToEditQuestion(type, parentId, ..., subtestId)
+                            }
+                        },
+                        onDeleteClick = { clicked ->
+                            if (!isEditable) {
+                                val msg = if (paket.isActive) "Nonaktifkan paket dulu." else "Paket sudah dikerjakan siswa, tidak bisa dihapus."
+                                Toast.makeText(context, msg, Toast.LENGTH_SHORT).show()
+                            } else {
+                                subtestToDelete = clicked
+                                showDeleteDialog = true
+                            }
                         }
                     )
                 }
@@ -147,41 +256,66 @@ private fun EditManagementContent(
         Spacer(modifier = Modifier.height(12.dp))
 
         // Tombol Edit Soal (umum, bukan per section)
-        OutlinedButton(
-            onClick = {
-                onGoToEditQuestion(
-                    "tryout",
-                    paket.id,
-                    "list_soal",
-                    paket.name,
-                    0
-                )
-            },
-            modifier = Modifier.align(Alignment.End),
-            colors = ButtonDefaults.outlinedButtonColors(contentColor = Color.Gray)
-        ) {
-            Text("Edit Soal")
-        }
+//        OutlinedButton(
+//            onClick = {
+//                onGoToEditQuestion(
+//                    "tryout",
+//                    paket.id,
+//                    "list_soal",
+//                    paket.name,
+//                    0
+//                )
+//            },
+//            modifier = Modifier.align(Alignment.End),
+//            colors = ButtonDefaults.outlinedButtonColors(contentColor = Color.Gray)
+//        ) {
+//            Text("Edit Soal")
+//        }
 
-        Spacer(modifier = Modifier.height(8.dp))
+//        Spacer(modifier = Modifier.height(8.dp))
 
         // Tombol Add More Section
         OutlinedButton(
             onClick = {
-                showAddSectionDialog = true
-                // onAddMoreSection() // Optional external callback
+                if (!isEditable) {
+                    val msg = if (paket.isActive) "Nonaktifkan paket dulu." else "Paket sudah dikerjakan siswa, tidak bisa tambah subtest."
+                    Toast.makeText(context, msg, Toast.LENGTH_SHORT).show()
+                } else {
+                    showAddSectionDialog = true
+                }
             },
+            enabled = isEditable,
             modifier = Modifier.align(Alignment.End),
-            colors = ButtonDefaults.outlinedButtonColors(contentColor = Color.Gray)
+            colors = ButtonDefaults.outlinedButtonColors(
+                contentColor = if (isEditable) Color(0xFFE91E63) else Color.LightGray
+            )
         ) {
-            Text("Tambah Section")
+            Text("Tambah Subtest")
         }
 
         Spacer(modifier = Modifier.height(16.dp))
 
         // Tombol Aktifkan/Nonaktifkan Paket
         Button(
-            onClick = onDeactivatePackage,
+            onClick = {
+                if (paket.isActive) {
+                    viewModel.deactivatePackage(paket.id) {
+                        onDeactivatePackage()
+                        Toast.makeText(context, "Tryout Dinonaktifkan", Toast.LENGTH_SHORT).show()
+                    }
+                } else {
+                    viewModel.activatePackage(
+                        tryoutId = paket.id,
+                        onSuccess = {
+                            onDeactivatePackage()
+                            Toast.makeText(context, "Tryout Berhasil Diaktifkan", Toast.LENGTH_SHORT).show()
+                        },
+                        onError = { errorMsg ->
+                            Toast.makeText(context, errorMsg, Toast.LENGTH_LONG).show()
+                        }
+                    )
+                }
+            },
             modifier = Modifier
                 .fillMaxWidth()
                 .height(48.dp),
@@ -200,7 +334,7 @@ private fun EditManagementContent(
         Spacer(modifier = Modifier.height(4.dp))
     }
 
-    // ---------- POPUP EDIT SECTION ----------
+    // ---------- POPUP EDIT SUBTEST ----------
     if (showEditSectionDialog && selectedSectionForEdit != null) {
         val section = selectedSectionForEdit!!
 
@@ -213,7 +347,8 @@ private fun EditManagementContent(
                 type = section.type,
                 subtest = section.title,
                 timeMinutes = section.timeMinutes,
-                questionCount = section.questionCount
+                questionCount = section.questionCount,
+                topicsString = section.topicsString
             ),
             onDismiss = {
                 showEditSectionDialog = false
@@ -226,7 +361,7 @@ private fun EditManagementContent(
         )
     }
 
-    // ---------- POPUP ADD SECTION ----------
+    // ---------- POPUP ADD SUBTEST ----------
     if (showAddSectionDialog) {
         AddSectionDialog(
             tryoutId = paket.id,          // <-- ADDED: tryoutId
@@ -240,6 +375,92 @@ private fun EditManagementContent(
             onEditSoalTryout = onGoToEditQuestion
         )
     }
+
+    // ---------- POPUP Delete SUBTEST ----------
+    if (showDeleteDialog && subtestToDelete != null) {
+        val subtest = subtestToDelete!!
+        AlertDialog(
+            onDismissRequest = { showDeleteDialog = false; subtestToDelete = null },
+            title = { Text("Hapus Subtest?") },
+            text = {
+                Column {
+                    Text("Anda yakin ingin menghapus subtest '${subtest.title}'?")
+                    Spacer(modifier = Modifier.height(8.dp))
+                    Text("PERINGATAN: Semua soal dalam subtest ini juga akan dihapus secara permanen.", color = Color.Red, fontSize = 12.sp)
+                }
+            },
+            confirmButton = {
+                TextButton(
+                    onClick = {
+                        // Cek lagi di sini (Double protection)
+                        if (!isEditable) {
+                            Toast.makeText(context, "Akses ditolak: Paket terkunci.", Toast.LENGTH_SHORT).show()
+                            showDeleteDialog = false
+                        } else {
+                            viewModel.deleteSubtest(
+                                tryoutId = paket.id,
+                                subtestIdToDelete = subtest.id,
+                                onSuccess = {
+                                    Toast.makeText(context, "Subtest berhasil dihapus", Toast.LENGTH_SHORT).show()
+                                    showDeleteDialog = false
+                                    subtestToDelete = null
+                                    viewModel.loadSections(paket.id)
+                                },
+                                onError = { error -> Toast.makeText(context, error, Toast.LENGTH_SHORT).show() }
+                            )
+                        }
+                    },
+                    colors = ButtonDefaults.textButtonColors(contentColor = Color.Red)
+                ) {
+                    Text("Hapus")
+                }
+            },
+            dismissButton = {
+                TextButton(onClick = { showDeleteDialog = false; subtestToDelete = null }) {
+                    Text("Batal")
+                }
+            }
+        )
+    }
+
+    // DIALOG KONFIRMASI HAPUS PAKET
+    if (showDeletePackageDialog) {
+        AlertDialog(
+            onDismissRequest = { showDeletePackageDialog = false },
+            title = { Text("Hapus Paket?", fontWeight = FontWeight.Bold, color = Color(0xFFD32F2F)) },
+            text = {
+                Column {
+                    Text("Anda akan menghapus '${paket.name}'.")
+                    Spacer(modifier = Modifier.height(8.dp))
+                    if (paket.takenCount > 0) {
+                        // Pesan khusus untuk Soft Delete
+                        Text("INFO: Paket ini sudah diambil ${paket.takenCount} siswa. Paket akan dihilangkan dari daftar.", fontSize = 13.sp, color = Color(0xFFE65100))
+                    } else {
+                        Text("Data akan dihapus dan hilang dari daftar.", fontSize = 13.sp)
+                    }
+                }
+            },
+            confirmButton = {
+                Button(
+                    onClick = {
+                        viewModel.deletePackage(
+                            packageId = paket.id,
+                            type = type,
+                            onSuccess = {
+                                showDeletePackageDialog = false
+                                Toast.makeText(context, "Paket berhasil dihapus", Toast.LENGTH_SHORT).show()
+                                onPackageDeleted() // Tutup dialog & refresh list parent
+                            },
+                            onError = { msg -> Toast.makeText(context, msg, Toast.LENGTH_SHORT).show() }
+                        )
+                    },
+                    colors = ButtonDefaults.buttonColors(containerColor = Color(0xFFD32F2F))
+                ) { Text("Hapus") }
+            },
+            dismissButton = { TextButton(onClick = { showDeletePackageDialog = false }) { Text("Batal") } },
+            containerColor = Color(0xFFFFEBEE)
+        )
+    }
 }
 
 // -------------------------------
@@ -248,8 +469,16 @@ private fun EditManagementContent(
 @Composable
 private fun SectionCard(
     section: TryoutSectionUiModel,
-    onEditClick: (TryoutSectionUiModel) -> Unit
+    isEditable: Boolean, // Parameter status
+    onEditClick: (TryoutSectionUiModel) -> Unit,
+    onManageQuestionClick: (String) -> Unit, // Callback baru: ID Subtest
+    onDeleteClick: (TryoutSectionUiModel) -> Unit
 ) {
+    // Tentukan warna icon berdasarkan status editable
+    val settingColor = if (isEditable) Color.Gray else Color.LightGray
+    val listIconColor = Color(0xFF2196F3) // Selalu biru (Material Blue)
+    val deleteColor = if (isEditable) Color(0xFFE53935) else Color.LightGray // Merah jika aktif
+
     Surface(
         modifier = Modifier.fillMaxWidth(),
         color = Color(0xFFE0E0E0),
@@ -269,19 +498,108 @@ private fun SectionCard(
                     modifier = Modifier.weight(1f)
                 )
                 Row {
+                    // Tombol kelola Soal Spesifik Subtest ini
+                    IconButton(
+                        onClick = {onManageQuestionClick(section.id)}, //// section.id disini adalah subtestId
+                        modifier = Modifier.size(24.dp)
+                    ) {
+                        // Ubah icon jika tidak editable agar user tau ini "View Mode"
+                        if (isEditable) {
+                            Icon(Icons.Default.List, contentDescription = "Kelola Soal", tint = listIconColor)
+                        } else {
+                            Icon(Icons.Default.Visibility, contentDescription = "Lihat Soal", tint = listIconColor)
+                        }
+                    }
+
+                    Spacer(modifier = Modifier.width(8.dp))
+
                     // Tombol Edit Section
                     IconButton(
                         onClick = { onEditClick(section) },
                         modifier = Modifier.size(24.dp)
                     ) {
-                        Icon(Icons.Default.Settings, contentDescription = "Edit Section", tint = Color.Gray)
+                        Icon(Icons.Default.Settings, contentDescription = "Edit Section", tint = settingColor)
+                    }
+                    Spacer(modifier = Modifier.width(8.dp))
+
+                    // Tombol Hapus Section
+                    IconButton(
+                        onClick = { onDeleteClick(section) },
+                        modifier = Modifier.size(24.dp)
+                    ) {
+                        Icon(Icons.Default.Delete, "Hapus Subtest", tint = deleteColor)
                     }
                 }
             }
             Spacer(modifier = Modifier.height(4.dp))
             InfoRow(label = "Tipe", value = section.type)
+            Spacer(modifier = Modifier.height(4.dp))
             InfoRow(label = "Waktu", value = "${section.timeMinutes} menit")
-            InfoRow(label = "Jumlah Soal", value = "${section.questionCount} soal")
+            Spacer(modifier = Modifier.height(4.dp))
+
+            val isTargetMet = section.actualCount >= section.questionCount
+            val progressColor = if (isTargetMet) Color(0xFF4CAF50) else Color(0xFFE53935)
+
+            Row(
+                modifier = Modifier.fillMaxWidth(),
+                horizontalArrangement = Arrangement.spacedBy(8.dp),
+                verticalAlignment = Alignment.CenterVertically
+            ) {
+                Text(
+                    text = "Progress Soal",
+                    fontSize = 13.sp,
+                    color = Color(0xFF616161),
+                    modifier = Modifier.width(90.dp)
+                )
+
+                Surface(
+                    color = progressColor,
+                    shape = RoundedCornerShape(10.dp)
+                ) {
+                    Text(
+                        // Format: "5 / 20"
+                        text = "${section.actualCount} / ${section.questionCount}",
+                        fontSize = 12.sp,
+                        fontWeight = FontWeight.Bold,
+                        color = Color.White,
+                        modifier = Modifier.padding(horizontal = 8.dp, vertical = 2.dp),
+                        textAlign = TextAlign.Center
+                    )
+                }
+
+                // Opsional: Tambahkan teks status kecil
+//                if (!isTargetMet) {
+//                    Text(
+//                        text = "(Belum Penuh)",
+//                        fontSize = 11.sp,
+//                        color = Color(0xFFE53935)
+//                    )
+//                }
+            }
+
+            Spacer(modifier = Modifier.height(4.dp))
+
+            val kisiKisiText = if (section.topicsString.isNotBlank()) section.topicsString else "-"
+
+            Row(
+                modifier = Modifier.fillMaxWidth(),
+                verticalAlignment = Alignment.Top
+            ) {
+                Text(
+                    text = "Kisi-kisi",
+                    fontSize = 13.sp,
+                    color = Color(0xFF616161),
+                    modifier = Modifier.width(90.dp) // Samakan lebar label dengan InfoRow
+                )
+                Text(
+                    text = kisiKisiText,
+                    fontSize = 13.sp, // Font sedikit lebih besar agar terbaca
+                    color = Color(0xFF424242),
+                    fontWeight = FontWeight.Medium,
+                    modifier = Modifier.weight(1f),
+                    lineHeight = 18.sp // Spasi antar baris jika panjang
+                )
+            }
         }
     }
 }

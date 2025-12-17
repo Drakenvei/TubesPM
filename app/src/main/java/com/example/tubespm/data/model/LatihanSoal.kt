@@ -6,16 +6,20 @@ import java.util.Date
 
 data class LatihanSoal(
     @DocumentId
-    val id: String = "", // <-- ID unik Firestore (misal: latihan_aljabar_01)
+    val id: String = "",
 
-    val code: String = "", // <-- Kode buatan admin (misal: LAT-ALG-01)
+    val code: String = "",
+    val codeLower: String = "", // <--- TAMBAH INI
     val title: String = "",
+    val titleLower: String = "", // <--- TAMBAH INI
     val subtest: String = "",
+    val subtestId: String = "",
     val questionCount: Int = 0,
-    val status: String = "",
+    val status: String = "inactive", // Default 'inactive'
+    val takenCount: Int = 0,
 
     @ServerTimestamp
     val createdAt: Date? = null,
 
-    val topics: List<Topic> = emptyList() // data class Topic diambil dari model Tryout.kt
+    val topics: List<Topic> = emptyList()
 )

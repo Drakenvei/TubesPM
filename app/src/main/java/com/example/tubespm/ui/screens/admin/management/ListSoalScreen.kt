@@ -20,9 +20,14 @@ import androidx.compose.ui.unit.sp
 import androidx.lifecycle.viewmodel.compose.viewModel
 import androidx.compose.material3.FabPosition
 import androidx.compose.foundation.layout.WindowInsets
+import androidx.compose.foundation.lazy.itemsIndexed
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.material.icons.automirrored.filled.ArrowBack
-import com.example.tubespm.ui.theme.TubesPMTheme
+import androidx.compose.material.icons.filled.CheckCircle
+import androidx.compose.material.icons.filled.Delete
+import androidx.compose.material.icons.filled.Info
+import androidx.compose.material.icons.filled.Lock
+import androidx.compose.material.icons.filled.Visibility
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
@@ -33,9 +38,11 @@ fun ListSoalScreen(
     subtestId: String? = null,
     sectionId: String? = null,
     paketName: String,
+    targetQuestionCount: Int, // Parameter ini sekarang sudah terisi angka (misal: 20)
+    currentQuestionCount: Int = 0, // Ini tidak dipakai dari parameter, kita ambil dari viewModel.uiState.questions.size
     onBackClick: () -> Unit,
-    onEditQuestion: (String, String, String, String, Int) -> Unit,
-    onAddQuestion: (String, String, String, Int, String?) -> Unit,
+    onEditQuestion: (String, String, String, String, Int, Int, Boolean) -> Unit,
+    onAddQuestion: (String, String, String, Int, String?, Int, Int) -> Unit,
     viewModel: ListSoalViewModel = viewModel()
 ) {
     // Extract section name dari paketName jika format "Paket - Section"
@@ -59,8 +66,19 @@ fun ListSoalScreen(
     // Load questions saat screen pertama kali dibuka
     LaunchedEffect(parentId, type, subtestId, sectionId, actualSectionName) {
         when {
+
+            // NEW: Logic for Latihan Soal
+            type == "latihan_soal" -> {
+                viewModel.loadLatihanSoalQuestions(parentId)
+            }
+
+            // [REVISI] PRIORITAS UTAMA: Jika ada Subtest ID, pakai itu!
+            subtestId != null && subtestId.isNotBlank() -> {
+                viewModel.loadQuestionsBySubtest(parentId, type, subtestId)
+            }
+
+            // PRIORITAS KEDUA: Baru cek Section
             sectionId != null || actualSectionName != null -> {
-                // Gunakan sectionId jika ada, atau sectionName sebagai fallback
                 val identifier = sectionId ?: actualSectionName ?: ""
                 if (identifier.isNotEmpty()) {
                     viewModel.loadQuestionsBySection(parentId, type, identifier)
@@ -68,9 +86,8 @@ fun ListSoalScreen(
                     viewModel.loadQuestions(parentId, type)
                 }
             }
-            subtestId != null -> {
-                viewModel.loadQuestionsBySubtest(parentId, type, subtestId)
-            }
+
+            // TERAKHIR: Load Semua
             else -> {
                 viewModel.loadQuestions(parentId, type)
             }
@@ -78,6 +95,13 @@ fun ListSoalScreen(
     }
 
     val uiState by viewModel.uiState.collectAsState()
+
+    val context = androidx.compose.ui.platform.LocalContext.current
+
+    // Hitung realisasi jumlah soal saat ini
+    val realQuestionCount = uiState.questions.size
+
+    val isEditable = uiState.isEditable
 
     Scaffold(
         topBar = {
@@ -113,19 +137,46 @@ fun ListSoalScreen(
             )
         },
         floatingActionButton = {
-            FloatingActionButton(
-                onClick = {
-                    val nextQuestionNumber = (uiState.questions.maxOfOrNull { it.questionNumber } ?: 0) + 1
-                    val subtestIdForNewQuestion = if (type == "tryout") uiState.currentSubtestId else null
-                    onAddQuestion(type, parentId, paketName, nextQuestionNumber, subtestIdForNewQuestion)
-                },
-                modifier = Modifier.offset(x = 0.dp, y = (-80).dp),
-                containerColor = Color(0xFF4CAF50),
-                contentColor = Color.White,
-                shape = CircleShape
-            ) {
-                Icon(Icons.Default.Add, contentDescription = "Tambah Soal")
+            // Tampilkan tombol HANYA JIKA:
+            // 1. Target Count = 0 (Unlimited/Latihan Soal mode lama), ATAU
+            // 2. Jumlah soal saat ini MASIH KURANG dari Target
+            if (isEditable && (targetQuestionCount == 0 || realQuestionCount < targetQuestionCount)) {
+                FloatingActionButton(
+                    onClick = {
+                        // Cari angka questionNumber terbesar yang ada di list saat ini
+                        val maxSortNumber = uiState.questions.maxOfOrNull { it.questionNumber } ?: 0
+
+                        // Soal baru pasti lebih besar dari yang paling besar
+                        val nextSortNumber = maxSortNumber + 1
+
+                        val nextVisualNumber = uiState.questions.size + 1
+
+                        // LOGIKA UTAMA PERBAIKAN:
+                        // Prioritaskan 'subtestId' dari parameter Navigasi.
+                        // Jika null, baru coba ambil dari ViewModel state.
+                        val targetSubtestId = subtestId ?: uiState.currentSubtestId
+
+                        // Validasi Kritis sebelum pindah layar
+                        if (type == "tryout" && targetSubtestId.isNullOrBlank()) {
+                            // Tampilkan pesan error jika ID benar-benar hilang (Bug prevention)
+                            android.widget.Toast.makeText(
+                                context, // Error context di sini, butuh context
+                                "Gagal: Subtest ID tidak ditemukan",
+                                android.widget.Toast.LENGTH_SHORT
+                            ).show()
+                        } else {
+                            onAddQuestion(type, parentId, paketName, nextSortNumber, targetSubtestId, nextVisualNumber, targetQuestionCount)
+                        }
+                    },
+                    modifier = Modifier.offset(x = 0.dp, y = (-80).dp),
+                    containerColor = Color(0xFF4CAF50),
+                    contentColor = Color.White,
+                    shape = CircleShape
+                ) {
+                    Icon(Icons.Default.Add, contentDescription = "Tambah Soal")
+                }
             }
+
         },
         floatingActionButtonPosition = FabPosition.End,
         contentWindowInsets = WindowInsets(0.dp)
@@ -137,16 +188,63 @@ fun ListSoalScreen(
                 .fillMaxSize()
                 .background(Color(0xFFF5F5F5))
         ) {
-            when {
-                uiState.isLoading -> {
+            Column (modifier = Modifier.fillMaxSize()) {
+                // [BARU] Banner Info Read Only
+                if (!isEditable) {
+                    Surface(color = Color(0xFFE3F2FD), modifier = Modifier.fillMaxWidth()) {
+                        Row(modifier = Modifier.padding(12.dp), verticalAlignment = Alignment.CenterVertically) {
+                            Icon(Icons.Default.Lock, contentDescription = null, tint = Color(0xFF1976D2), modifier = Modifier.size(16.dp))
+                            Spacer(modifier = Modifier.width(8.dp))
+                            Text("Mode Lihat (Paket Aktif). Nonaktifkan untuk mengedit.", color = Color(0xFF0D47A1), fontSize = 12.sp)
+                        }
+                    }
+                }
+
+                if (targetQuestionCount > 0) {
+                    val isComplete = realQuestionCount >= targetQuestionCount
+                    Card(
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .padding(16.dp),
+                        colors = CardDefaults.cardColors(
+                            containerColor = if (isComplete) Color(0xFF4CAF50) else Color(0xFFFF9800)
+                        ),
+                        elevation = CardDefaults.cardElevation(2.dp)
+                    ) {
+                        Row(
+                            modifier = Modifier.padding(16.dp),
+                            verticalAlignment = Alignment.CenterVertically
+                        ) {
+                            Icon(
+                                imageVector = if (isComplete) Icons.Default.CheckCircle else Icons.Default.Info,
+                                contentDescription = null,
+                                tint = Color.White
+                            )
+                            Spacer(modifier = Modifier.width(12.dp))
+                            Column {
+                                Text(
+                                    text = if (isComplete) "Target Terpenuhi" else "Belum Mencapai Target",
+                                    color = Color.White,
+                                    fontWeight = FontWeight.Bold,
+                                    fontSize = 16.sp
+                                )
+                                Text(
+                                    text = "Terisi: $realQuestionCount dari $targetQuestionCount soal",
+                                    color = Color.White.copy(alpha = 0.9f),
+                                    fontSize = 14.sp
+                                )
+                            }
+                        }
+                    }
+                }
+                if (uiState.isLoading) {
                     Box(
                         modifier = Modifier.fillMaxSize(),
                         contentAlignment = Alignment.Center
                     ) {
                         CircularProgressIndicator(color = Color(0xFFFF9966))
                     }
-                }
-                uiState.error != null -> {
+                } else if (uiState.error != null) {
                     Box(
                         modifier = Modifier.fillMaxSize(),
                         contentAlignment = Alignment.Center
@@ -169,8 +267,7 @@ fun ListSoalScreen(
                             }
                         }
                     }
-                }
-                uiState.questions.isEmpty() -> {
+                } else if (uiState.questions.isEmpty()) {
                     Box(
                         modifier = Modifier.fillMaxSize(),
                         contentAlignment = Alignment.Center
@@ -187,10 +284,13 @@ fun ListSoalScreen(
                                 color = Color.Gray,
                                 fontSize = 12.sp
                             )
+//                            Spacer(modifier = Modifier.height(8.dp))
+//                            Text(
+//                                text = "${subtestId}, ${sectionId}, ${sectionName}"
+//                            )
                         }
                     }
-                }
-                else -> {
+                } else {
                     LazyColumn(
                         modifier = Modifier.fillMaxSize(),
                         contentPadding = PaddingValues(
@@ -201,17 +301,35 @@ fun ListSoalScreen(
                         ),
                         verticalArrangement = Arrangement.spacedBy(12.dp)
                     ) {
-                        items(uiState.questions) { question ->
+                        itemsIndexed(uiState.questions) { index, question ->
+                            // Hitung nomor urut tampilan (selalu rapi: 1, 2, 3...)
+                            val displayQuestionNumber = index + 1
+
                             QuestionCard(
                                 question = question,
+                                displayNumber = displayQuestionNumber, // <-- Kirim nomor visual ini
+                                isEditable = isEditable,
                                 onClick = {
-                                    onEditQuestion(
-                                        type,
-                                        parentId,
-                                        question.id,
-                                        paketName,
-                                        question.questionNumber
-                                    )
+                                    // Panggil Navigasi dengan format URL baru
+                                    // Kita kirim questionNumber ASLI (untuk DB) dan displayQuestionNumber (untuk Judul)
+                                    val route = "admin_edit_question/$type/$parentId/${question.id}/$paketName/${question.questionNumber}?displayNumber=$displayQuestionNumber"
+                                    onEditQuestion(type, parentId, question.id, paketName, question.questionNumber, displayQuestionNumber, !isEditable)
+                                },
+                                onDeleteClick = {
+                                    if (isEditable) {
+                                        // Tentukan Subtest ID mana yang sedang aktif
+                                        // Prioritas: Parameter Navigasi -> State -> Null
+                                        val activeSubtestId = subtestId ?: uiState.currentSubtestId
+
+                                        // Panggil fungsi delete dengan parameter baru
+                                        viewModel.deleteQuestionSingle(
+                                            parentId = parentId,
+                                            type = type,
+                                            questionId = question.id,
+                                            currentSubtestId = activeSubtestId // <--- KIRIM ID INI
+                                        )
+                                    }
+
                                 }
                             )
                         }
@@ -225,7 +343,10 @@ fun ListSoalScreen(
 @Composable
 fun QuestionCard(
     question: com.example.tubespm.data.model.QuizQuestion,
-    onClick: () -> Unit
+    displayNumber: Int, // Terima parameter baru ini
+    isEditable: Boolean, // Parameter baru
+    onClick: () -> Unit,
+    onDeleteClick: () -> Unit
 ) {
     Card(
         modifier = Modifier
@@ -244,25 +365,39 @@ fun QuestionCard(
         ) {
             Column(modifier = Modifier.weight(1f)) {
                 Text(
-                    text = "Soal ${question.questionNumber}",
+                    text = "Soal $displayNumber", // (Client side numbering)
                     fontSize = 16.sp,
                     fontWeight = FontWeight.Bold,
                     color = Color(0xFF212121)
                 )
                 Spacer(modifier = Modifier.height(4.dp))
-                Text(
-                    text = question.questionText.take(100) + if (question.questionText.length > 100) "..." else "",
-                    fontSize = 14.sp,
-                    color = Color(0xFF757575),
-                    maxLines = 2
-                )
+                Row(verticalAlignment = Alignment.CenterVertically) {
+                    Text(
+                        text = "Jawaban: ",
+                        fontSize = 14.sp,
+                        color = Color(0xFF757575)
+                    )
+                    Text(
+                        text = question.correctAnswer, // Menampilkan "A", "B", dll.
+                        fontSize = 14.sp,
+                        fontWeight = FontWeight.Bold,
+                        color = Color(0xFF4CAF50) // Warna hijau agar menonjol
+                    )
+                }
             }
-            Icon(
-                Icons.Default.Edit,
-                contentDescription = "Edit",
-                tint = Color(0xFF757575),
-                modifier = Modifier.size(24.dp)
-            )
+            Row (
+                verticalAlignment = Alignment.CenterVertically
+            ) {
+                if (isEditable) {
+                    // Mode Edit: Tampilkan Hapus & Edit Icon
+                    IconButton(onClick = onDeleteClick) { Icon(Icons.Default.Delete, contentDescription = "Hapus", tint = Color(0xFFE53935)) }
+                    Icon(Icons.Default.Edit, contentDescription = "Edit", tint = Color(0xFF757575), modifier = Modifier.size(24.dp))
+                } else {
+                    // Mode View: Tampilkan Mata (Lihat) atau Gembok
+                    Icon(Icons.Default.Visibility, contentDescription = "Lihat Detail", tint = Color.LightGray, modifier = Modifier.size(24.dp))
+                }
+            }
+
         }
     }
 }

@@ -94,10 +94,14 @@ class TryoutViewModel @Inject constructor(
 
                 // B. Filter berdasarkan query
                 if (query.isBlank()) {
-                    catalogItems // Tampilkan semua (yang sudah di-map)
+                    catalogItems
                 } else {
-                    catalogItems.filter {
-                        it.tryout.title.contains(query, ignoreCase = true)
+                    catalogItems.filter { item ->
+                        // Cek apakah Title mengandung query ATAU Code mengandung query
+                        val titleMatch = item.tryout.title.contains(query, ignoreCase = true)
+                        val codeMatch = item.tryout.code.contains(query, ignoreCase = true)
+
+                        titleMatch || codeMatch
                     }
                 }
             }

@@ -105,7 +105,7 @@ fun AdminHomeScreen(
                                         modifier = Modifier.weight(1f)
                                     )
                                     AdminStatCard(
-                                        title = "Soal Latihan",
+                                        title = "Latihan Soal\nAktif",
                                         bigText = uiState.soalLatihan.toString(),
                                         subtitle = "Soal",
                                         modifier = Modifier.weight(1f)

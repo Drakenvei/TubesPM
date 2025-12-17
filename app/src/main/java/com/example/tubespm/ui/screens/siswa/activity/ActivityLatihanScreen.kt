@@ -20,7 +20,7 @@ import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.hilt.navigation.compose.hiltViewModel
 import androidx.navigation.NavController
-import com.example.tubespm.data.model.*
+import com.example.tubespm.data.model.* // Pastikan semua model terimport
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
@@ -35,9 +35,12 @@ fun ActivityLatihanScreen(
 
     var showDetailDialogFor by remember { mutableStateOf<ActivityLatihanDetail?>(null) }
 
+    // --- STATE BARU UNTUK KONFIRMASI PEMBATALAN LATIHAN ---
+    var latihanToConfirmCancel by remember { mutableStateOf<ActivityLatihanDetail?>(null) }
+
     val context = LocalContext.current
 
-    // --- LOGIKA PENERIMA PESAN ---
+    // --- LOGIKA PENERIMA PESAN (Tidak Berubah) ---
     val resultMessageState = navController.currentBackStackEntry
         ?.savedStateHandle
         ?.getLiveData<String>("submit_message")
@@ -94,7 +97,7 @@ fun ActivityLatihanScreen(
                 Tab(
                     selected = selectedTabIndex == index,
                     onClick = { selectedTabIndex = index },
-                    selectedContentColor = Color.Black,     // 🟢 warna teks saat aktif
+                    selectedContentColor = Color.Black,
                     unselectedContentColor = Color.Gray,
                     text = { Text(title, fontWeight = if (selectedTabIndex == index) FontWeight.Bold else FontWeight.Normal) },
                 )
@@ -120,46 +123,77 @@ fun ActivityLatihanScreen(
                     }
                 )
                 1 -> LatihanDalamProsesContent(
-                    latihanList = uiState.inProgress, // <-- Kirim data live
+                    latihanList = uiState.inProgress,
                     onContinueClick = { activityDetail ->
-                        // Kirim ID aktivitas unik
                         navController.navigate("latihan_quiz/${activityDetail.userActivity.id}")
                     }
                 )
                 2 -> LatihanSelesaiContent(
-                    latihanList = uiState.completed, // <-- Kirim data live
+                    latihanList = uiState.completed,
                     onResultClick = { activityDetail ->
-                        // Kirim ID aktivitas unik
                         navController.navigate("pembahasan/${activityDetail.userActivity.id}")
                     }
                 )
             }
         }
-
     }
 
-    // Dialog Detail
+    // --- 1. Dialog Detail (Trigger Pembatalan Tahap 1) ---
     showDetailDialogFor?.let { activityDetail ->
         LatihanDetailDialog(
-            latihan = activityDetail.latihanSoal, // <-- Kirim LatihanSoal-nya
+            latihan = activityDetail.latihanSoal,
             onDismiss = { showDetailDialogFor = null },
             onStart = {
-                // INI BAGIAN PENTINGNYA
-                // 1. Tutup dialog
                 showDetailDialogFor = null
-                // 2. Lakukan navigasi ke QuizScreen
                 navController.navigate("latihan_quiz/${activityDetail.userActivity.id}")
             },
             onCancel = {
-                // --- Hubungkan tombol Batal ---
-                viewModel.cancelLatihan(activityDetail.userActivity.id)
-                showDetailDialogFor = null
+                // Pindah ke state konfirmasi
+                latihanToConfirmCancel = activityDetail
+                showDetailDialogFor = null // Tutup dialog detail
             }
+        )
+    }
+
+    // --- 2. Dialog KONFIRMASI Pembatalan (Trigger Pembatalan Tahap 2) ---
+    latihanToConfirmCancel?.let { activityDetail ->
+        AlertDialog(
+            onDismissRequest = { latihanToConfirmCancel = null },
+            title = {
+                Text(text = "Batalkan Latihan?", fontWeight = FontWeight.Bold)
+            },
+            text = {
+                Text("Apakah Anda yakin ingin membatalkan pengambilan latihan '${activityDetail.latihanSoal.title}' ini? Aksi ini tidak dapat diurungkan.")
+            },
+            confirmButton = {
+                Button(
+                    onClick = {
+                        // AKSI PENTING: Panggil ViewModel untuk menghapus data
+                        viewModel.cancelLatihan(activityDetail.userActivity.id)
+
+                        // Umpan balik visual
+                        Toast.makeText(context, "Latihan '${activityDetail.latihanSoal.title}' berhasil dibatalkan.", Toast.LENGTH_SHORT).show()
+
+                        latihanToConfirmCancel = null // Tutup dialog konfirmasi
+                        // ViewModel diharapkan akan me-refresh uiState.notStarted setelah aksi
+                    },
+                    colors = ButtonDefaults.buttonColors(containerColor = Color(0xFFE61C5D)) // Merah
+                ) {
+                    Text("Ya, Batalkan")
+                }
+            },
+            dismissButton = {
+                OutlinedButton(onClick = { latihanToConfirmCancel = null }) {
+                    Text("Batal")
+                }
+            },
+            containerColor = Color.White,
+            shape = RoundedCornerShape(16.dp)
         )
     }
 }
 
-// Component yang dipakai
+// Component yang dipakai (Tidak Berubah)
 @Composable
 fun SubtestTag(text: String) {
     Box(

@@ -212,15 +212,30 @@ fun AdminNavGraph(
                 onGoToEditQuestion = { type, parentId, questionId, paketName, questionNumber ->
                     when {
                         questionId == "edit_nama" && type == "latihan_soal" -> {
-                            // Navigate to edit latihan soal (nama)
                             navController.navigate("admin_edit_latihan/$parentId")
                         }
                         questionId.startsWith("list") -> {
-                            // Navigate to list soal
-                            navController.navigate("admin_list_soal/$type/$parentId/$paketName")
+                            // HERE IS THE LOGIC:
+                            // If EditManagement sends questionId as "list_soal|subtest_123", split it
+                            val parts = questionId.split("|")
+                            val actualSubtestId = if (parts.size > 1) parts[1] else null
+
+                            // DEBUG LOG (Cek di Logcat)
+                            android.util.Log.d("AdminNav", "Raw: $questionId, Parsed ID: $actualSubtestId")
+
+                            // Kita manfaatkan parameter 'questionNumber' (Int) untuk membawa 'targetCount'
+                            // karena saat membuka LIST, nomor soal tidak dibutuhkan.
+                            val targetCount = questionNumber
+
+                            val route = if (actualSubtestId != null && actualSubtestId.isNotBlank()) {
+                                // Pastikan formatnya benar
+                                "admin_list_soal/$type/$parentId/$paketName?subtestId=$actualSubtestId&targetCount=$targetCount"
+                            } else {
+                                "admin_list_soal/$type/$parentId/$paketName?targetCount=$targetCount"
+                            }
+                            navController.navigate(route)
                         }
                         else -> {
-                            // Navigate to edit question
                             navController.navigate("admin_edit_question/$type/$parentId/$questionId/$paketName/$questionNumber")
                         }
                     }
@@ -237,13 +252,21 @@ fun AdminNavGraph(
         // ------------ Edit Question (DIPERBAIKI) ------------
         composable(
             // Tambahkan argumen di route
-            route = "admin_edit_question/{type}/{tryoutId}/{questionId}/{paketName}/{questionNumber}",
+            route = "admin_edit_question/{type}/{tryoutId}/{questionId}/{paketName}/{questionNumber}?displayNumber={displayNumber}&isReadOnly={isReadOnly}",
             arguments = listOf(
                 navArgument("type") { type = NavType.StringType },
                 navArgument("tryoutId") { type = NavType.StringType },
                 navArgument("questionId") { type = NavType.StringType },
                 navArgument("paketName") { type = NavType.StringType },
-                navArgument("questionNumber") { type = NavType.IntType }
+                navArgument("questionNumber") { type = NavType.IntType },
+                navArgument("displayNumber") {
+                    type = NavType.IntType
+                    defaultValue = 0 // Default 0 jika tidak dikirim
+                },
+                navArgument("isReadOnly") {
+                    type = NavType.BoolType
+                    defaultValue = false
+                }
             )
         ) { backStackEntry ->
             // Ambil data dari argument
@@ -252,22 +275,28 @@ fun AdminNavGraph(
             val questionId = backStackEntry.arguments?.getString("questionId") ?: ""
             val paketName = backStackEntry.arguments?.getString("paketName") ?: ""
             val questionNumber = backStackEntry.arguments?.getInt("questionNumber") ?: 1
+            val displayNumberArg = backStackEntry.arguments?.getInt("displayNumber") ?: 0
+            // Logika Fallback: Jika displayNumber 0 (tidak dikirim), pakai questionNumber lama
+            val finalDisplayNumber = if (displayNumberArg > 0) displayNumberArg else questionNumber
+            val isReadOnly = backStackEntry.arguments?.getBoolean("isReadOnly") ?: false
 
             // Panggil Screen dengan parameter lengkap
             EditQuestionScreen(
                 tryoutId = tryoutId,
                 questionId = questionId,
                 paketName = paketName,
-                questionNumber = questionNumber,
+                questionNumber = questionNumber, // Tetap kirim ID Database ke ViewModel
+                displayNumber = finalDisplayNumber, // [BARU] Kirim ID Visual ke UI
                 paddingValuesFromNavHost = paddingValues,
                 onBackClick = { navController.popBackStack() },
-                type = type
+                type = type,
+                isReadOnly = isReadOnly
             )
         }
 
         // ------------ Create Question ------------
         composable(
-            route = "admin_create_question/{type}/{parentId}/{paketName}/{questionNumber}?subtestId={subtestId}",
+            route = "admin_create_question/{type}/{parentId}/{paketName}/{questionNumber}?subtestId={subtestId}&displayNumber={displayNumber}&targetCount={targetCount}",
             arguments = listOf(
                 navArgument("type") { type = NavType.StringType },
                 navArgument("parentId") { type = NavType.StringType },
@@ -277,6 +306,14 @@ fun AdminNavGraph(
                     type = NavType.StringType
                     defaultValue = ""
                     nullable = true
+                },
+                navArgument("displayNumber") {
+                    type = NavType.IntType
+                    defaultValue = 0
+                },
+                navArgument("targetCount") {
+                    type = NavType.IntType
+                    defaultValue = 0 // 0 = Unlimited
                 }
             )
         ) { backStackEntry ->
@@ -285,13 +322,18 @@ fun AdminNavGraph(
             val paketName = backStackEntry.arguments?.getString("paketName") ?: ""
             val questionNumber = backStackEntry.arguments?.getInt("questionNumber") ?: 1
             val subtestId = backStackEntry.arguments?.getString("subtestId")?.takeIf { it.isNotEmpty() }
+            val displayNumberArg = backStackEntry.arguments?.getInt("displayNumber") ?: 0
+            val finalDisplayNumber = if (displayNumberArg > 0) displayNumberArg else questionNumber
+            val targetCount = backStackEntry.arguments?.getInt("targetCount") ?: 0
 
             CreateQuestionScreen(
                 parentId = parentId,
                 type = type,
                 paketName = paketName,
-                questionNumber = questionNumber,
+                questionNumber = questionNumber, // ID Database (misal 5)
+                displayNumber = finalDisplayNumber, // ID Visual (misal 4)
                 subtestId = subtestId,
+                targetCount = targetCount,
                 paddingValuesFromNavHost = paddingValues,
                 onBackClick = { navController.popBackStack() },
                 onQuestionCreated = {
@@ -306,9 +348,9 @@ fun AdminNavGraph(
             CreateLatihanSoalScreen(
                 paddingValuesFromNavHost = paddingValues,
                 onBackClick = { navController.popBackStack() },
-                onLatihanCreated = { latihanId ->
+                onLatihanCreated = { latihanId, subtestId ->
                     // Navigasi ke Create Question Screen
-                    navController.navigate("admin_create_question/latihan_soal/$latihanId/Latihan Soal Baru/1") {
+                    navController.navigate("admin_create_question/latihan_soal/$latihanId/Latihan Soal Baru/1?subtestId=$subtestId") {
                         popUpTo("admin_management") { inclusive = false }
                     }
                 }
@@ -333,16 +375,30 @@ fun AdminNavGraph(
 
         // ------------ List Soal ------------
         composable(
-            route = "admin_list_soal/{type}/{parentId}/{paketName}",
+            route = "admin_list_soal/{type}/{parentId}/{paketName}?subtestId={subtestId}&targetCount={targetCount}",
             arguments = listOf(
                 navArgument("type") { type = NavType.StringType },
                 navArgument("parentId") { type = NavType.StringType },
-                navArgument("paketName") { type = NavType.StringType }
+                navArgument("paketName") { type = NavType.StringType },
+                // CHANGE 2: Add argument definition for subtestId (optional)
+                navArgument("subtestId") {
+                    type = NavType.StringType
+                    nullable = true
+                    defaultValue = null
+                },
+                navArgument("targetCount") {
+                    type = NavType.IntType
+                    defaultValue = 0 // 0 artinya tidak dibatasi (default)
+                }
             )
         ) { backStackEntry ->
             val type = backStackEntry.arguments?.getString("type") ?: ""
             val parentId = backStackEntry.arguments?.getString("parentId") ?: ""
             val paketName = backStackEntry.arguments?.getString("paketName") ?: ""
+            // CHANGE 3: Capture the subtestId
+            val subtestId = backStackEntry.arguments?.getString("subtestId")
+
+            val targetCount = backStackEntry.arguments?.getInt("targetCount") ?: 0
 
             // Extract section name dari paketName jika format "Paket - Section"
             val sectionName = if (paketName.contains(" - ")) {
@@ -350,27 +406,42 @@ fun AdminNavGraph(
             } else {
                 null
             }
-            
+
             val actualSectionId: String? = if (sectionName != null && type == "tryout") {
                 sectionName // Temporary: gunakan section name sebagai identifier
             } else {
                 null
             }
-            
+
             ListSoalScreen(
                 parentId = parentId,
                 type = type,
-                sectionName = sectionName,
-                subtestId = null,
-                sectionId = actualSectionId,
+                sectionName = null,
+                subtestId = subtestId,
+                sectionId = null,
                 paketName = paketName,
+                targetQuestionCount = targetCount,
                 onBackClick = { navController.popBackStack() },
-                onEditQuestion = { t, pId, qId, pName, qNum ->
-                    navController.navigate("admin_edit_question/$t/$pId/$qId/$pName/$qNum")
+                onEditQuestion = { t, pId, qId, pName, qNum, dNum, readOnly ->
+                    navController.navigate("admin_edit_question/$t/$pId/$qId/$pName/$qNum?displayNumber=$dNum&isReadOnly=$readOnly")
                 },
-                onAddQuestion = { t, pId, pName, qNum, subtestId ->
-                    val subtestParam = if (subtestId != null) "?subtestId=$subtestId" else ""
-                    navController.navigate("admin_create_question/$t/$pId/$pName/$qNum$subtestParam")
+                onAddQuestion = { t, pId, pName, qNum, sId, dNum, tCount ->
+                    // CHANGE 4: Construct navigation with subtestId parameter
+//                    val subtestParam = if (sId != null) "?subtestId=$sId" else ""
+                    // Tambahkan query param &displayNumber=$dNum
+                    // Perhatikan penggunaan '&' karena subtestParam mungkin kosong atau sudah pakai '?'
+                    // Logika aman: url?param1&param2
+
+                    // Cara paling aman menyusun string URL:
+                    val baseUrl = "admin_create_question/$t/$pId/$pName/$qNum"
+                    val params = mutableListOf<String>()
+                    if (sId != null) params.add("subtestId=$sId")
+                    params.add("displayNumber=$dNum")
+                    params.add("targetCount=$tCount")
+
+                    val fullRoute = if (params.isEmpty()) baseUrl else "$baseUrl?${params.joinToString("&")}"
+
+                    navController.navigate(fullRoute)
                 }
             )
         }
@@ -391,8 +462,8 @@ fun AdminNavGraph(
                 onLatihanUpdated = {
                     navController.popBackStack()
                 },
-                onGoToListSoal = { type, parentId, paketName ->
-                    navController.navigate("admin_list_soal/$type/$parentId/$paketName")
+                onGoToListSoal = { type, parentId, paketName, subtestId ->
+                    navController.navigate("admin_list_soal/$type/$parentId/$paketName?subtestId={subtestId}")
                 }
             )
         }

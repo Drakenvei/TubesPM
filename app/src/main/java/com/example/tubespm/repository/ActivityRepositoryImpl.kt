@@ -71,6 +71,27 @@ class ActivityRepositoryImpl @Inject constructor(
             }
     }
 
+    // [BARU] Ambil Detail Tryout TANPA Filter Status
+    // Ini digunakan oleh Activity Siswa agar tetap bisa melihat soal inactive/deleted
+    override suspend fun getTryoutById(tryoutId: String): Tryout? {
+        return try {
+            val snapshot = db.collection("tryouts").document(tryoutId).get().await()
+            snapshot.toObject(Tryout::class.java)
+        } catch (e: Exception) {
+            null
+        }
+    }
+
+    // [BARU] Ambil Detail Latihan TANPA Filter Status
+    override suspend fun getLatihanSoalById(latihanId: String): LatihanSoal? {
+        return try {
+            val snapshot = db.collection("latihan_soal").document(latihanId).get().await()
+            snapshot.toObject(LatihanSoal::class.java)
+        } catch (e: Exception) {
+            null
+        }
+    }
+
     override suspend fun addTryoutActivity(tryout: Tryout) {
         val uid = currentUserId ?: return // Jangan lakukan apa-apa jika user tidak login
 
@@ -86,8 +107,17 @@ class ActivityRepositoryImpl @Inject constructor(
             "startedAt" to FieldValue.serverTimestamp()
         )
 
-        // 2. Simpan ke Firestore
-        db.collection("user_activities").add(newActivity).await()
+        // MENGGUNAKAN BATCH (Transaksi Atomik)
+        db.runBatch { batch ->
+            // 1. Simpan data bahwa user ini sedang mengerjakan (di user_activities)
+            val activityRef = db.collection("user_activities").document()
+            batch.set(activityRef, newActivity)
+
+            // 2. INI BAGIAN MENGHITUNG TAKEN COUNT
+            // Kita minta Firestore untuk otomatis menambah angka +1 pada dokumen Tryout induk
+            val tryoutRef = db.collection("tryouts").document(tryout.id)
+            batch.update(tryoutRef, "takenCount", FieldValue.increment(1))
+        }.await()
     }
 
     override suspend fun addLatihanActivity(latihan: LatihanSoal) {
@@ -106,8 +136,16 @@ class ActivityRepositoryImpl @Inject constructor(
             "startedAt" to FieldValue.serverTimestamp()
         )
 
-        // Simpan ke firestore
-        db.collection("user_activities").add(newActivity).await()
+        db.runBatch { batch ->
+            // 1. Simpan data user activity
+            val activityRef = db.collection("user_activities").document()
+            batch.set(activityRef, newActivity)
+
+            // 2. INI BAGIAN MENGHITUNG TAKEN COUNT
+            // Tambah +1 ke dokumen Latihan Soal induk
+            val latihanRef = db.collection("latihan_soal").document(latihan.id)
+            batch.update(latihanRef, "takenCount", FieldValue.increment(1))
+        }.await()
     }
 
     override suspend fun cancelTryoutActivity(activityId: String) {

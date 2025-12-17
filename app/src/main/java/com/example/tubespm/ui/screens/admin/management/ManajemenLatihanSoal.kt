@@ -31,7 +31,9 @@ fun LatihanSoalTabContent(
     onAddClick: () -> Unit,
     onEditClick: (String, String, String, String, Int) -> Unit, // (type, latihanId, questionId, paketName, questionNumber)
     onGoToListSoal: (String, String, String) -> Unit = { _, _, _ -> }, // (type, parentId, paketName)
-    viewModel: ManajemenLatihanSoalViewModel = viewModel()
+    filterStatus: FilterStatus,
+    onFilterChange: (FilterStatus) -> Unit,
+    viewModel: ManajemenLatihanSoalViewModel = viewModel(),
 ) {
     val uiState by viewModel.uiState.collectAsState()
     val searchQuery by viewModel.searchQuery.collectAsState()
@@ -70,19 +72,24 @@ fun LatihanSoalTabContent(
                 onValueChange = { viewModel.onSearchQueryChanged(it) },
                 modifier = Modifier
                     .fillMaxWidth()
-                    .padding(16.dp),
+                    .padding(horizontal = 16.dp, vertical = 8.dp),
                 placeholder = { Text("Cari Latihan Soal...", color = Color.Gray) },
                 leadingIcon = {
                     Icon(Icons.Filled.Search, contentDescription = "Search", tint = Color.Gray)
                 },
                 shape = RoundedCornerShape(12.dp), // Lebih rounded seperti siswa
                 colors = OutlinedTextFieldDefaults.colors(
-                    focusedContainerColor = Color.White,
-                    unfocusedContainerColor = Color.White,
-                    focusedBorderColor = Color(0xFFE0E0E0),
+                    focusedContainerColor = Color(0xFFE0E0E0),
+                    unfocusedContainerColor = Color(0xFFE0E0E0),
+                    focusedBorderColor = Color.Transparent,
                     unfocusedBorderColor = Color.Transparent
                 ),
                 singleLine = true
+            )
+
+            FilterSection(
+                currentFilter = filterStatus,
+                onFilterSelected = onFilterChange
             )
 
             // ===============================
@@ -98,7 +105,7 @@ fun LatihanSoalTabContent(
                     contentPadding = PaddingValues(
                         start = 16.dp,
                         end = 16.dp,
-                        top = 16.dp,
+                        top = 8.dp,
                         bottom = 100.dp
                     ),
                     verticalArrangement = Arrangement.spacedBy(16.dp)
@@ -181,11 +188,15 @@ fun PaketSoalAdminCard(
                 // Row untuk tombol-tombol
                 Row {
                     // Tombol Lihat Soal (Baru)
-                    TextButton(
+                    IconButton(
                         onClick = onGoToListSoal,
-                        colors = ButtonDefaults.textButtonColors(contentColor = Color.White)
+                        modifier = Modifier.size(32.dp)
                     ) {
-                        Text("Lihat Soal", fontSize = 12.sp)
+                        Icon(
+                            imageVector = Icons.Filled.Description,
+                            contentDescription = "Lihat Soal",
+                            tint = Color.White
+                        )
                     }
 
                     // Tombol Edit (Khas Admin)

@@ -103,17 +103,27 @@ fun CreateTryoutScreen(
                     onValueChange = { viewModel.updateCode(it) },
                     modifier = Modifier.fillMaxWidth(),
                     placeholder = { Text("Contoh: TO-001", color = Color(0xFF9E9E9E)) },
+                    isError = uiState.codeError != null,
                     shape = RoundedCornerShape(6.dp),
                     colors = OutlinedTextFieldDefaults.colors(
                         focusedContainerColor = Color(0xFFE0E0E0),
                         unfocusedContainerColor = Color(0xFFE0E0E0),
-                        focusedBorderColor = Color.Transparent,
-                        unfocusedBorderColor = Color.Transparent,
+                        focusedBorderColor = if (uiState.codeError != null) Color(0xFFE53935) else Color.Transparent,
+                        unfocusedBorderColor = if (uiState.codeError != null) Color(0xFFE53935) else Color.Transparent,
                         focusedTextColor = Color(0xFF212121),
                         unfocusedTextColor = Color(0xFF212121),
                         cursorColor = Color(0xFF212121)
                     )
                 )
+                // Tampilkan error di bawah inputan Code
+                if (uiState.codeError != null) {
+                    Text(
+                        text = uiState.codeError!!,
+                        color = Color(0xFFE53935),
+                        fontSize = 12.sp,
+                        modifier = Modifier.padding(start = 4.dp, top = 4.dp)
+                    )
+                }
 
                 Spacer(modifier = Modifier.height(16.dp))
 
@@ -130,76 +140,31 @@ fun CreateTryoutScreen(
                     onValueChange = { viewModel.updateTitle(it) },
                     modifier = Modifier.fillMaxWidth(),
                     placeholder = { Text("Contoh: Tryout UTBK 2024", color = Color(0xFF9E9E9E)) },
+                    isError = uiState.titleError != null,
                     shape = RoundedCornerShape(6.dp),
                     colors = OutlinedTextFieldDefaults.colors(
                         focusedContainerColor = Color(0xFFE0E0E0),
                         unfocusedContainerColor = Color(0xFFE0E0E0),
-                        focusedBorderColor = Color.Transparent,
-                        unfocusedBorderColor = Color.Transparent,
+                        focusedBorderColor = if (uiState.titleError != null) Color(0xFFE53935) else Color.Transparent,
+                        unfocusedBorderColor = if (uiState.titleError != null) Color(0xFFE53935) else Color.Transparent,
                         focusedTextColor = Color(0xFF212121),
                         unfocusedTextColor = Color(0xFF212121),
                         cursorColor = Color(0xFF212121)
                     )
                 )
+                // Tampilkan error di bawah inputan Judul
+                if (uiState.titleError != null) {
+                    Text(
+                        text = uiState.titleError!!,
+                        color = Color(0xFFE53935),
+                        fontSize = 12.sp,
+                        modifier = Modifier.padding(start = 4.dp, top = 4.dp)
+                    )
+                }
 
                 Spacer(modifier = Modifier.height(16.dp))
 
-                // Status
-                Text(
-                    text = "Status",
-                    fontSize = 14.sp,
-                    fontWeight = FontWeight.SemiBold,
-                    color = Color(0xFF757575)
-                )
-                Spacer(modifier = Modifier.height(4.dp))
-                var expanded by remember { mutableStateOf(false) }
-                ExposedDropdownMenuBox(
-                    expanded = expanded,
-                    onExpandedChange = { expanded = !expanded }
-                ) {
-                    OutlinedTextField(
-                        value = if (uiState.status == "active") "Aktif" else "Nonaktif",
-                        onValueChange = {},
-                        readOnly = true,
-                        modifier = Modifier
-                            .fillMaxWidth()
-                            .menuAnchor(),
-                        placeholder = { Text("Pilih Status", color = Color(0xFF9E9E9E)) },
-                        shape = RoundedCornerShape(6.dp),
-                        colors = OutlinedTextFieldDefaults.colors(
-                            focusedContainerColor = Color(0xFFE0E0E0),
-                            unfocusedContainerColor = Color(0xFFE0E0E0),
-                            focusedBorderColor = Color.Transparent,
-                            unfocusedBorderColor = Color.Transparent,
-                            focusedTextColor = Color(0xFF212121),
-                            unfocusedTextColor = Color(0xFF212121)
-                        ),
-                        trailingIcon = { ExposedDropdownMenuDefaults.TrailingIcon(expanded = expanded) }
-                    )
-                    ExposedDropdownMenu(
-                        expanded = expanded,
-                        onDismissRequest = { expanded = false }
-                    ) {
-                        DropdownMenuItem(
-                            text = { Text("Aktif") },
-                            onClick = {
-                                viewModel.updateStatus("active")
-                                expanded = false
-                            }
-                        )
-                        DropdownMenuItem(
-                            text = { Text("Nonaktif") },
-                            onClick = {
-                                viewModel.updateStatus("inactive")
-                                expanded = false
-                            }
-                        )
-                    }
-                }
-
-                Spacer(modifier = Modifier.height(24.dp))
-
-                // Error message
+                // Error message (untuk error umum, misalnya gagal koneksi)
                 uiState.error?.let { error ->
                     Text(
                         text = error,
@@ -213,7 +178,7 @@ fun CreateTryoutScreen(
                 Button(
                     onClick = {
                         viewModel.createTryout(
-                            onSuccess = { tryoutId ->
+                            onSuccess = {
                                 android.widget.Toast.makeText(
                                     context,
                                     "Tryout berhasil dibuat",
@@ -221,11 +186,14 @@ fun CreateTryoutScreen(
                                 ).show()
                             },
                             onError = { error ->
-                                android.widget.Toast.makeText(
-                                    context,
-                                    error,
-                                    android.widget.Toast.LENGTH_SHORT
-                                ).show()
+                                // Toast hanya untuk error umum atau error yang bukan karena isBlank/duplikasi
+                                if (uiState.codeError == null && uiState.titleError == null) {
+                                    android.widget.Toast.makeText(
+                                        context,
+                                        error,
+                                        android.widget.Toast.LENGTH_SHORT
+                                    ).show()
+                                }
                             }
                         )
                     },

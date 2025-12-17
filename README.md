@@ -22,11 +22,11 @@ Aplikasi ini adalah platform mobile berbasis **Kotlin (Native Android)** yang me
 ### 🎓 Fitur untuk **Siswa**
 - **Register & Login**: Membuat akun dan masuk ke aplikasi.  
 - **List Tryout**: Melihat daftar tryout yang tersedia.  
-- **Search & Filter Tryout**: Mencari tryout berdasarkan kategori.  
+- **Search Tryout**: Mencari tryout.  
 - **Mengerjakan Tryout**: Mengerjakan soal tryout secara online.  
 - **Analisis & Skor Tryout**: Menyimpan jawaban, menampilkan skor & pembahasan.  
 - **List Latihan Soal**: Melihat daftar latihan soal.  
-- **Search & Filter Latihan Soal**: Mempermudah pencarian latihan soal.  
+- **Search Latihan Soal**: Mempermudah pencarian latihan soal.  
 - **Mengerjakan Latihan Soal**: Dapat mengerjakan latihan soal secara online.  
 - **Analisis & Skor Latihan Soal**: Menampilkan hasil & pembahasan.  
 - **Edit Profil**: Mengubah data diri (nama, telepon, sekolah/kampus tujuan, jurusan, kelas).  
