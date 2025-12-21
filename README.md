@@ -30,7 +30,8 @@ Aplikasi ini adalah platform mobile berbasis **Kotlin (Native Android)** yang me
 - **Mengerjakan Latihan Soal**: Dapat mengerjakan latihan soal secara online.
 - **AI Mentor**: Fitur AI pada pembahasan untuk penjelasan yang lebih lanjut.  
 - **Analisis & Skor Latihan Soal**: Menampilkan hasil & pembahasan.  
-- **Edit Profil**: Mengubah data diri (nama, telepon, sekolah/kampus tujuan, jurusan, kelas).  
+- **Edit Profil**: Mengubah data diri (nama, telepon, sekolah/kampus tujuan, jurusan, kelas).
+- **Notifikasi**: Menampilkan notifikasi untuk mengingatkan siswa mengerjakan tryout dan latihan.  
 - **Logout**: Keluar dari halaman siswa.  
 
 ---
@@ -40,8 +41,9 @@ Aplikasi ini adalah platform mobile berbasis **Kotlin (Native Android)** yang me
 - **Manajemen Paket Tryout** — Membuat dan menghapus paket tryout.  
 - **Soal Tryout** — Menambah, mengedit, dan menghapus soal serta pembahasan pada tryout.  
 - **Publish Tryout & Latihan Soal** — Memublikasikan tryout dan latihan soal apabila sudah siap.  
-- **Ubah Status Tryout & Latihan Soal** — Mengubah status paket soal menjadi aktif, nonaktif, atau perbaikan.  
-- **Manajemen Latihan Soal** — Membuat, mengedit, menonaktifkan, dan menghapus soal serta pembahasan latihan soal.  
+- **Ubah Status Tryout & Latihan Soal** — Mengubah status paket soal menjadi aktif dan nonaktif  
+- **Manajemen Latihan Soal** — Membuat, mengedit, menonaktifkan, dan menghapus soal serta pembahasan latihan soal.
+- **Edit Profil**: Mengubah passsword dan mengganti foto profile. 
 - **Logout** — Keluar dari dashboard admin.
 
 ---
